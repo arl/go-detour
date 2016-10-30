@@ -1,3 +1,3 @@
-# go-navmeshset
+# go-detour
 
-Read Detour navmesh output files
+Read Detour navigation mesh output files
