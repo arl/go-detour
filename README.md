@@ -1,3 +1,3 @@
 # go-detour
 
-Read Detour navigation mesh output files
+Read [Detour](https://github.com/recastnavigation/recastnavigation) navigation mesh output files
