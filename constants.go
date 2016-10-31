@@ -5,5 +5,10 @@ const (
 	NAVMESHSET_VERSION int32 = 1
 )
 
-/// The maximum number of vertices per navigation polygon.
-const DT_VERTS_PER_POLYGON int = 6
+const (
+	/// The maximum number of vertices per navigation polygon.
+	DT_VERTS_PER_POLYGON int = 6
+
+	/// A value that indicates the entity does not link to anything.
+	DT_NULL_LINK = 0xffffffff
+)

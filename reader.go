@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 )
 
 type Reader struct{}
@@ -34,5 +35,39 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 	}
 
 	var mesh DtNavMesh
+	status := mesh.init(&hdr.Params)
+	if dtStatusFailed(status) {
+		return nil, fmt.Errorf("status failed 0x%x", status)
+	}
+
+	fmt.Println("numTiles", hdr.NumTiles)
+
+	// Read tiles.
+	var i int32
+	for i = 0; i < hdr.NumTiles; i++ {
+
+		var tileHdr NavMeshTileHeader
+		err = binary.Read(r, binary.LittleEndian, &tileHdr)
+		if err != nil {
+			return nil, err
+		}
+
+		if tileHdr.TileRef == 0 || tileHdr.DataSize == 0 {
+			break
+		}
+
+		log.Println("reading tile header", i, tileHdr)
+
+		data := make([]byte, tileHdr.DataSize)
+		if data == nil {
+			break
+		}
+		err = binary.Read(r, binary.LittleEndian, &data)
+		if err != nil {
+			return nil, err
+		}
+		status := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef, nil)
+		log.Printf("mesh.addTile() returned 0x%x\n", status)
+	}
 	return &mesh, nil
 }

@@ -18,3 +18,23 @@ const (
 	DT_OUT_OF_NODES       = 1 << 5 // Query ran out of nodes during search.
 	DT_PARTIAL_RESULT     = 1 << 6 // Query did not reach the end location, returning best guess.
 )
+
+// Returns true of status is success.
+func dtStatusSucceed(status dtStatus) bool {
+	return (status & DT_SUCCESS) != 0
+}
+
+// Returns true of status is failure.
+func dtStatusFailed(status dtStatus) bool {
+	return (status & DT_FAILURE) != 0
+}
+
+// Returns true of status is in progress.
+func dtStatusInProgress(status dtStatus) bool {
+	return (status & DT_IN_PROGRESS) != 0
+}
+
+// Returns true if specific detail is set.
+func dtStatusDetail(status dtStatus, detail uint32) bool {
+	return (uint32(status) & detail) != 0
+}
