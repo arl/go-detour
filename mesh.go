@@ -273,21 +273,20 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		m.connectExtOffMeshLinks(neis[j], tile, -1)
 	}
 
-	//// Connect with neighbour tiles.
-	//for (int i = 0; i < 8; ++i)
-	//{
-	//nneis = getNeighbourTilesAt(header.x, header.y, i, neis, MAX_NEIS);
-	//for (int j = 0; j < nneis; ++j)
-	//{
-	//connectExtLinks(tile, neis[j], i);
-	//connectExtLinks(neis[j], tile, dtOppositeTile(i));
-	//connectExtOffMeshLinks(tile, neis[j], i);
-	//connectExtOffMeshLinks(neis[j], tile, dtOppositeTile(i));
-	//}
-	//}
+	// Connect with neighbour tiles.
+	for i = 0; i < 8; i++ {
+		nneis = m.getNeighbourTilesAt(hdr.X, hdr.Y, i, neis, MAX_NEIS)
+		for j = 0; j < nneis; j++ {
+			m.connectExtLinks(tile, neis[j], i)
+			m.connectExtLinks(neis[j], tile, dtOppositeTile(i))
+			m.connectExtOffMeshLinks(tile, neis[j], i)
+			m.connectExtOffMeshLinks(neis[j], tile, dtOppositeTile(i))
+		}
+	}
 
-	//if (result)
-	//*result = getTileRef(tile);
+	if result != nil {
+		*result = m.getTileRef(tile)
+	}
 
 	return DT_SUCCESS
 }
@@ -371,7 +370,16 @@ func (m *DtNavMesh) getPolyRefBase(tile *dtMeshTile) dtPolyRef {
 		return 0
 	}
 	//it := uint32(tile - m.m_tiles)
-	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles)))
+	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0])))
+
+	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0]))
+	ip := uint32(e / unsafe.Sizeof(*tile))
+
+	if it > uint32(len(m.m_tiles)) {
+		fmt.Println("e", e, "ip", ip)
+		log.Fatalln("houston...", it, ">", len(m.m_tiles))
+	}
+
 	return m.encodePolyId(tile.Salt, it, 0)
 }
 
@@ -800,6 +808,11 @@ func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, po
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
 	ip := uint32(e / unsafe.Sizeof(*poly))
 
+	if ip > uint32(len(tile.Polys)) {
+		log.Fatalln("houston...", ip, ">", len(tile.Polys))
+	} else {
+		log.Fatalln("OK with", ip, "<", len(tile.Polys))
+	}
 	//unsafe.Pointer(poly)
 	//hdr := (*reflect.SliceHeader)(unsafe.Pointer(&tile.Polys)) // case 1
 	//hdr.Data = uintptr(unsafe.Pointer(p))              // case 6 (this case)
@@ -817,7 +830,9 @@ func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, po
 	var i uint8
 	for i = 0; i < nv; i++ {
 		// TODO: could probably use copy
-		dtVcopy(verts[i*3:3], tile.Verts[poly.Verts[i]*3:3])
+		idx := i * 3
+		jdx := poly.Verts[i] * 3
+		dtVcopy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
 	}
 
 	dtVcopy(closest, pos)
@@ -935,7 +950,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *dtMeshTile, side int32)
 		ext := []float32{targetCon.Rad, target.Header.WalkableClimb, targetCon.Rad}
 
 		// Find polygon to connect to.
-		p := targetCon.Pos[3:3]
+		p := targetCon.Pos[3:6]
 		nearestPt := make([]float32, 3)
 		ref := m.findNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
@@ -1041,8 +1056,11 @@ func (m *DtNavMesh) connectExtLinks(tile, target *dtMeshTile, side int32) {
 			}
 
 			// Create new links
-			va := tile.Verts[poly.Verts[j]*3 : 3]
-			vb := tile.Verts[poly.Verts[(j+1)%int32(nv)]*3 : 3]
+			idx := poly.Verts[j] * 3
+			va := tile.Verts[idx : idx+3]
+			idx = poly.Verts[(j+1)%int32(nv)] * 3
+
+			vb := tile.Verts[idx : idx+3]
 			nei := make([]dtPolyRef, 4)
 			neia := make([]float32, 4*2)
 			nnei := m.findConnectingPolys(va, vb, target, dtOppositeTile(dir), nei, neia, 4)
@@ -1105,15 +1123,17 @@ func (m *DtNavMesh) findConnectingPolys(va, vb []float32, tile *dtMeshTile, side
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		poly := &tile.Polys[i]
 		nv := poly.VertCount
-		var j int32
+		var j uint8
 		for j = 0; j < nv; j++ {
 			// Skip edges which do not point to the right side.
-			if poly.neis[j] != m_ {
+			if poly.Neis[j] != m_ {
 				continue
 			}
 
-			vc := tile.verts[poly.verts[j]*3 : 3]
-			vd := tile.verts[poly.verts[(j+1)%nv]*3 : 3]
+			idx := poly.Verts[j] * 3
+			vc := tile.Verts[idx : idx+3]
+			idx = poly.Verts[(j+1)%nv] * 3
+			vd := tile.Verts[idx : idx+3]
 			bpos := getSlabCoord(vc, side)
 
 			// Segments are not close enough.
@@ -1124,7 +1144,7 @@ func (m *DtNavMesh) findConnectingPolys(va, vb []float32, tile *dtMeshTile, side
 			// Check if the segments touch.
 			calcSlabEndPoints(vc, vd, bmin, bmax, side)
 
-			if !overlapSlabs(amin, amax, bmin, bmax, 0.01, tile.header.walkableClimb) {
+			if !overlapSlabs(amin, amax, bmin, bmax, 0.01, tile.Header.WalkableClimb) {
 				continue
 			}
 
@@ -1138,7 +1158,7 @@ func (m *DtNavMesh) findConnectingPolys(va, vb []float32, tile *dtMeshTile, side
 			break
 		}
 	}
-	//return n;
+	return n
 }
 
 func calcSlabEndPoints(va, vb []float32, bmin, bmax []float32, side int32) {
@@ -1176,4 +1196,94 @@ func getSlabCoord(va []float32, side int32) float32 {
 		return va[2]
 	}
 	return 0
+}
+
+func overlapSlabs(amin, amax, bmin, bmax []float32, px, py float32) bool {
+	// Check for horizontal overlap.
+	// The segment is shrunken a little so that slabs which touch
+	// at end points are not connected.
+	minx := dtMax(amin[0]+px, bmin[0]+px)
+	maxx := dtMin(amax[0]-px, bmax[0]-px)
+	if minx > maxx {
+		return false
+	}
+
+	// Check vertical overlap.
+	ad := (amax[1] - amin[1]) / (amax[0] - amin[0])
+	ak := amin[1] - ad*amin[0]
+	bd := (bmax[1] - bmin[1]) / (bmax[0] - bmin[0])
+	bk := bmin[1] - bd*bmin[0]
+	aminy := ad*minx + ak
+	amaxy := ad*maxx + ak
+	bminy := bd*minx + bk
+	bmaxy := bd*maxx + bk
+	dmin := bminy - aminy
+	dmax := bmaxy - amaxy
+
+	// Crossing segments always overlap.
+	if dmin*dmax < 0 {
+		return true
+	}
+
+	// Check for overlap at endpoints.
+	thr := dtSqr(py * 2)
+	if dmin*dmin <= thr || dmax*dmax <= thr {
+		return true
+	}
+
+	return false
+}
+
+func (m *DtNavMesh) getNeighbourTilesAt(x, y, side int32, tiles []*dtMeshTile, maxTiles int32) int32 {
+	nx := x
+	ny := y
+	switch side {
+	case 0:
+		nx++
+	case 1:
+		nx++
+		ny++
+	case 2:
+		ny++
+	case 3:
+		nx--
+		ny++
+	case 4:
+		nx--
+	case 5:
+		nx--
+		ny--
+	case 6:
+		ny--
+	case 7:
+		nx++
+		ny--
+	}
+
+	return m.getTilesAt(nx, ny, tiles, maxTiles)
+}
+
+func (m *DtNavMesh) getTileRefAt(x, y, layer int32) dtTileRef {
+	// Find tile based on hash.
+	h := computeTileHash(x, y, m.m_tileLutMask)
+	tile := m.m_posLookup[h]
+	for tile != nil {
+		if tile.Header != nil &&
+			tile.Header.X == x &&
+			tile.Header.Y == y &&
+			tile.Header.Layer == layer {
+			return m.getTileRef(tile)
+		}
+		tile = tile.Next
+	}
+	return 0
+}
+
+func (m *DtNavMesh) getTileRef(tile *dtMeshTile) dtTileRef {
+	if tile == nil {
+		return 0
+	}
+	//const unsigned int it = (unsigned int)(tile - m_tiles);
+	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles)))
+	return dtTileRef(m.encodePolyId(tile.Salt, it, 0))
 }
