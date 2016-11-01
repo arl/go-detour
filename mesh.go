@@ -11,67 +11,67 @@ import (
 
 /// A navigation mesh based on tiles of convex polygons.
 type DtNavMesh struct {
-	m_params                  dtNavMeshParams ///< Current initialization params. TODO: do not store this info twice.
-	m_orig                    [3]float32      ///< Origin of the tile (0,0)
-	m_tileWidth, m_tileHeight float32         ///< Dimensions of each tile.
-	m_maxTiles                int32           ///< Max number of tiles.
-	m_tileLutSize             int32           ///< Tile hash lookup size (must be pot).
-	m_tileLutMask             int32           ///< Tile hash lookup mask.
+	Params                dtNavMeshParams ///< Current initialization params. TODO: do not store this info twice.
+	Orig                  [3]float32      ///< Origin of the tile (0,0)
+	TileWidth, TileHeight float32         ///< Dimensions of each tile.
+	MaxTiles              int32           ///< Max number of tiles.
+	TileLUTSize           int32           ///< Tile hash lookup size (must be pot).
+	TileLUTMask           int32           ///< Tile hash lookup mask.
 
 	//m_posLookup **dtMeshTile ///< Tile hash lookup.
-	m_posLookup []*dtMeshTile ///< Tile hash lookup.
-	m_nextFree  *dtMeshTile   ///< Freelist of tiles.
-	m_tiles     []dtMeshTile  ///< List of tiles.
+	posLookup []*dtMeshTile ///< Tile hash lookup.
+	nextFree  *dtMeshTile   ///< Freelist of tiles.
+	Tiles     []dtMeshTile  ///< List of tiles.
 
 	//#ifndef DT_POLYREF64
-	m_saltBits uint32 ///< Number of salt bits in the tile ID.
-	m_tileBits uint32 ///< Number of tile bits in the tile ID.
-	m_polyBits uint32 ///< Number of poly bits in the tile ID.
+	saltBits uint32 ///< Number of salt bits in the tile ID.
+	tileBits uint32 ///< Number of tile bits in the tile ID.
+	polyBits uint32 ///< Number of poly bits in the tile ID.
 	//#endif
 }
 
 func (m *DtNavMesh) init(params *dtNavMeshParams) dtStatus {
-	m.m_params = *params
-	m.m_orig = params.Orig
-	m.m_tileWidth = params.TileWidth
-	m.m_tileHeight = params.TileHeight
+	m.Params = *params
+	m.Orig = params.Orig
+	m.TileWidth = params.TileWidth
+	m.TileHeight = params.TileHeight
 
 	// Init tiles
-	m.m_maxTiles = int32(params.MaxTiles)
-	m.m_tileLutSize = int32(dtNextPow2(uint32(params.MaxTiles / 4)))
-	if !(m.m_tileLutSize == 0) {
-		m.m_tileLutSize = 1
+	m.MaxTiles = int32(params.MaxTiles)
+	m.TileLUTSize = int32(dtNextPow2(uint32(params.MaxTiles / 4)))
+	if !(m.TileLUTSize == 0) {
+		m.TileLUTSize = 1
 	}
-	m.m_tileLutMask = m.m_tileLutSize - 1
+	m.TileLUTMask = m.TileLUTSize - 1
 
 	//m.m_tiles = (dtMeshTile*)dtAlloc(sizeof(dtMeshTile)*m_maxTiles, DT_ALLOC_PERM);
-	m.m_tiles = make([]dtMeshTile, m.m_maxTiles, m.m_maxTiles)
+	m.Tiles = make([]dtMeshTile, m.MaxTiles, m.MaxTiles)
 	//if (!m_tiles)
 	//return DT_FAILURE | DT_OUT_OF_MEMORY;
-	m.m_posLookup = make([]*dtMeshTile, m.m_tileLutSize, m.m_tileLutSize)
+	m.posLookup = make([]*dtMeshTile, m.TileLUTSize, m.TileLUTSize)
 	//if (!m_posLookup)
 	//return DT_FAILURE | DT_OUT_OF_MEMORY;
 	//memset(m_tiles, 0, sizeof(dtMeshTile)*m_maxTiles);
 	//memset(m_posLookup, 0, sizeof(dtMeshTile*)*m_tileLutSize);
-	m.m_nextFree = nil
-	for i := m.m_maxTiles - 1; i >= 0; i-- {
-		m.m_tiles[i].Salt = 1
-		m.m_tiles[i].Next = m.m_nextFree
-		m.m_nextFree = &m.m_tiles[i]
+	m.nextFree = nil
+	for i := m.MaxTiles - 1; i >= 0; i-- {
+		m.Tiles[i].Salt = 1
+		m.Tiles[i].Next = m.nextFree
+		m.nextFree = &m.Tiles[i]
 	}
 
 	// Init ID generator values.
 	//#ifndef DT_POLYREF64
-	m.m_tileBits = dtIlog2(dtNextPow2(uint32(params.MaxTiles)))
-	m.m_polyBits = dtIlog2(dtNextPow2(uint32(params.MaxPolys)))
+	m.tileBits = dtIlog2(dtNextPow2(uint32(params.MaxTiles)))
+	m.polyBits = dtIlog2(dtNextPow2(uint32(params.MaxPolys)))
 	// Only allow 31 salt bits, since the salt mask is calculated using 32bit uint and it will overflow.
-	if 31 < 32-m.m_tileBits-m.m_polyBits {
-		m.m_saltBits = 31
+	if 31 < 32-m.tileBits-m.polyBits {
+		m.saltBits = 31
 	} else {
-		m.m_saltBits = 32 - m.m_tileBits - m.m_polyBits
+		m.saltBits = 32 - m.tileBits - m.polyBits
 	}
 
-	if m.m_saltBits < 10 {
+	if m.saltBits < 10 {
 		return dtStatus(DT_FAILURE | DT_INVALID_PARAM)
 	}
 	//#endif
@@ -118,22 +118,22 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	// Allocate a tile.
 	var tile *dtMeshTile
 	if lastRef == 0 {
-		if m.m_nextFree != nil {
-			tile = m.m_nextFree
-			m.m_nextFree = tile.Next
+		if m.nextFree != nil {
+			tile = m.nextFree
+			m.nextFree = tile.Next
 			tile.Next = nil
 		}
 	} else {
 		// Try to relocate the tile to specific index with same salt.
 		tileIndex := int32(m.decodePolyIdTile(dtPolyRef(lastRef)))
-		if tileIndex >= m.m_maxTiles {
-			log.Fatalln("tileIndex >= m.m_maxTiles", tileIndex, m.m_maxTiles)
+		if tileIndex >= m.MaxTiles {
+			log.Fatalln("tileIndex >= m.m_maxTiles", tileIndex, m.MaxTiles)
 			return DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 		// Try to find the specific tile id from the free list.
-		target := &m.m_tiles[tileIndex]
+		target := &m.Tiles[tileIndex]
 		var prev *dtMeshTile
-		tile = m.m_nextFree
+		tile = m.nextFree
 		for tile != nil && tile != target {
 			prev = tile
 			tile = tile.Next
@@ -145,7 +145,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		}
 		// Remove from freelist
 		if prev == nil {
-			m.m_nextFree = tile.Next
+			m.nextFree = tile.Next
 		} else {
 			prev.Next = tile.Next
 		}
@@ -161,9 +161,9 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	}
 
 	// Insert tile into the position lut.
-	h := computeTileHash(hdr.X, hdr.Y, m.m_tileLutMask)
-	tile.Next = m.m_posLookup[h]
-	m.m_posLookup[h] = tile
+	h := computeTileHash(hdr.X, hdr.Y, m.TileLUTMask)
+	tile.Next = m.posLookup[h]
+	m.posLookup[h] = tile
 
 	// Patch header pointers.
 	headerSize := dtAlign4(uint32(unsafe.Sizeof(dtMeshHeader{})))
@@ -294,10 +294,10 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 func (m *DtNavMesh) getTileAt(x, y, layer int32) *dtMeshTile {
 	// Find tile based on hash.
-	h := computeTileHash(x, y, m.m_tileLutMask)
+	h := computeTileHash(x, y, m.TileLUTMask)
 
 	//dtMeshTile* tile = m.m_posLookup[h];
-	tile := m.m_posLookup[h]
+	tile := m.posLookup[h]
 	for tile != nil {
 		if tile.Header != nil &&
 			tile.Header.X == x &&
@@ -373,7 +373,7 @@ func (m *DtNavMesh) getPolyRefBase(tile *dtMeshTile) dtPolyRef {
 	//it := uint32(tile - m.m_tiles)
 	//it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0])))
 
-	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0]))
+	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0]))
 	ip := uint32(e / unsafe.Sizeof(*tile))
 
 	//if it > uint32(len(m.m_tiles)) {
@@ -418,7 +418,7 @@ func (m *DtNavMesh) encodePolyId(salt, it, ip uint32) dtPolyRef {
 	//#ifdef DT_POLYREF64
 	//return ((dtPolyRef)salt << (DT_POLY_BITS+DT_TILE_BITS)) | ((dtPolyRef)it << DT_POLY_BITS) | (dtPolyRef)ip;
 	//#else
-	return (dtPolyRef(salt) << (m.m_polyBits + m.m_tileBits)) | (dtPolyRef(it) << m.m_polyBits) | dtPolyRef(ip)
+	return (dtPolyRef(salt) << (m.polyBits + m.tileBits)) | (dtPolyRef(it) << m.polyBits) | dtPolyRef(ip)
 	//#endif
 }
 
@@ -525,8 +525,8 @@ func (m *DtNavMesh) decodePolyIdTile(ref dtPolyRef) uint32 {
 	//const dtPolyRef tileMask = ((dtPolyRef)1<<DT_TILE_BITS)-1;
 	//return (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
 	//#else
-	tileMask := dtPolyRef((dtPolyRef(1) << m.m_tileBits) - 1)
-	return uint32((ref >> m.m_polyBits) & tileMask)
+	tileMask := dtPolyRef((dtPolyRef(1) << m.tileBits) - 1)
+	return uint32((ref >> m.polyBits) & tileMask)
 	//#endif
 }
 
@@ -539,8 +539,8 @@ func (m *DtNavMesh) decodePolyIdSalt(ref dtPolyRef) uint32 {
 	//const dtPolyRef saltMask = ((dtPolyRef)1<<DT_SALT_BITS)-1;
 	//return (unsigned int)((ref >> (DT_POLY_BITS+DT_TILE_BITS)) & saltMask);
 	//#else
-	saltMask := (dtPolyRef(1) << m.m_saltBits) - 1
-	return uint32((ref >> (m.m_polyBits + m.m_tileBits)) & saltMask)
+	saltMask := (dtPolyRef(1) << m.saltBits) - 1
+	return uint32((ref >> (m.polyBits + m.tileBits)) & saltMask)
 	//#endif
 }
 
@@ -773,7 +773,7 @@ func (m *DtNavMesh) decodePolyIdPoly(ref dtPolyRef) uint32 {
 	//const dtPolyRef polyMask = ((dtPolyRef)1<<DT_POLY_BITS)-1;
 	//return (unsigned int)(ref & polyMask);
 	//#else
-	polyMask := dtPolyRef((1 << m.m_polyBits) - 1)
+	polyMask := dtPolyRef((1 << m.polyBits) - 1)
 	return uint32(ref & polyMask)
 	//#endif
 }
@@ -889,8 +889,8 @@ func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, po
 func (m *DtNavMesh) getTileAndPolyByRefUnsafe(ref dtPolyRef, tile **dtMeshTile, poly **dtPoly) {
 	var salt, it, ip uint32
 	m.decodePolyId(ref, &salt, &it, &ip)
-	*tile = &m.m_tiles[it]
-	*poly = &m.m_tiles[it].Polys[ip]
+	*tile = &m.Tiles[it]
+	*poly = &m.Tiles[it].Polys[ip]
 }
 
 /// Decodes a standard polygon reference.
@@ -909,12 +909,12 @@ func (m *DtNavMesh) decodePolyId(ref dtPolyRef, salt, it, ip *uint32) {
 	//it = (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
 	//ip = (unsigned int)(ref & polyMask);
 	//#else
-	saltMask := (dtPolyRef(1) << m.m_saltBits) - 1
-	tileMask := (dtPolyRef(1) << m.m_tileBits) - 1
-	polyMask := (dtPolyRef(1) << m.m_polyBits) - 1
+	saltMask := (dtPolyRef(1) << m.saltBits) - 1
+	tileMask := (dtPolyRef(1) << m.tileBits) - 1
+	polyMask := (dtPolyRef(1) << m.polyBits) - 1
 
-	*salt = uint32((ref >> (m.m_polyBits + m.m_tileBits)) & saltMask)
-	*it = uint32((ref >> m.m_polyBits) & tileMask)
+	*salt = uint32((ref >> (m.polyBits + m.tileBits)) & saltMask)
+	*it = uint32((ref >> m.polyBits) & tileMask)
 	*ip = uint32(ref & polyMask)
 	//#endif
 }
@@ -1015,8 +1015,8 @@ func (m *DtNavMesh) getTilesAt(x, y int32, tiles []*dtMeshTile, maxTiles int32) 
 	var n int32
 
 	// Find tile based on hash.
-	h := computeTileHash(x, y, m.m_tileLutMask)
-	tile := m.m_posLookup[h]
+	h := computeTileHash(x, y, m.TileLUTMask)
+	tile := m.posLookup[h]
 	for tile != nil {
 		if tile.Header != nil && tile.Header.X == x && tile.Header.Y == y {
 			if n < maxTiles {
@@ -1267,8 +1267,8 @@ func (m *DtNavMesh) getNeighbourTilesAt(x, y, side int32, tiles []*dtMeshTile, m
 
 func (m *DtNavMesh) getTileRefAt(x, y, layer int32) dtTileRef {
 	// Find tile based on hash.
-	h := computeTileHash(x, y, m.m_tileLutMask)
-	tile := m.m_posLookup[h]
+	h := computeTileHash(x, y, m.TileLUTMask)
+	tile := m.posLookup[h]
 	for tile != nil {
 		if tile.Header != nil &&
 			tile.Header.X == x &&
@@ -1287,6 +1287,6 @@ func (m *DtNavMesh) getTileRef(tile *dtMeshTile) dtTileRef {
 	}
 
 	//const unsigned int it = (unsigned int)(tile - m_tiles);
-	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles)))
+	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles)))
 	return dtTileRef(m.encodePolyId(tile.Salt, it, 0))
 }
