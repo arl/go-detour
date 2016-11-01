@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"math"
 	"unsafe"
 )
 
@@ -186,42 +187,42 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	log.Println("offMeshLinksSize", offMeshLinksSize)
 
 	//unsigned char* d = data + headerSize;
-	//tile->verts = dtGetThenAdvanceBufferPointer<float>(d, vertsSize);
+	//tile.verts = dtGetThenAdvanceBufferPointer<float>(d, vertsSize);
 	tile.Verts = make([]float32, 3*hdr.VertCount)
 	binary.Read(r, binary.LittleEndian, &tile.Verts)
 	fmt.Println("verts", tile.Verts)
 
-	//tile->polys = dtGetThenAdvanceBufferPointer<dtPoly>(d, polysSize);
+	//tile.polys = dtGetThenAdvanceBufferPointer<dtPoly>(d, polysSize);
 	tile.Polys = make([]dtPoly, hdr.PolyCount)
 	binary.Read(r, binary.LittleEndian, &tile.Polys)
 	fmt.Println("polys", tile.Polys)
 
-	//tile->links = dtGetThenAdvanceBufferPointer<dtLink>(d, linksSize);
+	//tile.links = dtGetThenAdvanceBufferPointer<dtLink>(d, linksSize);
 	tile.Links = make([]dtLink, hdr.MaxLinkCount)
 	binary.Read(r, binary.LittleEndian, &tile.Links)
 	fmt.Println("links", tile.Links)
 
-	//tile->detailMeshes = dtGetThenAdvanceBufferPointer<dtPolyDetail>(d, detailMeshesSize);
+	//tile.detailMeshes = dtGetThenAdvanceBufferPointer<dtPolyDetail>(d, detailMeshesSize);
 	tile.DetailMeshes = make([]dtPolyDetail, hdr.DetailMeshCount)
 	binary.Read(r, binary.LittleEndian, &tile.DetailMeshes)
 	fmt.Println("detailMeshes", tile.DetailMeshes)
 
-	//tile->detailVerts = dtGetThenAdvanceBufferPointer<float>(d, detailVertsSize);
+	//tile.detailVerts = dtGetThenAdvanceBufferPointer<float>(d, detailVertsSize);
 	tile.DetailVerts = make([]float32, 3*hdr.DetailVertCount)
 	binary.Read(r, binary.LittleEndian, &tile.DetailVerts)
 	fmt.Println("detailVerts", tile.DetailVerts)
 
-	//tile->detailTris = dtGetThenAdvanceBufferPointer<unsigned char>(d, detailTrisSize);
+	//tile.detailTris = dtGetThenAdvanceBufferPointer<unsigned char>(d, detailTrisSize);
 	tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
 	binary.Read(r, binary.LittleEndian, &tile.DetailTris)
 	fmt.Println("detailTris", tile.DetailTris)
 
-	//tile->bvTree = dtGetThenAdvanceBufferPointer<dtBVNode>(d, bvtreeSize);
+	//tile.bvTree = dtGetThenAdvanceBufferPointer<dtBVNode>(d, bvtreeSize);
 	tile.BvTree = make([]dtBVNode, hdr.BvNodeCount)
 	binary.Read(r, binary.LittleEndian, &tile.BvTree)
 	fmt.Println("bvTree", tile.BvTree)
 
-	//tile->offMeshCons = dtGetThenAdvanceBufferPointer<dtOffMeshConnection>(d, offMeshLinksSize);
+	//tile.offMeshCons = dtGetThenAdvanceBufferPointer<dtOffMeshConnection>(d, offMeshLinksSize);
 	tile.OffMeshCons = make([]dtOffMeshConnection, hdr.OffMeshConCount)
 	binary.Read(r, binary.LittleEndian, &tile.OffMeshCons)
 	fmt.Println("offMeshCons", tile.OffMeshCons)
@@ -257,7 +258,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	//int nneis;
 
 	//// Connect with layers in current tile.
-	//nneis = getTilesAt(header->x, header->y, neis, MAX_NEIS);
+	//nneis = getTilesAt(header.x, header.y, neis, MAX_NEIS);
 	//for (int j = 0; j < nneis; ++j)
 	//{
 	//if (neis[j] == tile)
@@ -272,7 +273,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	//// Connect with neighbour tiles.
 	//for (int i = 0; i < 8; ++i)
 	//{
-	//nneis = getNeighbourTilesAt(header->x, header->y, i, neis, MAX_NEIS);
+	//nneis = getNeighbourTilesAt(header.x, header.y, i, neis, MAX_NEIS);
 	//for (int j = 0; j < nneis; ++j)
 	//{
 	//connectExtLinks(tile, neis[j], i);
@@ -353,16 +354,16 @@ func (m *DtNavMesh) connectIntLinks(tile *dtMeshTile) {
 /// Example use case:
 /// @code
 ///
-/// const dtPolyRef base = navmesh->getPolyRefBase(tile);
-/// for (int i = 0; i < tile->header->polyCount; ++i)
+/// const dtPolyRef base = navmesh.getPolyRefBase(tile);
+/// for (int i = 0; i < tile.header.polyCount; ++i)
 /// {
-///     const dtPoly* p = &tile->polys[i];
+///     const dtPoly* p = &tile.polys[i];
 ///     const dtPolyRef ref = base | (dtPolyRef)i;
 ///
 ///     // Use the reference to access the polygon data.
 /// }
 /// @endcode
-func (m DtNavMesh) getPolyRefBase(tile *dtMeshTile) dtPolyRef {
+func (m *DtNavMesh) getPolyRefBase(tile *dtMeshTile) dtPolyRef {
 	if tile == nil {
 		return 0
 	}
@@ -401,7 +402,7 @@ func freeLink(tile *dtMeshTile, link uint32) {
 ///  @param[in]	salt	The tile's salt value.
 ///  @param[in]	it		The index of the tile.
 ///  @param[in]	ip		The index of the polygon within the tile.
-func (m DtNavMesh) encodePolyId(salt, it, ip uint32) dtPolyRef {
+func (m *DtNavMesh) encodePolyId(salt, it, ip uint32) dtPolyRef {
 	//#ifdef DT_POLYREF64
 	//return ((dtPolyRef)salt << (DT_POLY_BITS+DT_TILE_BITS)) | ((dtPolyRef)it << DT_POLY_BITS) | (dtPolyRef)ip;
 	//#else
@@ -443,7 +444,7 @@ type dtPolyDetail struct {
 type dtBVNode struct {
 	Bmin [3]uint16 ///< Minimum bounds of the node's AABB. [(x, y, z)]
 	Bmax [3]uint16 ///< Maximum bounds of the node's AABB. [(x, y, z)]
-	I    int       ///< The node's index. (Negative for escape sequence.)
+	I    int32     ///< The node's index. (Negative for escape sequence.)
 }
 
 /// Defines an navigation mesh off-mesh connection within a dtMeshTile object.
@@ -507,7 +508,7 @@ const (
 ///  @note This function is generally meant for internal use only.
 ///  @param[in]	ref		The polygon reference.
 ///  @see #encodePolyId
-func (m DtNavMesh) decodePolyIdTile(ref dtPolyRef) uint32 {
+func (m *DtNavMesh) decodePolyIdTile(ref dtPolyRef) uint32 {
 	//#ifdef DT_POLYREF64
 	//const dtPolyRef tileMask = ((dtPolyRef)1<<DT_TILE_BITS)-1;
 	//return (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
@@ -521,12 +522,380 @@ func (m DtNavMesh) decodePolyIdTile(ref dtPolyRef) uint32 {
 ///  @note This function is generally meant for internal use only.
 ///  @param[in]	ref		The polygon reference.
 ///  @see #encodePolyId
-func (m DtNavMesh) decodePolyIdSalt(ref dtPolyRef) uint32 {
+func (m *DtNavMesh) decodePolyIdSalt(ref dtPolyRef) uint32 {
 	//#ifdef DT_POLYREF64
 	//const dtPolyRef saltMask = ((dtPolyRef)1<<DT_SALT_BITS)-1;
 	//return (unsigned int)((ref >> (DT_POLY_BITS+DT_TILE_BITS)) & saltMask);
 	//#else
 	saltMask := (dtPolyRef(1) << m.m_saltBits) - 1
 	return uint32((ref >> (m.m_polyBits + m.m_tileBits)) & saltMask)
+	//#endif
+}
+
+func (m *DtNavMesh) baseOffMeshLinks(tile *dtMeshTile) {
+	if tile == nil {
+		return
+	}
+
+	base := m.getPolyRefBase(tile)
+
+	var (
+		i    int32
+		con  *dtOffMeshConnection
+		poly *dtPoly
+	)
+
+	// Base off-mesh connection start points.
+	for i = 0; i < tile.Header.OffMeshConCount; i++ {
+		con = &tile.OffMeshCons[i]
+		poly = &tile.Polys[con.Poly]
+
+		var (
+			ext []float32
+			p   []float32
+		)
+		ext = []float32{con.Rad, tile.Header.WalkableClimb, con.Rad}
+
+		// Find polygon to connect to.
+		//p = &con.Pos[0] // First vertex
+		p = con.Pos[0:3] // First vertex
+		//p = dtVec{con.Pos[0], con.Pos[1], con.Pos[2]} // First vertex
+
+		nearestPt := make([]float32, 3)
+		ref := m.findNearestPolyInTile(tile, p, ext, nearestPt)
+		if ref == 0 {
+			continue
+		}
+		// findNearestPoly may return too optimistic results, further check to make sure.
+		if dtSqr(nearestPt[0]-p[0])+dtSqr(nearestPt[2]-p[2]) > dtSqr(con.Rad) {
+			continue
+		}
+		// Make sure the location is on current mesh.
+		v := tile.Verts[poly.Verts[0]*3 : 3]
+		dtVcopy(v, nearestPt)
+
+		// Link off-mesh connection to target poly.
+		idx := allocLink(tile)
+		if idx != DT_NULL_LINK {
+			link := &tile.Links[idx]
+			link.Ref = ref
+			link.Edge = uint8(0)
+			link.Side = 0xff
+			link.Bmin = 0
+			link.Bmax = 0
+			// Add to linked list.
+			link.Next = poly.FirstLink
+			poly.FirstLink = idx
+		}
+
+		// Start end-point is always connect back to off-mesh connection.
+		tidx := allocLink(tile)
+		if tidx != DT_NULL_LINK {
+			landPolyIdx := uint16(m.decodePolyIdPoly(ref))
+			landPoly := &tile.Polys[landPolyIdx]
+			link := &tile.Links[tidx]
+			link.Ref = base | dtPolyRef(con.Poly)
+			link.Edge = 0xff
+			link.Side = 0xff
+			link.Bmin = 0
+			link.Bmax = 0
+			// Add to linked list.
+			link.Next = landPoly.FirstLink
+			landPoly.FirstLink = tidx
+		}
+	}
+}
+
+func (m *DtNavMesh) findNearestPolyInTile(tile *dtMeshTile, center, extents, nearestPt []float32) dtPolyRef {
+	bmin := make([]float32, 3)
+	bmax := make([]float32, 3)
+	dtVsub(bmin, center, extents)
+	dtVadd(bmax, center, extents)
+
+	// Get nearby polygons from proximity grid.
+	var polys [128]dtPolyRef
+	polyCount := m.queryPolygonsInTile(tile, bmin, bmax, polys[:], 128)
+
+	// Find nearest polygon amongst the nearby polygons.
+	var nearest dtPolyRef
+	nearestDistanceSqr := float32(math.MaxFloat32)
+	var i int32
+	for i = 0; i < polyCount; i++ {
+		ref := polys[i]
+		var (
+			posOverPoly bool
+			d           float32
+		)
+		closestPtPoly := make([]float32, 3)
+		diff := make([]float32, 3)
+		m.closestPointOnPoly(ref, center, closestPtPoly, &posOverPoly)
+
+		// If a point is directly over a polygon and closer than
+		// climb height, favor that instead of straight line nearest point.
+		dtVsub(diff, center, closestPtPoly)
+		if posOverPoly {
+			d = dtAbs(diff[1]) - tile.Header.WalkableClimb
+			if d > 0 {
+				d = d * d
+			} else {
+				d = 0
+			}
+		} else {
+			d = dtVlenSqr(diff)
+		}
+
+		if d < nearestDistanceSqr {
+			dtVcopy(nearestPt, closestPtPoly)
+			nearestDistanceSqr = d
+			nearest = ref
+		}
+	}
+
+	return nearest
+}
+
+func (m *DtNavMesh) queryPolygonsInTile(tile *dtMeshTile, qmin, qmax []float32, polys []dtPolyRef, maxPolys int32) int32 {
+	if tile.BvTree != nil {
+
+		var (
+			// AR: those won't be needed once nodeIdx and endIdx are correctcly
+			// used
+			node *dtBVNode
+			//end  *dtBVNode
+
+			nodeIdx int32
+			endIdx  int32
+
+			tbmin, tbmax [3]float32
+			qfac         float32
+		)
+		//node = &tile.BvTree[0]
+		//end = &tile.BvTree[tile.Header.BvNodeCount]
+		nodeIdx = 0
+		endIdx = tile.Header.BvNodeCount
+
+		tbmin = tile.Header.Bmin
+		tbmin = tile.Header.Bmax
+		qfac = tile.Header.BvQuantFactor
+
+		// Calculate quantized box
+		var bmin, bmax [3]uint16
+		// dtClamp query box to world box.
+		minx := dtClamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
+		miny := dtClamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
+		minz := dtClamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
+		maxx := dtClamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
+		maxy := dtClamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
+		maxz := dtClamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
+		// Quantize
+		bmin[0] = uint16(uint32(qfac*minx) & 0xfffe)
+		bmin[1] = uint16(uint32(qfac*miny) & 0xfffe)
+		bmin[2] = uint16(uint32(qfac*minz) & 0xfffe)
+		bmax[0] = uint16(uint32(qfac*maxx+1) | 1)
+		bmax[1] = uint16(uint32(qfac*maxy+1) | 1)
+		bmax[2] = uint16(uint32(qfac*maxz+1) | 1)
+
+		// Traverse tree
+		base := m.getPolyRefBase(tile)
+		var n int32
+		for nodeIdx < endIdx {
+			node = &tile.BvTree[nodeIdx]
+			overlap := dtOverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
+			isLeafNode := node.I >= 0
+
+			if isLeafNode && overlap {
+				if n < maxPolys {
+					n++
+					polys[n] = base | dtPolyRef(node.I)
+				}
+			}
+
+			if overlap || isLeafNode {
+				nodeIdx++
+			} else {
+				escapeIndex := -node.I
+				nodeIdx += escapeIndex
+			}
+		}
+
+		return n
+	} else {
+
+		bmin := make([]float32, 3)
+		bmax := make([]float32, 3)
+		var n, i int32
+		base := m.getPolyRefBase(tile)
+		for i = 0; i < tile.Header.PolyCount; i++ {
+			p := &tile.Polys[i]
+			// Do not return off-mesh connection polygons.
+			if p.getType() == DT_POLYTYPE_OFFMESH_CONNECTION {
+				continue
+			}
+			// Calc polygon bounds.
+			v := tile.Verts[p.Verts[0]*3 : 3]
+			dtVcopy(bmin, v)
+			dtVcopy(bmax, v)
+			var j uint8
+			for j = 1; j < p.VertCount; j++ {
+				v = tile.Verts[p.Verts[j]*3 : 3]
+				dtVmin(bmin, v)
+				dtVmax(bmax, v)
+			}
+			if dtOverlapBounds(qmin, qmax, bmin, bmax) {
+				if n < maxPolys {
+					n++
+					polys[n] = base | dtPolyRef(i)
+				}
+			}
+		}
+		return n
+	}
+}
+
+/// Extracts the polygon's index (within its tile) from the specified polygon reference.
+///  @note This function is generally meant for internal use only.
+///  @param[in]	ref		The polygon reference.
+///  @see #encodePolyId
+func (m *DtNavMesh) decodePolyIdPoly(ref dtPolyRef) uint32 {
+	//#ifdef DT_POLYREF64
+	//const dtPolyRef polyMask = ((dtPolyRef)1<<DT_POLY_BITS)-1;
+	//return (unsigned int)(ref & polyMask);
+	//#else
+	polyMask := dtPolyRef((1 << m.m_polyBits) - 1)
+	return uint32(ref & polyMask)
+	//#endif
+}
+
+func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, posOverPoly *bool) {
+	var (
+		tile *dtMeshTile
+		poly *dtPoly
+	)
+
+	m.getTileAndPolyByRefUnsafe(ref, &tile, &poly)
+
+	// Off-mesh connections don't have detail polygons.
+	if poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION {
+		var (
+			v0, v1    []float32
+			d0, d1, u float32
+		)
+		v0 = tile.Verts[poly.Verts[0]*3 : 3]
+		v1 = tile.Verts[poly.Verts[1]*3 : 3]
+		d0 = dtVdist(pos, v0)
+		d1 = dtVdist(pos, v1)
+		u = d0 / (d0 + d1)
+		dtVlerp(closest, v0, v1, u)
+		if posOverPoly != nil {
+			*posOverPoly = false
+		}
+		return
+	}
+
+	// CAREFUL with unsafe, double check the ip variable is bounded to
+	// tile.Polys length
+	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
+	ip := uint32(e / unsafe.Sizeof(*poly))
+
+	//unsafe.Pointer(poly)
+	//hdr := (*reflect.SliceHeader)(unsafe.Pointer(&tile.Polys)) // case 1
+	//hdr.Data = uintptr(unsafe.Pointer(p))              // case 6 (this case)
+	//hdr.Len = uintptr(n)
+
+	//ip := uint32(poly - tile.Polys)
+
+	pd := &tile.DetailMeshes[ip]
+
+	// Clamp point to be inside the polygon.
+	verts := make([]float32, DT_VERTS_PER_POLYGON*3)
+	edged := make([]float32, DT_VERTS_PER_POLYGON)
+	edget := make([]float32, DT_VERTS_PER_POLYGON)
+	nv := poly.VertCount
+	var i uint8
+	for i = 0; i < nv; i++ {
+		// TODO: could probably use copy
+		dtVcopy(verts[i*3:3], tile.Verts[poly.Verts[i]*3:3])
+	}
+
+	dtVcopy(closest, pos)
+	if !dtDistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
+		// Point is outside the polygon, dtClamp to nearest edge.
+		dmin := edged[0]
+		var imin uint8
+		for i = 1; i < nv; i++ {
+			if edged[i] < dmin {
+				dmin = edged[i]
+				imin = i
+			}
+		}
+		va := verts[imin*3 : 3]
+		vb := verts[((imin+1)%nv)*3 : 3]
+		dtVlerp(closest, va, vb, edget[imin])
+
+		if posOverPoly != nil {
+			*posOverPoly = false
+		}
+	} else {
+		if posOverPoly != nil {
+			*posOverPoly = true
+		}
+	}
+
+	// Find height at the location.
+	var j uint8
+	for j = 0; j < pd.TriCount; j++ {
+		t := tile.DetailTris[(pd.TriBase+uint32(j))*4 : 3]
+		v := make([][]float32, 3)
+		var k int
+		for k = 0; k < 3; k++ {
+			if t[k] < poly.VertCount {
+				v[k] = tile.Verts[poly.Verts[t[k]]*3 : 3]
+			} else {
+				v[k] = tile.DetailVerts[(pd.VertBase+uint32(t[k]-poly.VertCount))*3 : 3]
+			}
+		}
+		var h float32
+		if dtClosestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
+			closest[1] = h
+			break
+		}
+	}
+}
+
+/// @par
+///
+/// @warning Only use this function if it is known that the provided polygon
+/// reference is valid. This function is faster than #getTileAndPolyByRef, but
+/// it does not validate the reference.
+func (m *DtNavMesh) getTileAndPolyByRefUnsafe(ref dtPolyRef, tile **dtMeshTile, poly **dtPoly) {
+	var salt, it, ip uint32
+	m.decodePolyId(ref, &salt, &it, &ip)
+	*tile = &m.m_tiles[it]
+	*poly = &m.m_tiles[it].Polys[ip]
+}
+
+/// Decodes a standard polygon reference.
+///  @note This function is generally meant for internal use only.
+///  @param[in]	ref   The polygon reference to decode.
+///  @param[out]	salt	The tile's salt value.
+///  @param[out]	it		The index of the tile.
+///  @param[out]	ip		The index of the polygon within the tile.
+///  @see #encodePolyId
+func (m *DtNavMesh) decodePolyId(ref dtPolyRef, salt, it, ip *uint32) {
+	//#ifdef DT_POLYREF64
+	//const dtPolyRef saltMask = ((dtPolyRef)1<<DT_SALT_BITS)-1;
+	//const dtPolyRef tileMask = ((dtPolyRef)1<<DT_TILE_BITS)-1;
+	//const dtPolyRef polyMask = ((dtPolyRef)1<<DT_POLY_BITS)-1;
+	//salt = (unsigned int)((ref >> (DT_POLY_BITS+DT_TILE_BITS)) & saltMask);
+	//it = (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
+	//ip = (unsigned int)(ref & polyMask);
+	//#else
+	saltMask := (dtPolyRef(1) << m.m_saltBits) - 1
+	tileMask := (dtPolyRef(1) << m.m_tileBits) - 1
+	polyMask := (dtPolyRef(1) << m.m_polyBits) - 1
+
+	*salt = uint32((ref >> (m.m_polyBits + m.m_tileBits)) & saltMask)
+	*it = uint32((ref >> m.m_polyBits) & tileMask)
+	*ip = uint32(ref & polyMask)
 	//#endif
 }
