@@ -67,7 +67,10 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 			return nil, err
 		}
 		status := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef, nil)
-		log.Printf("mesh.addTile() returned 0x%x\n", status)
+		if status&DT_FAILURE != 0 {
+			log.Fatal("mesh.addTile() returned 0x%x\n", status)
+		}
 	}
+	log.Println(hdr.NumTiles, "tiles added successfully")
 	return &mesh, nil
 }

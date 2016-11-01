@@ -248,11 +248,10 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 	m.connectIntLinks(tile)
 
-	// Base off-mesh connections to their starting polygons and connect connections inside the tile.
+	// Base off-mesh connections to their starting polygons and connect
+	// connections inside the tile.
 	m.baseOffMeshLinks(tile)
-	log.Println("before baseOffMeshLinks")
 	m.connectExtOffMeshLinks(tile, tile, -1)
-	log.Println("after baseOffMeshLinks")
 
 	// Create connections with neighbour tiles.
 	MAX_NEIS := int32(32)
@@ -266,6 +265,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		if neis[j] == tile {
 			continue
 		}
+		//log.Println("connecting with layers in current tile", neis[j])
 
 		m.connectExtLinks(tile, neis[j], -1)
 		m.connectExtLinks(neis[j], tile, -1)
@@ -277,6 +277,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	for i = 0; i < 8; i++ {
 		nneis = m.getNeighbourTilesAt(hdr.X, hdr.Y, i, neis, MAX_NEIS)
 		for j = 0; j < nneis; j++ {
+			//log.Println("connecting with neighbour tiles", neis[j])
 			m.connectExtLinks(tile, neis[j], i)
 			m.connectExtLinks(neis[j], tile, dtOppositeTile(i))
 			m.connectExtOffMeshLinks(tile, neis[j], i)
@@ -370,17 +371,17 @@ func (m *DtNavMesh) getPolyRefBase(tile *dtMeshTile) dtPolyRef {
 		return 0
 	}
 	//it := uint32(tile - m.m_tiles)
-	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0])))
+	//it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0])))
 
 	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0]))
 	ip := uint32(e / unsafe.Sizeof(*tile))
 
-	if it > uint32(len(m.m_tiles)) {
-		fmt.Println("e", e, "ip", ip)
-		log.Fatalln("houston...", it, ">", len(m.m_tiles))
-	}
+	//if it > uint32(len(m.m_tiles)) {
+	//fmt.Println("e", e, "ip", ip)
+	//log.Fatalln("houston...", it, ">", len(m.m_tiles))
+	//}
 
-	return m.encodePolyId(tile.Salt, it, 0)
+	return m.encodePolyId(tile.Salt, ip, 0)
 }
 
 func computeTileHash(x, y, mask int32) int32 {
@@ -1038,6 +1039,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *dtMeshTile, side int32) {
 	var i int32
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		poly := &tile.Polys[i]
+		log.Println("connecting border links", poly)
 
 		// Create new links.
 		//		unsigned short m = DT_EXT_LINK | (unsigned short)side;
@@ -1283,6 +1285,7 @@ func (m *DtNavMesh) getTileRef(tile *dtMeshTile) dtTileRef {
 	if tile == nil {
 		return 0
 	}
+
 	//const unsigned int it = (unsigned int)(tile - m_tiles);
 	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles)))
 	return dtTileRef(m.encodePolyId(tile.Salt, it, 0))
