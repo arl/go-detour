@@ -1,7 +1,7 @@
 package detour
 
 /// Defines a polygon within a dtMeshTile object.
-type dtPoly struct {
+type DtPoly struct {
 	/// Index to first link in linked list. (Or #DT_NULL_LINK if there is no link.)
 	FirstLink uint32
 
@@ -24,21 +24,21 @@ type dtPoly struct {
 }
 
 /// Sets the user defined area id. [Limit: < #DT_MAX_AREAS]
-func (p *dtPoly) setArea(a uint8) {
+func (p *DtPoly) SetArea(a uint8) {
 	p.AreaAndtype = (p.AreaAndtype & 0xc0) | (a & 0x3f)
 }
 
 /// Sets the polygon type. (See: #dtPolyTypes.)
-func (p *dtPoly) setType(t uint8) {
+func (p *DtPoly) SetType(t uint8) {
 	p.AreaAndtype = (p.AreaAndtype & 0x3f) | (t << 6)
 }
 
 /// Gets the user defined area id.
-func (p *dtPoly) getArea() uint8 {
+func (p *DtPoly) Area() uint8 {
 	return p.AreaAndtype & 0x3f
 }
 
 /// Gets the polygon type. (See: #dtPolyTypes)
-func (p *dtPoly) getType() uint8 {
+func (p *DtPoly) Type() uint8 {
 	return p.AreaAndtype >> 6
 }

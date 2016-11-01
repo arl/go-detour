@@ -4,39 +4,14 @@ type NavMeshSetHeader struct {
 	Magic    int32
 	Version  int32
 	NumTiles int32
-	Params   dtNavMeshParams
+	Params   DtNavMeshParams
 }
 
-//func (hdr *NavMeshSetHeader) decode(r io.Reader) error {
-//err := binary.Read(r, binary.LittleEndian, &hdr.magic)
-//if err != nil {
-//return err
-//}
-//if hdr.magic != NAVMESHSET_MAGIC {
-//return fmt.Errorf("wrong magic number: %x", hdr.magic)
-//}
-
-//err = binary.Read(r, binary.LittleEndian, &hdr.version)
-//if err != nil {
-//return err
-//}
-//if hdr.version != NAVMESHSET_VERSION {
-//return fmt.Errorf("wrong version")
-//}
-
-//err = binary.Read(r, binary.LittleEndian, &hdr.numTiles)
-//if err != nil {
-//return err
-//}
-
-//return hdr.params.decode(r)
-//}
-
-/// Configuration parameters used to define multi-tile navigation meshes.
-/// The values are used to allocate space during the initialization of a navigation mesh.
-/// @see dtNavMesh::init()
-/// @ingroup detour
-type dtNavMeshParams struct {
+// Configuration parameters used to define multi-tile navigation meshes.
+// The values are used to allocate space during the initialization of a navigation mesh.
+// @see dtNavMesh::init()
+// @ingroup detour
+type DtNavMeshParams struct {
 	Orig       [3]float32 ///< The world space origin of the navigation mesh's tile space. [(x, y, z)]
 	TileWidth  float32    ///< The width of each tile. (Along the x-axis.)
 	TileHeight float32    ///< The height of each tile. (Along the z-axis.)
@@ -44,33 +19,8 @@ type dtNavMeshParams struct {
 	MaxPolys   uint32     ///< The maximum number of polygons each tile can contain.
 }
 
-//func (prm *dtNavMeshParams) decode(r io.Reader) error {
-//err := binary.Read(r, binary.LittleEndian, &hdr.magic)
-//if err != nil {
-//return err
-//}
-//if hdr.magic != NAVMESHSET_MAGIC {
-//return fmt.Errorf("wrong magic number: %x", hdr.magic)
-//}
-
-//err = binary.Read(r, binary.LittleEndian, &hdr.version)
-//if err != nil {
-//return err
-//}
-//if hdr.version != NAVMESHSET_VERSION {
-//return fmt.Errorf("wrong version")
-//}
-
-//err = binary.Read(r, binary.LittleEndian, &hdr.numTiles)
-//if err != nil {
-//return err
-//}
-
-//return nil
-//}
-
 // Provides high level information related to a dtMeshTile object.
-type dtMeshHeader struct {
+type DtMeshHeader struct {
 	Magic           int32      // Tile magic number. (Used to identify the data format.)
 	Version         int32      // Tile data format version number.
 	X               int32      // The x-position of the tile within the dtNavMesh tile grid. (x, y, layer)
@@ -101,8 +51,8 @@ type DtMeshTile struct {
 	Salt uint32 // Counter describing modifications to the tile.
 
 	LinksFreeList uint32         // Index to the next free link.
-	Header        *dtMeshHeader  // The tile header.
-	Polys         []dtPoly       // The tile polygons. [Size: dtMeshHeader::polyCount]
+	Header        *DtMeshHeader  // The tile header.
+	Polys         []DtPoly       // The tile polygons. [Size: dtMeshHeader::polyCount]
 	Verts         []float32      // The tile vertices. [Size: dtMeshHeader::vertCount]
 	Links         []dtLink       // The tile links. [Size: dtMeshHeader::maxLinkCount]
 	DetailMeshes  []dtPolyDetail // The tile's detail sub-meshes. [Size: dtMeshHeader::detailMeshCount]

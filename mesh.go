@@ -11,7 +11,7 @@ import (
 
 /// A navigation mesh based on tiles of convex polygons.
 type DtNavMesh struct {
-	Params                dtNavMeshParams ///< Current initialization params. TODO: do not store this info twice.
+	Params                DtNavMeshParams ///< Current initialization params. TODO: do not store this info twice.
 	Orig                  [3]float32      ///< Origin of the tile (0,0)
 	TileWidth, TileHeight float32         ///< Dimensions of each tile.
 	MaxTiles              int32           ///< Max number of tiles.
@@ -30,7 +30,7 @@ type DtNavMesh struct {
 	//#endif
 }
 
-func (m *DtNavMesh) init(params *dtNavMeshParams) dtStatus {
+func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
 	m.Params = *params
 	m.Orig = params.Orig
 	m.TileWidth = params.TileWidth
@@ -97,7 +97,7 @@ func (m *DtNavMesh) init(params *dtNavMeshParams) dtStatus {
 /// @see dtCreateNavMeshData, #removeTile
 func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) dtStatus {
 
-	var hdr dtMeshHeader
+	var hdr DtMeshHeader
 	// prepare a reader on the received data
 	r := bytes.NewReader(data)
 	binary.Read(r, binary.LittleEndian, &hdr)
@@ -166,9 +166,9 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	m.posLookup[h] = tile
 
 	// Patch header pointers.
-	headerSize := dtAlign4(uint32(unsafe.Sizeof(dtMeshHeader{})))
+	headerSize := dtAlign4(uint32(unsafe.Sizeof(DtMeshHeader{})))
 	vertsSize := dtAlign4(uint32(unsafe.Sizeof(float32(0))) * 3 * uint32(hdr.VertCount))
-	polysSize := dtAlign4(uint32(unsafe.Sizeof(dtPoly{})) * uint32(hdr.PolyCount))
+	polysSize := dtAlign4(uint32(unsafe.Sizeof(DtPoly{})) * uint32(hdr.PolyCount))
 	linksSize := dtAlign4(uint32(unsafe.Sizeof(dtLink{})) * uint32(hdr.MaxLinkCount))
 	detailMeshesSize := dtAlign4(uint32(unsafe.Sizeof(dtPolyDetail{})) * uint32(hdr.DetailMeshCount))
 	detailVertsSize := dtAlign4(uint32(unsafe.Sizeof(float32(0))) * 3 * uint32(hdr.DetailVertCount))
@@ -193,7 +193,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	fmt.Println("verts", tile.Verts)
 
 	//tile.polys = dtGetThenAdvanceBufferPointer<dtPoly>(d, polysSize);
-	tile.Polys = make([]dtPoly, hdr.PolyCount)
+	tile.Polys = make([]DtPoly, hdr.PolyCount)
 	binary.Read(r, binary.LittleEndian, &tile.Polys)
 	fmt.Println("polys", tile.Polys)
 
@@ -323,7 +323,7 @@ func (m *DtNavMesh) connectIntLinks(tile *DtMeshTile) {
 		poly := &tile.Polys[i]
 		poly.FirstLink = DT_NULL_LINK
 
-		if poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION {
+		if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
 			continue
 		}
 
@@ -554,7 +554,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 	var (
 		i    int32
 		con  *dtOffMeshConnection
-		poly *dtPoly
+		poly *DtPoly
 	)
 
 	// Base off-mesh connection start points.
@@ -740,7 +740,7 @@ func (m *DtNavMesh) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 		for i = 0; i < tile.Header.PolyCount; i++ {
 			p := &tile.Polys[i]
 			// Do not return off-mesh connection polygons.
-			if p.getType() == DT_POLYTYPE_OFFMESH_CONNECTION {
+			if p.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
 				continue
 			}
 			// Calc polygon bounds.
@@ -781,13 +781,13 @@ func (m *DtNavMesh) decodePolyIdPoly(ref dtPolyRef) uint32 {
 func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, posOverPoly *bool) {
 	var (
 		tile *DtMeshTile
-		poly *dtPoly
+		poly *DtPoly
 	)
 
 	m.getTileAndPolyByRefUnsafe(ref, &tile, &poly)
 
 	// Off-mesh connections don't have detail polygons.
-	if poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION {
+	if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
 		var (
 			v0, v1    []float32
 			d0, d1, u float32
@@ -886,7 +886,7 @@ func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, po
 /// @warning Only use this function if it is known that the provided polygon
 /// reference is valid. This function is faster than #getTileAndPolyByRef, but
 /// it does not validate the reference.
-func (m *DtNavMesh) getTileAndPolyByRefUnsafe(ref dtPolyRef, tile **DtMeshTile, poly **dtPoly) {
+func (m *DtNavMesh) getTileAndPolyByRefUnsafe(ref dtPolyRef, tile **DtMeshTile, poly **DtPoly) {
 	var salt, it, ip uint32
 	m.decodePolyId(ref, &salt, &it, &ip)
 	*tile = &m.Tiles[it]
