@@ -245,10 +245,10 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	tile.DataSize = dataSize
 	tile.Flags = 0
 
-	//connectIntLinks(tile);
+	m.connectIntLinks(tile)
 
-	//// Base off-mesh connections to their starting polygons and connect connections inside the tile.
-	//baseOffMeshLinks(tile);
+	// Base off-mesh connections to their starting polygons and connect connections inside the tile.
+	//baseOffMeshLinks(tile)
 	//connectExtOffMeshLinks(tile, tile, -1);
 
 	//// Create connections with neighbour tiles.
@@ -314,39 +314,38 @@ func (m *DtNavMesh) connectIntLinks(tile *dtMeshTile) {
 
 	base := m.getPolyRefBase(tile)
 
-	//CONTINUER ICI
-	//CONTINUER ICI
-	//CONTINUER ICI
-	//CONTINUER ICI
+	var i int32
+	for i = 0; i < tile.Header.PolyCount; i++ {
+		poly := &tile.Polys[i]
+		poly.FirstLink = DT_NULL_LINK
 
-	//for (int i = 0; i < tile->header->polyCount; ++i) {
-	//dtPoly* poly = &tile->polys[i];
-	//poly->firstLink = DT_NULL_LINK;
+		if poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION {
+			continue
+		}
 
-	//if (poly->getType() == DT_POLYTYPE_OFFMESH_CONNECTION)
-	//continue;
+		// Build edge links backwards so that the links will be
+		// in the linked list from lowest index to highest.
+		var j int32
+		for j = int32(poly.VertCount - 1); j >= 0; j-- {
+			// Skip hard and non-internal edges.
+			if poly.Neis[j] == 0 || ((poly.Neis[j] & DT_EXT_LINK) != 0) {
+				continue
+			}
 
-	//// Build edge links backwards so that the links will be
-	//// in the linked list from lowest index to highest.
-	//for (int j = poly->vertCount-1; j >= 0; --j)
-	//{
-	//// Skip hard and non-internal edges.
-	//if (poly->neis[j] == 0 || (poly->neis[j] & DT_EXT_LINK)) continue;
-
-	//unsigned int idx = allocLink(tile);
-	//if (idx != DT_NULL_LINK)
-	//{
-	//dtLink* link = &tile->links[idx];
-	//link->ref = base | (dtPolyRef)(poly->neis[j]-1);
-	//link->edge = (unsigned char)j;
-	//link->side = 0xff;
-	//link->bmin = link->bmax = 0;
-	//// Add to linked list.
-	//link->next = poly->firstLink;
-	//poly->firstLink = idx;
-	//}
-	//}
-	//}
+			idx := allocLink(tile)
+			if idx != DT_NULL_LINK {
+				link := &tile.Links[idx]
+				link.Ref = base | dtPolyRef(poly.Neis[j]-1)
+				link.Edge = uint8(j)
+				link.Side = 0xff
+				link.Bmin = 0
+				link.Bmax = 0
+				// Add to linked list.
+				link.Next = poly.FirstLink
+				poly.FirstLink = idx
+			}
+		}
+	}
 }
 
 /// @par
@@ -377,6 +376,20 @@ func computeTileHash(x, y, mask int32) int32 {
 	h2 := 0xd8163841 // here arbitrarily chosen primes
 	n := h1*int(x) + h2*int(y)
 	return int32(n) & mask
+}
+
+func allocLink(tile *dtMeshTile) uint32 {
+	if tile.LinksFreeList == DT_NULL_LINK {
+		return DT_NULL_LINK
+	}
+	link := tile.LinksFreeList
+	tile.LinksFreeList = tile.Links[link].Next
+	return link
+}
+
+func freeLink(tile *dtMeshTile, link uint32) {
+	tile.Links[link].Next = tile.LinksFreeList
+	tile.LinksFreeList = link
 }
 
 /// @{
@@ -469,6 +482,25 @@ const (
 
 	/// A version number used to detect compatibility of navigation tile states.
 	DT_NAVMESH_STATE_VERSION = 1
+)
+
+/// Flags representing the type of a navigation mesh polygon.
+type dtPolyTypes uint32
+
+const (
+	/// The polygon is a standard convex polygon that is part of the surface of the mesh.
+	DT_POLYTYPE_GROUND dtPolyTypes = 0
+	/// The polygon is an off-mesh connection consisting of two vertices.
+	DT_POLYTYPE_OFFMESH_CONNECTION = 1
+)
+
+const (
+	/// A flag that indicates that an entity links to an external entity.
+	/// (E.g. A polygon edge is a portal that links to another polygon.)
+	DT_EXT_LINK uint16 = 0x8000
+
+	/// A value that indicates the entity does not link to anything.
+	DT_NULL_LINK uint32 = 0xffffffff
 )
 
 /// Extracts the tile's index from the specified polygon reference.
