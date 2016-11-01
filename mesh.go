@@ -249,26 +249,29 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	m.connectIntLinks(tile)
 
 	// Base off-mesh connections to their starting polygons and connect connections inside the tile.
-	//baseOffMeshLinks(tile)
-	//connectExtOffMeshLinks(tile, tile, -1);
+	m.baseOffMeshLinks(tile)
+	log.Println("before baseOffMeshLinks")
+	m.connectExtOffMeshLinks(tile, tile, -1)
+	log.Println("after baseOffMeshLinks")
 
-	//// Create connections with neighbour tiles.
-	//static const int MAX_NEIS = 32;
-	//dtMeshTile* neis[MAX_NEIS];
-	//int nneis;
+	// Create connections with neighbour tiles.
+	MAX_NEIS := int32(32)
+	neis := make([]*dtMeshTile, MAX_NEIS)
+	var nneis int32
 
-	//// Connect with layers in current tile.
-	//nneis = getTilesAt(header.x, header.y, neis, MAX_NEIS);
-	//for (int j = 0; j < nneis; ++j)
-	//{
-	//if (neis[j] == tile)
-	//continue;
+	// Connect with layers in current tile.
+	nneis = m.getTilesAt(hdr.X, hdr.Y, neis, MAX_NEIS)
+	var j int32
+	for j = 0; j < nneis; j++ {
+		if neis[j] == tile {
+			continue
+		}
 
-	//connectExtLinks(tile, neis[j], -1);
-	//connectExtLinks(neis[j], tile, -1);
-	//connectExtOffMeshLinks(tile, neis[j], -1);
-	//connectExtOffMeshLinks(neis[j], tile, -1);
-	//}
+		m.connectExtLinks(tile, neis[j], -1)
+		m.connectExtLinks(neis[j], tile, -1)
+		m.connectExtOffMeshLinks(tile, neis[j], -1)
+		m.connectExtOffMeshLinks(neis[j], tile, -1)
+	}
 
 	//// Connect with neighbour tiles.
 	//for (int i = 0; i < 8; ++i)
@@ -898,4 +901,279 @@ func (m *DtNavMesh) decodePolyId(ref dtPolyRef, salt, it, ip *uint32) {
 	*it = uint32((ref >> m.m_polyBits) & tileMask)
 	*ip = uint32(ref & polyMask)
 	//#endif
+}
+
+func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *dtMeshTile, side int32) {
+	if tile == nil {
+		return
+	}
+
+	// Connect off-mesh links.
+	// We are interested on links which land from target tile to this tile.
+	var oppositeSide uint8
+	if side == -1 {
+		oppositeSide = 0xff
+	} else {
+		oppositeSide = uint8(dtOppositeTile(side))
+	}
+
+	var i int32
+	for i = 0; i < target.Header.OffMeshConCount; i++ {
+		targetCon := &target.OffMeshCons[i]
+		if targetCon.Side != oppositeSide {
+			continue
+		}
+
+		panic("here7")
+		targetPoly := &target.Polys[targetCon.Poly]
+		// Skip off-mesh connections which start location could not be connected at all.
+		if targetPoly.FirstLink == DT_NULL_LINK {
+			continue
+		}
+
+		panic("here8")
+		ext := []float32{targetCon.Rad, target.Header.WalkableClimb, targetCon.Rad}
+
+		// Find polygon to connect to.
+		p := targetCon.Pos[3:3]
+		nearestPt := make([]float32, 3)
+		ref := m.findNearestPolyInTile(tile, p, ext, nearestPt)
+		if ref == 0 {
+			continue
+		}
+
+		panic("here9")
+		// findNearestPoly may return too optimistic results, further check to make sure.
+		if dtSqr(nearestPt[0]-p[0])+dtSqr(nearestPt[2]-p[2]) > dtSqr(targetCon.Rad) {
+			continue
+		}
+
+		panic("here10")
+		// Make sure the location is on current mesh.
+		v := target.Verts[targetPoly.Verts[1]*3 : 3]
+		dtVcopy(v, nearestPt)
+
+		// Link off-mesh connection to target poly.
+		idx := allocLink(target)
+		if idx != DT_NULL_LINK {
+			link := &target.Links[idx]
+			link.Ref = ref
+			link.Edge = uint8(1)
+			link.Side = oppositeSide
+			link.Bmin = 0
+			link.Bmax = 0
+			// Add to linked list.
+			link.Next = targetPoly.FirstLink
+			targetPoly.FirstLink = idx
+		}
+
+		// Link target poly to off-mesh connection.
+		if (uint32(targetCon.Flags) & DT_OFFMESH_CON_BIDIR) != 0 {
+			tidx := allocLink(tile)
+			if tidx != DT_NULL_LINK {
+				landPolyIdx := uint16(m.decodePolyIdPoly(ref))
+				landPoly := &tile.Polys[landPolyIdx]
+				link := &tile.Links[tidx]
+				link.Ref = m.getPolyRefBase(target) | dtPolyRef(targetCon.Poly)
+				link.Edge = 0xff
+				if side == -1 {
+					link.Side = 0xff
+				} else {
+					link.Side = uint8(side)
+				}
+				link.Bmin = 0
+				link.Bmax = 0
+				// Add to linked list.
+				link.Next = landPoly.FirstLink
+				landPoly.FirstLink = tidx
+			}
+		}
+	}
+}
+
+/// @par
+///
+/// This function will not fail if the tiles array is too small to hold the
+/// entire result set.  It will simply fill the array to capacity.
+func (m *DtNavMesh) getTilesAt(x, y int32, tiles []*dtMeshTile, maxTiles int32) int32 {
+	var n int32
+
+	// Find tile based on hash.
+	h := computeTileHash(x, y, m.m_tileLutMask)
+	tile := m.m_posLookup[h]
+	for tile != nil {
+		if tile.Header != nil && tile.Header.X == x && tile.Header.Y == y {
+			if n < maxTiles {
+				tiles[n] = tile
+				n++
+			}
+		}
+		tile = tile.Next
+	}
+
+	return n
+}
+
+func (m *DtNavMesh) connectExtLinks(tile, target *dtMeshTile, side int32) {
+	if tile == nil {
+		return
+	}
+
+	// Connect border links.
+	var i int32
+	for i = 0; i < tile.Header.PolyCount; i++ {
+		poly := &tile.Polys[i]
+
+		// Create new links.
+		//		unsigned short m = DT_EXT_LINK | (unsigned short)side;
+
+		nv := poly.VertCount
+		var j int32
+		for j = 0; j < int32(nv); j++ {
+			// Skip non-portal edges.
+			if (poly.Neis[j] & DT_EXT_LINK) == 0 {
+				continue
+			}
+
+			dir := (int32)(poly.Neis[j] & 0xff)
+			if side != -1 && dir != side {
+				continue
+			}
+
+			// Create new links
+			va := tile.Verts[poly.Verts[j]*3 : 3]
+			vb := tile.Verts[poly.Verts[(j+1)%int32(nv)]*3 : 3]
+			nei := make([]dtPolyRef, 4)
+			neia := make([]float32, 4*2)
+			nnei := m.findConnectingPolys(va, vb, target, dtOppositeTile(dir), nei, neia, 4)
+			var k int32
+			for k = 0; k < nnei; k++ {
+				idx := allocLink(tile)
+				if idx != DT_NULL_LINK {
+					link := tile.Links[idx]
+					link.Ref = nei[k]
+					link.Edge = uint8(j)
+					link.Side = uint8(dir)
+
+					link.Next = poly.FirstLink
+					poly.FirstLink = idx
+
+					// Compress portal limits to a byte value.
+					if dir == 0 || dir == 4 {
+						tmin := (neia[k*2+0] - va[2]) / (vb[2] - va[2])
+						tmax := (neia[k*2+1] - va[2]) / (vb[2] - va[2])
+						if tmin > tmax {
+							dtSwap(&tmin, &tmax)
+						}
+						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
+						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
+					} else if dir == 2 || dir == 6 {
+						tmin := (neia[k*2+0] - va[0]) / (vb[0] - va[0])
+						tmax := (neia[k*2+1] - va[0]) / (vb[0] - va[0])
+						if tmin > tmax {
+							dtSwap(&tmin, &tmax)
+						}
+						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
+						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
+					}
+				}
+			}
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+func (m *DtNavMesh) findConnectingPolys(va, vb []float32, tile *dtMeshTile, side int32, con []dtPolyRef, conarea []float32, maxcon int32) int32 {
+	if tile == nil {
+		return 0
+	}
+
+	amin := make([]float32, 2)
+	amax := make([]float32, 2)
+	calcSlabEndPoints(va, vb, amin, amax, side)
+	apos := getSlabCoord(va, side)
+
+	// Remove links pointing to 'side' and compact the links array.
+	bmin := make([]float32, 2)
+	bmax := make([]float32, 2)
+	m_ := DT_EXT_LINK | uint16(side)
+	var n int32
+
+	base := m.getPolyRefBase(tile)
+
+	var i int32
+	for i = 0; i < tile.Header.PolyCount; i++ {
+		poly := &tile.Polys[i]
+		nv := poly.VertCount
+		var j int32
+		for j = 0; j < nv; j++ {
+			// Skip edges which do not point to the right side.
+			if poly.neis[j] != m_ {
+				continue
+			}
+
+			vc := tile.verts[poly.verts[j]*3 : 3]
+			vd := tile.verts[poly.verts[(j+1)%nv]*3 : 3]
+			bpos := getSlabCoord(vc, side)
+
+			// Segments are not close enough.
+			if dtAbs(apos-bpos) > 0.01 {
+				continue
+			}
+
+			// Check if the segments touch.
+			calcSlabEndPoints(vc, vd, bmin, bmax, side)
+
+			if !overlapSlabs(amin, amax, bmin, bmax, 0.01, tile.header.walkableClimb) {
+				continue
+			}
+
+			// Add return value.
+			if n < maxcon {
+				conarea[n*2+0] = dtMax(amin[0], bmin[0])
+				conarea[n*2+1] = dtMin(amax[0], bmax[0])
+				con[n] = base | dtPolyRef(i)
+				n++
+			}
+			break
+		}
+	}
+	//return n;
+}
+
+func calcSlabEndPoints(va, vb []float32, bmin, bmax []float32, side int32) {
+	if side == 0 || side == 4 {
+		if va[2] < vb[2] {
+			bmin[0] = va[2]
+			bmin[1] = va[1]
+			bmax[0] = vb[2]
+			bmax[1] = vb[1]
+		} else {
+			bmin[0] = vb[2]
+			bmin[1] = vb[1]
+			bmax[0] = va[2]
+			bmax[1] = va[1]
+		}
+	} else if side == 2 || side == 6 {
+		if va[0] < vb[0] {
+			bmin[0] = va[0]
+			bmin[1] = va[1]
+			bmax[0] = vb[0]
+			bmax[1] = vb[1]
+		} else {
+			bmin[0] = vb[0]
+			bmin[1] = vb[1]
+			bmax[0] = va[0]
+			bmax[1] = va[1]
+		}
+	}
+}
+
+func getSlabCoord(va []float32, side int32) float32 {
+	if side == 0 || side == 4 {
+		return va[0]
+	} else if side == 2 || side == 6 {
+		return va[2]
+	}
+	return 0
 }

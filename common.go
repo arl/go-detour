@@ -185,3 +185,17 @@ func dtClosestHeightPointTriangle(p, a, b, c []float32, h *float32) bool {
 
 	return false
 }
+
+func dtOppositeTile(side int32) int32 {
+	return (side + 4) & 0x7
+}
+
+/// Swaps the values of the two parameters.
+///  @param[in,out]	a	Value A
+///  @param[in,out]	b	Value B
+func dtSwap(a, b *float32) {
+	var t float32
+	t = *a
+	*a = *b
+	*b = t
+}

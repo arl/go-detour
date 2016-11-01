@@ -7,5 +7,8 @@ const (
 
 const (
 	/// The maximum number of vertices per navigation polygon.
-	DT_VERTS_PER_POLYGON int = 6
+	DT_VERTS_PER_POLYGON uint32 = 6
+
+	/// A flag that indicates that an off-mesh connection can be traversed in both directions. (Is bidirectional.)
+	DT_OFFMESH_CON_BIDIR uint32 = 1
 )
