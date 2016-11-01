@@ -97,7 +97,7 @@ type dtMeshHeader struct {
 }
 
 /// Defines a navigation mesh tile.
-type dtMeshTile struct {
+type DtMeshTile struct {
 	Salt uint32 // Counter describing modifications to the tile.
 
 	LinksFreeList uint32         // Index to the next free link.
@@ -119,5 +119,5 @@ type dtMeshTile struct {
 	Data     []uint8     // The tile data. (Not directly accessed under normal situations.)
 	DataSize int32       // Size of the tile data.
 	Flags    int32       // Tile flags. (See: #dtTileFlags)
-	Next     *dtMeshTile // The next free tile, or the next tile in the spatial grid.
+	Next     *DtMeshTile // The next free tile, or the next tile in the spatial grid.
 }

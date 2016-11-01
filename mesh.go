@@ -19,9 +19,9 @@ type DtNavMesh struct {
 	TileLUTMask           int32           ///< Tile hash lookup mask.
 
 	//m_posLookup **dtMeshTile ///< Tile hash lookup.
-	posLookup []*dtMeshTile ///< Tile hash lookup.
-	nextFree  *dtMeshTile   ///< Freelist of tiles.
-	Tiles     []dtMeshTile  ///< List of tiles.
+	posLookup []*DtMeshTile ///< Tile hash lookup.
+	nextFree  *DtMeshTile   ///< Freelist of tiles.
+	Tiles     []DtMeshTile  ///< List of tiles.
 
 	//#ifndef DT_POLYREF64
 	saltBits uint32 ///< Number of salt bits in the tile ID.
@@ -45,10 +45,10 @@ func (m *DtNavMesh) init(params *dtNavMeshParams) dtStatus {
 	m.TileLUTMask = m.TileLUTSize - 1
 
 	//m.m_tiles = (dtMeshTile*)dtAlloc(sizeof(dtMeshTile)*m_maxTiles, DT_ALLOC_PERM);
-	m.Tiles = make([]dtMeshTile, m.MaxTiles, m.MaxTiles)
+	m.Tiles = make([]DtMeshTile, m.MaxTiles, m.MaxTiles)
 	//if (!m_tiles)
 	//return DT_FAILURE | DT_OUT_OF_MEMORY;
-	m.posLookup = make([]*dtMeshTile, m.TileLUTSize, m.TileLUTSize)
+	m.posLookup = make([]*DtMeshTile, m.TileLUTSize, m.TileLUTSize)
 	//if (!m_posLookup)
 	//return DT_FAILURE | DT_OUT_OF_MEMORY;
 	//memset(m_tiles, 0, sizeof(dtMeshTile)*m_maxTiles);
@@ -116,7 +116,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	}
 
 	// Allocate a tile.
-	var tile *dtMeshTile
+	var tile *DtMeshTile
 	if lastRef == 0 {
 		if m.nextFree != nil {
 			tile = m.nextFree
@@ -132,7 +132,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		}
 		// Try to find the specific tile id from the free list.
 		target := &m.Tiles[tileIndex]
-		var prev *dtMeshTile
+		var prev *DtMeshTile
 		tile = m.nextFree
 		for tile != nil && tile != target {
 			prev = tile
@@ -255,7 +255,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 	// Create connections with neighbour tiles.
 	MAX_NEIS := int32(32)
-	neis := make([]*dtMeshTile, MAX_NEIS)
+	neis := make([]*DtMeshTile, MAX_NEIS)
 	var nneis int32
 
 	// Connect with layers in current tile.
@@ -292,7 +292,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	return DT_SUCCESS
 }
 
-func (m *DtNavMesh) getTileAt(x, y, layer int32) *dtMeshTile {
+func (m *DtNavMesh) getTileAt(x, y, layer int32) *DtMeshTile {
 	// Find tile based on hash.
 	h := computeTileHash(x, y, m.TileLUTMask)
 
@@ -311,7 +311,7 @@ func (m *DtNavMesh) getTileAt(x, y, layer int32) *dtMeshTile {
 	return nil
 }
 
-func (m *DtNavMesh) connectIntLinks(tile *dtMeshTile) {
+func (m *DtNavMesh) connectIntLinks(tile *DtMeshTile) {
 	if tile == nil {
 		return
 	}
@@ -366,7 +366,7 @@ func (m *DtNavMesh) connectIntLinks(tile *dtMeshTile) {
 ///     // Use the reference to access the polygon data.
 /// }
 /// @endcode
-func (m *DtNavMesh) getPolyRefBase(tile *dtMeshTile) dtPolyRef {
+func (m *DtNavMesh) getPolyRefBase(tile *DtMeshTile) dtPolyRef {
 	if tile == nil {
 		return 0
 	}
@@ -391,7 +391,7 @@ func computeTileHash(x, y, mask int32) int32 {
 	return int32(n) & mask
 }
 
-func allocLink(tile *dtMeshTile) uint32 {
+func allocLink(tile *DtMeshTile) uint32 {
 	if tile.LinksFreeList == DT_NULL_LINK {
 		return DT_NULL_LINK
 	}
@@ -400,7 +400,7 @@ func allocLink(tile *dtMeshTile) uint32 {
 	return link
 }
 
-func freeLink(tile *dtMeshTile, link uint32) {
+func freeLink(tile *DtMeshTile, link uint32) {
 	tile.Links[link].Next = tile.LinksFreeList
 	tile.LinksFreeList = link
 }
@@ -544,7 +544,7 @@ func (m *DtNavMesh) decodePolyIdSalt(ref dtPolyRef) uint32 {
 	//#endif
 }
 
-func (m *DtNavMesh) baseOffMeshLinks(tile *dtMeshTile) {
+func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 	if tile == nil {
 		return
 	}
@@ -618,7 +618,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *dtMeshTile) {
 	}
 }
 
-func (m *DtNavMesh) findNearestPolyInTile(tile *dtMeshTile, center, extents, nearestPt []float32) dtPolyRef {
+func (m *DtNavMesh) findNearestPolyInTile(tile *DtMeshTile, center, extents, nearestPt []float32) dtPolyRef {
 	bmin := make([]float32, 3)
 	bmax := make([]float32, 3)
 	dtVsub(bmin, center, extents)
@@ -666,7 +666,7 @@ func (m *DtNavMesh) findNearestPolyInTile(tile *dtMeshTile, center, extents, nea
 	return nearest
 }
 
-func (m *DtNavMesh) queryPolygonsInTile(tile *dtMeshTile, qmin, qmax []float32, polys []dtPolyRef, maxPolys int32) int32 {
+func (m *DtNavMesh) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, polys []dtPolyRef, maxPolys int32) int32 {
 	if tile.BvTree != nil {
 
 		var (
@@ -780,7 +780,7 @@ func (m *DtNavMesh) decodePolyIdPoly(ref dtPolyRef) uint32 {
 
 func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, posOverPoly *bool) {
 	var (
-		tile *dtMeshTile
+		tile *DtMeshTile
 		poly *dtPoly
 	)
 
@@ -886,7 +886,7 @@ func (m *DtNavMesh) closestPointOnPoly(ref dtPolyRef, pos, closest []float32, po
 /// @warning Only use this function if it is known that the provided polygon
 /// reference is valid. This function is faster than #getTileAndPolyByRef, but
 /// it does not validate the reference.
-func (m *DtNavMesh) getTileAndPolyByRefUnsafe(ref dtPolyRef, tile **dtMeshTile, poly **dtPoly) {
+func (m *DtNavMesh) getTileAndPolyByRefUnsafe(ref dtPolyRef, tile **DtMeshTile, poly **dtPoly) {
 	var salt, it, ip uint32
 	m.decodePolyId(ref, &salt, &it, &ip)
 	*tile = &m.Tiles[it]
@@ -919,7 +919,7 @@ func (m *DtNavMesh) decodePolyId(ref dtPolyRef, salt, it, ip *uint32) {
 	//#endif
 }
 
-func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *dtMeshTile, side int32) {
+func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32) {
 	if tile == nil {
 		return
 	}
@@ -1011,7 +1011,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *dtMeshTile, side int32)
 ///
 /// This function will not fail if the tiles array is too small to hold the
 /// entire result set.  It will simply fill the array to capacity.
-func (m *DtNavMesh) getTilesAt(x, y int32, tiles []*dtMeshTile, maxTiles int32) int32 {
+func (m *DtNavMesh) getTilesAt(x, y int32, tiles []*DtMeshTile, maxTiles int32) int32 {
 	var n int32
 
 	// Find tile based on hash.
@@ -1030,7 +1030,7 @@ func (m *DtNavMesh) getTilesAt(x, y int32, tiles []*dtMeshTile, maxTiles int32) 
 	return n
 }
 
-func (m *DtNavMesh) connectExtLinks(tile, target *dtMeshTile, side int32) {
+func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 	if tile == nil {
 		return
 	}
@@ -1103,7 +1103,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *dtMeshTile, side int32) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-func (m *DtNavMesh) findConnectingPolys(va, vb []float32, tile *dtMeshTile, side int32, con []dtPolyRef, conarea []float32, maxcon int32) int32 {
+func (m *DtNavMesh) findConnectingPolys(va, vb []float32, tile *DtMeshTile, side int32, con []dtPolyRef, conarea []float32, maxcon int32) int32 {
 	if tile == nil {
 		return 0
 	}
@@ -1236,7 +1236,7 @@ func overlapSlabs(amin, amax, bmin, bmax []float32, px, py float32) bool {
 	return false
 }
 
-func (m *DtNavMesh) getNeighbourTilesAt(x, y, side int32, tiles []*dtMeshTile, maxTiles int32) int32 {
+func (m *DtNavMesh) getNeighbourTilesAt(x, y, side int32, tiles []*DtMeshTile, maxTiles int32) int32 {
 	nx := x
 	ny := y
 	switch side {
@@ -1281,7 +1281,7 @@ func (m *DtNavMesh) getTileRefAt(x, y, layer int32) dtTileRef {
 	return 0
 }
 
-func (m *DtNavMesh) getTileRef(tile *dtMeshTile) dtTileRef {
+func (m *DtNavMesh) getTileRef(tile *DtMeshTile) dtTileRef {
 	if tile == nil {
 		return 0
 	}
