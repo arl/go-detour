@@ -23,11 +23,9 @@ type DtNavMesh struct {
 	nextFree  *DtMeshTile   ///< Freelist of tiles.
 	Tiles     []DtMeshTile  ///< List of tiles.
 
-	//#ifndef DT_POLYREF64
 	saltBits uint32 ///< Number of salt bits in the tile ID.
 	tileBits uint32 ///< Number of tile bits in the tile ID.
 	polyBits uint32 ///< Number of poly bits in the tile ID.
-	//#endif
 }
 
 func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
@@ -44,7 +42,6 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
 	}
 	m.TileLUTMask = m.TileLUTSize - 1
 
-	//m.m_tiles = (dtMeshTile*)dtAlloc(sizeof(dtMeshTile)*m_maxTiles, DT_ALLOC_PERM);
 	m.Tiles = make([]DtMeshTile, m.MaxTiles, m.MaxTiles)
 	//if (!m_tiles)
 	//return DT_FAILURE | DT_OUT_OF_MEMORY;
@@ -61,7 +58,6 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
 	}
 
 	// Init ID generator values.
-	//#ifndef DT_POLYREF64
 	m.tileBits = dtIlog2(dtNextPow2(uint32(params.MaxTiles)))
 	m.polyBits = dtIlog2(dtNextPow2(uint32(params.MaxPolys)))
 	// Only allow 31 salt bits, since the salt mask is calculated using 32bit uint and it will overflow.
@@ -74,7 +70,6 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
 	if m.saltBits < 10 {
 		return dtStatus(DT_FAILURE | DT_INVALID_PARAM)
 	}
-	//#endif
 
 	return DT_SUCCESS
 }
@@ -265,7 +260,6 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		if neis[j] == tile {
 			continue
 		}
-		//log.Println("connecting with layers in current tile", neis[j])
 
 		m.connectExtLinks(tile, neis[j], -1)
 		m.connectExtLinks(neis[j], tile, -1)
