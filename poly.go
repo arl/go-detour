@@ -42,3 +42,26 @@ func (p *DtPoly) Area() uint8 {
 func (p *DtPoly) Type() uint8 {
 	return p.AreaAndtype >> 6
 }
+
+/// Derives the centroid of a convex polygon.
+///  @param[out]	tc		The centroid of the polgyon. [(x, y, z)]
+///  @param[in]		idx		The polygon indices. [(vertIndex) * @p nidx]
+///  @param[in]		nidx	The number of indices in the polygon. [Limit: >= 3]
+///  @param[in]		verts	The polygon vertices. [(x, y, z) * vertCount]
+func DtCalcPolyCenter(tc []float32, idx []uint16, nidx int32, verts []float32) {
+	tc[0] = 0.0
+	tc[1] = 0.0
+	tc[2] = 0.0
+	var j int32
+	for j = 0; j < nidx; j++ {
+		start := idx[j] * 3
+		v := verts[start : start+3]
+		tc[0] += v[0]
+		tc[1] += v[1]
+		tc[2] += v[2]
+	}
+	s := float32(1.0 / float64(nidx))
+	tc[0] *= s
+	tc[1] *= s
+	tc[2] *= s
+}
