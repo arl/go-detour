@@ -49,11 +49,22 @@ func dtVmax(mx, v []float32) {
 	mx[2] = dtMax(mx[2], v[2])
 }
 
-/// Returns the minimum of two values.
+/// Returns the minimum of two float32 values.
 ///  @param[in]		a	Value A
 ///  @param[in]		b	Value B
 ///  @return The minimum of the two values.
 func dtMin(a, b float32) float32 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+/// Returns the minimum of two int32 values.
+///  @param[in]		a	Value A
+///  @param[in]		b	Value B
+///  @return The minimum of the two values.
+func dtiMin(a, b int32) int32 {
 	if a < b {
 		return a
 	}

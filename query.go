@@ -776,15 +776,15 @@ func (q *dtNavMeshQuery) getPathToNode(endNode *dtNode, path *[]dtPolyRef, pathC
 	}
 
 	// Write path
-	for i = writeCount - 1; i >= 0; i-- {
+	for i := writeCount - 1; i >= 0; i-- {
 		assert.True(curNode != nil, "curNode should not be nil")
-		path[i] = curNode.id
+		(*path)[i] = curNode.id
 		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.pidx))
 	}
 
 	assert.True(curNode == nil, "curNode should be nil")
 
-	*pathCount = dtMin(length, maxPath)
+	*pathCount = dtiMin(length, maxPath)
 
 	if length > maxPath {
 		return DT_SUCCESS | DT_BUFFER_TOO_SMALL
