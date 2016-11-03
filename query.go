@@ -470,7 +470,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	}
 
 	// Validate input
-	if !q.m_nav.isValidPolyRef(startRef) || !q.m_nav.isValidPolyRef(endRef) ||
+	if !q.m_nav.IsValidPolyRef(startRef) || !q.m_nav.IsValidPolyRef(endRef) ||
 		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
 
 		return DT_FAILURE | DT_INVALID_PARAM
@@ -529,7 +529,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		bestRef = bestNode.ID
 		bestTile = nil
 		bestPoly = nil
-		q.m_nav.getTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
+		q.m_nav.GetTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
 
 		// Get parent poly and tile.
 		var (
@@ -541,7 +541,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			parentRef = q.m_nodePool.getNodeAtIdx(int32(bestNode.PIdx)).ID
 		}
 		if parentRef != 0 {
-			q.m_nav.getTileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
+			q.m_nav.GetTileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
 		}
 
 		var i uint32
@@ -559,7 +559,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 				neighbourTile *DtMeshTile
 				neighbourPoly *DtPoly
 			)
-			q.m_nav.getTileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
+			q.m_nav.GetTileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
 
 			if !filter.passFilter(neighbourRef, neighbourTile, neighbourPoly) {
 				continue
