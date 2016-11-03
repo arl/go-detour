@@ -457,7 +457,7 @@ func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
 ///
 func (q *DtNavMeshQuery) findPath(startRef, endRef DtPolyRef,
 	startPos, endPos []float32,
-	filter *dtQueryFilter,
+	filter *DtQueryFilter,
 	path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
 
 	//dtAssert(q.m_nav);

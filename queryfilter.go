@@ -34,22 +34,22 @@ package detour
 /// to lead to problems during pathfinding.
 ///
 /// @see dtNavMeshQuery
-type dtQueryFilter struct {
+type DtQueryFilter struct {
 	///< Cost per area type. (Used by default implementation.)
-	m_areaCost [DT_MAX_AREAS]float32
+	areaCost [DT_MAX_AREAS]float32
 	///< Flags for polygons that can be visited. (Used by default implementation.)
-	m_includeFlags uint16
+	includeFlags uint16
 	///< Flags for polygons that should not be visted. (Used by default implementation.)
-	m_excludeFlags uint16
+	excludeFlags uint16
 }
 
-func newDtQueryFilter() *dtQueryFilter {
-	qf := dtQueryFilter{
-		m_includeFlags: 0xffff,
-		m_excludeFlags: 0,
+func newDtQueryFilter() *DtQueryFilter {
+	qf := DtQueryFilter{
+		includeFlags: 0xffff,
+		excludeFlags: 0,
 	}
 	for i := int32(0); i < DT_MAX_AREAS; i++ {
-		qf.m_areaCost[i] = 1.0
+		qf.areaCost[i] = 1.0
 	}
 	return &qf
 }
@@ -57,40 +57,40 @@ func newDtQueryFilter() *dtQueryFilter {
 /// Returns the traversal cost of the area.
 ///  @param[in]		i		The id of the area.
 /// @returns The traversal cost of the area.
-func (qf *dtQueryFilter) getAreaCost(i int32) float32 { return qf.m_areaCost[i] }
+func (qf *DtQueryFilter) getAreaCost(i int32) float32 { return qf.areaCost[i] }
 
 /// Sets the traversal cost of the area.
 ///  @param[in]		i		The id of the area.
 ///  @param[in]		cost	The new cost of traversing the area.
-func (qf *dtQueryFilter) setAreaCost(i int32, cost float32) { qf.m_areaCost[i] = cost }
+func (qf *DtQueryFilter) setAreaCost(i int32, cost float32) { qf.areaCost[i] = cost }
 
 /// Returns the include flags for the filter.
 /// Any polygons that include one or more of these flags will be
 /// included in the operation.
-func (qf *dtQueryFilter) getIncludeFlags() uint16 { return qf.m_includeFlags }
+func (qf *DtQueryFilter) getIncludeFlags() uint16 { return qf.includeFlags }
 
 /// Sets the include flags for the filter.
 /// @param[in]		flags	The new flags.
-func (qf *dtQueryFilter) setIncludeFlags(flags uint16) { qf.m_includeFlags = flags }
+func (qf *DtQueryFilter) setIncludeFlags(flags uint16) { qf.includeFlags = flags }
 
 /// Returns the exclude flags for the filter.
 /// Any polygons that include one ore more of these flags will be
 /// excluded from the operation.
-func (qf *dtQueryFilter) getExcludeFlags() uint16 { return qf.m_excludeFlags }
+func (qf *DtQueryFilter) getExcludeFlags() uint16 { return qf.excludeFlags }
 
 /// Sets the exclude flags for the filter.
 /// @param[in]		flags		The new flags.
-func (qf *dtQueryFilter) setExcludeFlags(flags uint16) { qf.m_excludeFlags = flags }
+func (qf *DtQueryFilter) setExcludeFlags(flags uint16) { qf.excludeFlags = flags }
 
 /// Returns true if the polygon can be visited.  (I.e. Is traversable.)
 ///  @param[in]		ref		The reference id of the polygon test.
 ///  @param[in]		tile	The tile containing the polygon.
 ///  @param[in]		poly  The polygon to test.
-func (qf *dtQueryFilter) passFilter(ref DtPolyRef,
+func (qf *DtQueryFilter) passFilter(ref DtPolyRef,
 	tile *DtMeshTile,
 	poly *DtPoly) bool {
 
-	return (poly.Flags&qf.m_includeFlags) != 0 && (poly.Flags&qf.m_excludeFlags) == 0
+	return (poly.Flags&qf.includeFlags) != 0 && (poly.Flags&qf.excludeFlags) == 0
 }
 
 /// Returns cost to move from the beginning to the end of a line segment
@@ -107,10 +107,10 @@ func (qf *dtQueryFilter) passFilter(ref DtPolyRef,
 ///  @param[in]		nextTile	The tile containing the next polygon. [opt]
 ///  @param[in]		nextPoly	The next polygon. [opt]
 
-func (qf *dtQueryFilter) getCost(pa, pb []float32,
+func (qf *DtQueryFilter) getCost(pa, pb []float32,
 	prevRef DtPolyRef, prevTile *DtMeshTile, prevPoly *DtPoly,
 	curRef DtPolyRef, curTile *DtMeshTile, curPoly *DtPoly,
 	nextRef DtPolyRef, nextTile *DtMeshTile, nextPoly *DtPoly) float32 {
 
-	return dtVdist(pa, pb) * qf.m_areaCost[curPoly.Area()]
+	return dtVdist(pa, pb) * qf.areaCost[curPoly.Area()]
 }
