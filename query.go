@@ -361,8 +361,8 @@ type DtNavMeshQuery struct {
 	m_nav   *DtNavMesh  ///< Pointer to navmesh data.
 	m_query dtQueryData ///< Sliced query state.
 
-	m_tinyNodePool *dtNodePool  ///< Pointer to small node pool.
-	m_nodePool     *dtNodePool  ///< Pointer to node pool.
+	m_tinyNodePool *DtNodePool  ///< Pointer to small node pool.
+	m_nodePool     *DtNodePool  ///< Pointer to node pool.
 	m_openList     *dtNodeQueue ///< Pointer to open list queue.
 }
 
