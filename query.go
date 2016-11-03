@@ -387,11 +387,12 @@ type dtQueryData struct {
 /// functions are used.
 ///
 /// This function can be used multiple times.
-func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
+func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatus) {
 	if maxNodes > int32(DT_NULL_IDX) || maxNodes > int32(1<<DT_NODE_PARENT_BITS)-1 {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return nil, DT_FAILURE | DT_INVALID_PARAM
 	}
 
+	q := &DtNavMeshQuery{}
 	q.m_nav = nav
 
 	if q.m_nodePool == nil || q.m_nodePool.getMaxNodes() < maxNodes {
@@ -403,7 +404,7 @@ func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
 		//m_nodePool = new (dtAlloc(sizeof(dtNodePool), DT_ALLOC_PERM)) dtNodePool(maxNodes, dtNextPow2(maxNodes/4));
 		q.m_nodePool = newDtNodePool(maxNodes, int32(dtNextPow2(uint32(maxNodes/4))))
 		if q.m_nodePool == nil {
-			return DT_FAILURE | DT_OUT_OF_MEMORY
+			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 	} else {
 		q.m_nodePool.clear()
@@ -412,7 +413,7 @@ func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
 	if q.m_tinyNodePool == nil {
 		q.m_tinyNodePool = newDtNodePool(64, 32)
 		if q.m_tinyNodePool == nil {
-			return DT_FAILURE | DT_OUT_OF_MEMORY
+			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 	} else {
 		q.m_tinyNodePool.clear()
@@ -426,13 +427,13 @@ func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
 		}
 		q.m_openList = newDtNodeQueue(maxNodes)
 		if q.m_openList == nil {
-			return DT_FAILURE | DT_OUT_OF_MEMORY
+			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 	} else {
 		q.m_openList.clear()
 	}
 
-	return DT_SUCCESS
+	return q, DT_SUCCESS
 }
 
 /// Finds a path from the start polygon to the end polygon.
@@ -455,7 +456,7 @@ func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
 /// The start and end positions are used to calculate traversal costs.
 /// (The y-values impact the result.)
 ///
-func (q *DtNavMeshQuery) findPath(startRef, endRef DtPolyRef,
+func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	startPos, endPos []float32,
 	filter *DtQueryFilter,
 	path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
@@ -667,7 +668,7 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 	left := make([]float32, 3)
 	right := make([]float32, 3)
 
-	if dtStatusFailed(q.getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
+	if DtStatusFailed(q.getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 	mid[0] = (left[0] + right[0]) * 0.5

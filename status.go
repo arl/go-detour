@@ -20,21 +20,21 @@ const (
 )
 
 // Returns true of status is success.
-func dtStatusSucceed(status DtStatus) bool {
+func DtStatusSucceed(status DtStatus) bool {
 	return (status & DT_SUCCESS) != 0
 }
 
 // Returns true of status is failure.
-func dtStatusFailed(status DtStatus) bool {
+func DtStatusFailed(status DtStatus) bool {
 	return (status & DT_FAILURE) != 0
 }
 
 // Returns true of status is in progress.
-func dtStatusInProgress(status DtStatus) bool {
+func DtStatusInProgress(status DtStatus) bool {
 	return (status & DT_IN_PROGRESS) != 0
 }
 
 // Returns true if specific detail is set.
-func dtStatusDetail(status DtStatus, detail uint32) bool {
+func DtStatusDetail(status DtStatus, detail uint32) bool {
 	return (uint32(status) & detail) != 0
 }

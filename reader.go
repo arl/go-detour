@@ -36,7 +36,7 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 
 	var mesh DtNavMesh
 	status := mesh.init(&hdr.Params)
-	if dtStatusFailed(status) {
+	if DtStatusFailed(status) {
 		return nil, fmt.Errorf("status failed 0x%x", status)
 	}
 
