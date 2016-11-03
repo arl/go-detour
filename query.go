@@ -363,7 +363,7 @@ type DtNavMeshQuery struct {
 
 	m_tinyNodePool *DtNodePool  ///< Pointer to small node pool.
 	m_nodePool     *DtNodePool  ///< Pointer to node pool.
-	m_openList     *dtNodeQueue ///< Pointer to open list queue.
+	m_openList     *DtNodeQueue ///< Pointer to open list queue.
 }
 
 type dtQueryData struct {

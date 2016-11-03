@@ -6,87 +6,87 @@ import (
 	"github.com/aurelien-rainone/assertgo"
 )
 
-type dtNodeQueue struct {
-	m_heap     []*DtNode
-	m_capacity int32
-	m_size     int32
+type DtNodeQueue struct {
+	heap     []*DtNode
+	capacity int32
+	size     int32
 }
 
-func newDtNodeQueue(n int32) *dtNodeQueue {
-	q := &dtNodeQueue{}
+func newDtNodeQueue(n int32) *DtNodeQueue {
+	q := &DtNodeQueue{}
 
-	q.m_capacity = n
-	assert.True(q.m_capacity > 0, "dtNodeQueue capacity must be > 0")
+	q.capacity = n
+	assert.True(q.capacity > 0, "dtNodeQueue capacity must be > 0")
 
-	q.m_heap = make([]*DtNode, q.m_capacity+1)
-	assert.True(len(q.m_heap) > 0, "allocation error")
+	q.heap = make([]*DtNode, q.capacity+1)
+	assert.True(len(q.heap) > 0, "allocation error")
 
 	return q
 }
 
-func (q *dtNodeQueue) bubbleUp(i int32, node *DtNode) {
+func (q *DtNodeQueue) bubbleUp(i int32, node *DtNode) {
 	parent := (i - 1) / 2
 	// note: (index > 0) means there is a parent
-	for (i > 0) && (q.m_heap[parent].Total > node.Total) {
-		q.m_heap[i] = q.m_heap[parent]
+	for (i > 0) && (q.heap[parent].Total > node.Total) {
+		q.heap[i] = q.heap[parent]
 		i = parent
 		parent = (i - 1) / 2
 	}
-	q.m_heap[i] = node
+	q.heap[i] = node
 }
 
-func (q *dtNodeQueue) trickleDown(i int32, node *DtNode) {
+func (q *DtNodeQueue) trickleDown(i int32, node *DtNode) {
 	child := (i * 2) + 1
-	for child < q.m_size {
-		if ((child + 1) < q.m_size) &&
-			(q.m_heap[child].Total > q.m_heap[child+1].Total) {
+	for child < q.size {
+		if ((child + 1) < q.size) &&
+			(q.heap[child].Total > q.heap[child+1].Total) {
 			child++
 		}
-		q.m_heap[i] = q.m_heap[child]
+		q.heap[i] = q.heap[child]
 		i = child
 		child = (i * 2) + 1
 	}
 	q.bubbleUp(i, node)
 }
 
-func (q *dtNodeQueue) clear() {
-	q.m_size = 0
+func (q *DtNodeQueue) clear() {
+	q.size = 0
 }
 
-func (q *dtNodeQueue) top() *DtNode {
-	return q.m_heap[0]
+func (q *DtNodeQueue) top() *DtNode {
+	return q.heap[0]
 }
 
-func (q *dtNodeQueue) pop() *DtNode {
-	result := q.m_heap[0]
-	q.m_size--
-	q.trickleDown(0, q.m_heap[q.m_size])
+func (q *DtNodeQueue) pop() *DtNode {
+	result := q.heap[0]
+	q.size--
+	q.trickleDown(0, q.heap[q.size])
 	return result
 }
 
-func (q *dtNodeQueue) push(node *DtNode) {
-	q.m_size++
-	q.bubbleUp(q.m_size-1, node)
+func (q *DtNodeQueue) push(node *DtNode) {
+	q.size++
+	q.bubbleUp(q.size-1, node)
 }
 
-func (q *dtNodeQueue) modify(node *DtNode) {
-	for i := int32(0); i < q.m_size; i++ {
-		if q.m_heap[i] == node {
+func (q *DtNodeQueue) modify(node *DtNode) {
+	for i := int32(0); i < q.size; i++ {
+		if q.heap[i] == node {
 			q.bubbleUp(i, node)
 			return
 		}
 	}
 }
 
-func (q *dtNodeQueue) empty() bool {
-	return q.m_size == 0
+func (q *DtNodeQueue) empty() bool {
+	return q.size == 0
 }
 
-func (q *dtNodeQueue) getMemUsed() int32 {
+func (q *DtNodeQueue) getMemUsed() int32 {
 	return int32(unsafe.Sizeof(*q)) +
-		int32(unsafe.Sizeof(DtNode{}))*(q.m_capacity+1)
+		int32(unsafe.Sizeof(DtNode{}))*(q.capacity+1)
 }
 
-func (q *dtNodeQueue) getCapacity() int32 {
-	return q.m_capacity
+func (q *DtNodeQueue) getCapacity() int32 {
+	return q.capacity
 }
