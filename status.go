@@ -1,10 +1,10 @@
 package detour
 
-type dtStatus uint32
+type DtStatus uint32
 
 // High level status.
 const (
-	DT_FAILURE     dtStatus = 1 << 31 // Operation failed.
+	DT_FAILURE     DtStatus = 1 << 31 // Operation failed.
 	DT_SUCCESS              = 1 << 30 // Operation succeed.
 	DT_IN_PROGRESS          = 1 << 29 // Operation still in progress.
 
@@ -20,21 +20,21 @@ const (
 )
 
 // Returns true of status is success.
-func dtStatusSucceed(status dtStatus) bool {
+func dtStatusSucceed(status DtStatus) bool {
 	return (status & DT_SUCCESS) != 0
 }
 
 // Returns true of status is failure.
-func dtStatusFailed(status dtStatus) bool {
+func dtStatusFailed(status DtStatus) bool {
 	return (status & DT_FAILURE) != 0
 }
 
 // Returns true of status is in progress.
-func dtStatusInProgress(status dtStatus) bool {
+func dtStatusInProgress(status DtStatus) bool {
 	return (status & DT_IN_PROGRESS) != 0
 }
 
 // Returns true if specific detail is set.
-func dtStatusDetail(status dtStatus, detail uint32) bool {
+func dtStatusDetail(status DtStatus, detail uint32) bool {
 	return (uint32(status) & detail) != 0
 }

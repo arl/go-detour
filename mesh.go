@@ -28,7 +28,7 @@ type DtNavMesh struct {
 	polyBits uint32 ///< Number of poly bits in the tile ID.
 }
 
-func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
+func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	m.Params = *params
 	m.Orig = params.Orig
 	m.TileWidth = params.TileWidth
@@ -68,7 +68,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
 	}
 
 	if m.saltBits < 10 {
-		return dtStatus(DT_FAILURE | DT_INVALID_PARAM)
+		return DtStatus(DT_FAILURE | DT_INVALID_PARAM)
 	}
 
 	return DT_SUCCESS
@@ -90,7 +90,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) dtStatus {
 /// removed from this nav mesh.
 ///
 /// @see dtCreateNavMeshData, #removeTile
-func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) dtStatus {
+func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) DtStatus {
 
 	var hdr DtMeshHeader
 	// prepare a reader on the received data

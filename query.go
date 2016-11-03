@@ -367,7 +367,7 @@ type DtNavMeshQuery struct {
 }
 
 type dtQueryData struct {
-	status           dtStatus
+	status           DtStatus
 	lastBestNode     *DtNode
 	lastBestNodeCost float32
 	startRef, endRef DtPolyRef
@@ -387,7 +387,7 @@ type dtQueryData struct {
 /// functions are used.
 ///
 /// This function can be used multiple times.
-func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) dtStatus {
+func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) DtStatus {
 	if maxNodes > int32(DT_NULL_IDX) || maxNodes > int32(1<<DT_NODE_PARENT_BITS)-1 {
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
@@ -458,7 +458,7 @@ func (q *DtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) dtStatus {
 func (q *DtNavMeshQuery) findPath(startRef, endRef DtPolyRef,
 	startPos, endPos []float32,
 	filter *dtQueryFilter,
-	path *[]DtPolyRef, pathCount *int32, maxPath int32) dtStatus {
+	path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
 
 	//dtAssert(q.m_nav);
 	//dtAssert(q.m_nodePool);
@@ -662,7 +662,7 @@ func (q *DtNavMeshQuery) findPath(startRef, endRef DtPolyRef,
 // Returns edge mid point between two polygons.
 func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 	fromPoly *DtPoly, fromTile *DtMeshTile,
-	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile, mid []float32) dtStatus {
+	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile, mid []float32) DtStatus {
 
 	left := make([]float32, 3)
 	right := make([]float32, 3)
@@ -679,7 +679,7 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 // Returns portal points between two polygons.
 func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
 	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile,
-	left, right []float32) dtStatus {
+	left, right []float32) DtStatus {
 
 	// Find the link that points to the 'to' polygon.
 	var link *dtLink
@@ -750,7 +750,7 @@ func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromT
 }
 
 // Gets the path leading to the specified end node.
-func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathCount *int32, maxPath int32) dtStatus {
+func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
 
 	var (
 		curNode *DtNode
