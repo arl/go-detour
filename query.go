@@ -1,5 +1,11 @@
 package detour
 
+import "github.com/aurelien-rainone/assertgo"
+
+const (
+	H_SCALE float32 = 0.999 // Search heuristic scale.
+)
+
 /// Provides the ability to perform pathfinding related queries against
 /// a navigation mesh.
 /// @ingroup detour
@@ -7,21 +13,6 @@ type dtNavMeshQuery struct {
 
 	/// @name Standard Pathfinding Functions
 	// /@{
-
-	/// Finds a path from the start polygon to the end polygon.
-	///  @param[in]		startRef	The refrence id of the start polygon.
-	///  @param[in]		endRef		The reference id of the end polygon.
-	///  @param[in]		startPos	A position within the start polygon. [(x, y, z)]
-	///  @param[in]		endPos		A position within the end polygon. [(x, y, z)]
-	///  @param[in]		filter		The polygon filter to apply to the query.
-	///  @param[out]	path		An ordered list of polygon references representing the path. (Start to end.)
-	///  							[(polyRef) * @p pathCount]
-	///  @param[out]	pathCount	The number of polygons returned in the @p path array.
-	///  @param[in]		maxPath		The maximum number of polygons the @p path array can hold. [Limit: >= 1]
-	//dtStatus findPath(dtPolyRef startRef, dtPolyRef endRef,
-	//const float* startPos, const float* endPos,
-	//const dtQueryFilter* filter,
-	//dtPolyRef* path, int* pathCount, const int maxPath) const;
 
 	///// Finds the straight path from the start to the end position within the polygon corridor.
 	/////  @param[in]		startPos			Path start position. [(x, y, z)]
@@ -353,9 +344,6 @@ type dtNavMeshQuery struct {
 
 	///// Returns edge mid point between two polygons.
 	//dtStatus getEdgeMidPoint(dtPolyRef from, dtPolyRef to, float* mid) const;
-	//dtStatus getEdgeMidPoint(dtPolyRef from, const dtPoly* fromPoly, const dtMeshTile* fromTile,
-	//dtPolyRef to, const dtPoly* toPoly, const dtMeshTile* toTile,
-	//float* mid) const;
 
 	//// Appends vertex to a straight path
 	//dtStatus appendVertex(const float* pos, const unsigned char flags, const dtPolyRef ref,
@@ -442,6 +430,364 @@ func (q *dtNavMeshQuery) init(nav *DtNavMesh, maxNodes int32) dtStatus {
 		}
 	} else {
 		q.m_openList.clear()
+	}
+
+	return DT_SUCCESS
+}
+
+/// Finds a path from the start polygon to the end polygon.
+///  @param[in]		startRef	The refrence id of the start polygon.
+///  @param[in]		endRef		The reference id of the end polygon.
+///  @param[in]		startPos	A position within the start polygon. [(x, y, z)]
+///  @param[in]		endPos		A position within the end polygon. [(x, y, z)]
+///  @param[in]		filter		The polygon filter to apply to the query.
+///  @param[out]	path		An ordered list of polygon references representing the path. (Start to end.)
+///  							[(polyRef) * @p pathCount]
+///  @param[out]	pathCount	The number of polygons returned in the @p path array.
+///  @param[in]		maxPath		The maximum number of polygons the @p path array can hold. [Limit: >= 1]
+///
+/// If the end polygon cannot be reached through the navigation graph,
+/// the last polygon in the path will be the nearest the end polygon.
+///
+/// If the path array is to small to hold the full result, it will be filled as
+/// far as possible from the start polygon toward the end polygon.
+///
+/// The start and end positions are used to calculate traversal costs.
+/// (The y-values impact the result.)
+///
+func (q *dtNavMeshQuery) findPath(startRef, endRef dtPolyRef,
+	startPos, endPos []float32,
+	filter *dtQueryFilter,
+	path *[]dtPolyRef, pathCount *int32, maxPath int32) dtStatus {
+
+	//dtAssert(q.m_nav);
+	//dtAssert(q.m_nodePool);
+	//dtAssert(q.m_openList);
+
+	if pathCount != nil {
+		*pathCount = 0
+	}
+
+	// Validate input
+	if !q.m_nav.isValidPolyRef(startRef) || !q.m_nav.isValidPolyRef(endRef) ||
+		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
+
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	if startRef == endRef {
+		(*path)[0] = startRef
+		*pathCount = 1
+		return DT_SUCCESS
+	}
+
+	q.m_nodePool.clear()
+	q.m_openList.clear()
+
+	var (
+		startNode, lastBestNode *dtNode
+		lastBestNodeCost        float32
+	)
+	startNode = q.m_nodePool.getNode2(startRef)
+	dtVcopy(startNode.pos[:], startPos)
+	startNode.pidx = 0
+	startNode.cost = 0
+	startNode.total = dtVdist(startPos, endPos) * H_SCALE
+	startNode.id = startRef
+	startNode.flags = uint8(DT_NODE_OPEN)
+	q.m_openList.push(startNode)
+
+	lastBestNode = startNode
+	lastBestNodeCost = startNode.total
+
+	outOfNodes := false
+
+	for !q.m_openList.empty() {
+
+		var bestNode *dtNode
+
+		// Remove node from open list and put it in closed list.
+		bestNode = q.m_openList.pop()
+		bestNode.flags &= ^(uint8(DT_NODE_OPEN))
+		bestNode.flags |= DT_NODE_CLOSED
+
+		// Reached the goal, stop searching.
+		if bestNode.id == endRef {
+			lastBestNode = bestNode
+			break
+		}
+
+		// Get current poly and tile.
+		// The API input has been cheked already, skip checking internal data.
+		var (
+			bestRef  dtPolyRef
+			bestTile *DtMeshTile
+			bestPoly *DtPoly
+		)
+
+		bestRef = bestNode.id
+		bestTile = nil
+		bestPoly = nil
+		q.m_nav.getTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
+
+		// Get parent poly and tile.
+		var (
+			parentRef  dtPolyRef
+			parentTile *DtMeshTile
+			parentPoly *DtPoly
+		)
+		if bestNode.pidx != 0 {
+			parentRef = q.m_nodePool.getNodeAtIdx(int32(bestNode.pidx)).id
+		}
+		if parentRef != 0 {
+			q.m_nav.getTileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
+		}
+
+		var i uint32
+		for i = bestPoly.FirstLink; i != DT_NULL_LINK; i = bestTile.Links[i].Next {
+			neighbourRef := bestTile.Links[i].Ref
+
+			// Skip invalid ids and do not expand back to where we came from.
+			if neighbourRef == 0 || neighbourRef == parentRef {
+				continue
+			}
+
+			// Get neighbour poly and tile.
+			// The API input has been cheked already, skip checking internal data.
+			var (
+				neighbourTile *DtMeshTile
+				neighbourPoly *DtPoly
+			)
+			q.m_nav.getTileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
+
+			if !filter.passFilter(neighbourRef, neighbourTile, neighbourPoly) {
+				continue
+			}
+
+			// deal explicitly with crossing tile boundaries
+			var crossSide uint8
+			if bestTile.Links[i].Side != 0xff {
+				crossSide = bestTile.Links[i].Side >> 1
+			}
+
+			// get the node
+			neighbourNode := q.m_nodePool.getNode(neighbourRef, crossSide)
+			if neighbourNode == nil {
+				outOfNodes = true
+				continue
+			}
+
+			// If the node is visited the first time, calculate node position.
+			if neighbourNode.flags == 0 {
+				q.getEdgeMidPoint(bestRef, bestPoly, bestTile,
+					neighbourRef, neighbourPoly, neighbourTile,
+					neighbourNode.pos[:])
+			}
+
+			// Calculate cost and heuristic.
+			var cost, heuristic float32
+
+			// Special case for last node.
+			if neighbourRef == endRef {
+				// Cost
+				curCost := filter.getCost(bestNode.pos[:], neighbourNode.pos[:],
+					parentRef, parentTile, parentPoly,
+					bestRef, bestTile, bestPoly,
+					neighbourRef, neighbourTile, neighbourPoly)
+				endCost := filter.getCost(neighbourNode.pos[:], endPos[:],
+					bestRef, bestTile, bestPoly,
+					neighbourRef, neighbourTile, neighbourPoly,
+					0, nil, nil)
+
+				cost = bestNode.cost + curCost + endCost
+				heuristic = 0
+			} else {
+				// Cost
+				curCost := filter.getCost(bestNode.pos[:], neighbourNode.pos[:],
+					parentRef, parentTile, parentPoly,
+					bestRef, bestTile, bestPoly,
+					neighbourRef, neighbourTile, neighbourPoly)
+				cost = bestNode.cost + curCost
+				heuristic = dtVdist(neighbourNode.pos[:], endPos[:]) * H_SCALE
+			}
+
+			total := cost + heuristic
+
+			// The node is already in open list and the new result is worse, skip.
+			if (neighbourNode.flags&uint8(DT_NODE_OPEN)) != 0 && total >= neighbourNode.total {
+				continue
+			}
+			// The node is already visited and process, and the new result is worse, skip.
+			if (neighbourNode.flags&uint8(DT_NODE_CLOSED)) != 0 && total >= neighbourNode.total {
+				continue
+			}
+
+			// Add or update the node.
+			neighbourNode.pidx = q.m_nodePool.getNodeIdx(bestNode)
+			neighbourNode.id = neighbourRef
+			neighbourNode.flags = (neighbourNode.flags & ^uint8(DT_NODE_CLOSED))
+			neighbourNode.cost = cost
+			neighbourNode.total = total
+
+			if (neighbourNode.flags & uint8(DT_NODE_OPEN)) != 0 {
+				// Already in open, update node location.
+				q.m_openList.modify(neighbourNode)
+			} else {
+				// Put the node in open list.
+				neighbourNode.flags |= uint8(DT_NODE_OPEN)
+				q.m_openList.push(neighbourNode)
+			}
+
+			// Update nearest node to target so far.
+			if heuristic < lastBestNodeCost {
+				lastBestNodeCost = heuristic
+				lastBestNode = neighbourNode
+			}
+		}
+	}
+
+	status := q.getPathToNode(lastBestNode, path, pathCount, maxPath)
+
+	if lastBestNode.id != endRef {
+		status |= DT_PARTIAL_RESULT
+	}
+
+	if outOfNodes {
+		status |= DT_OUT_OF_NODES
+	}
+
+	return status
+}
+
+// Returns edge mid point between two polygons.
+func (q *dtNavMeshQuery) getEdgeMidPoint(from dtPolyRef,
+	fromPoly *DtPoly, fromTile *DtMeshTile,
+	to dtPolyRef, toPoly *DtPoly, toTile *DtMeshTile, mid []float32) dtStatus {
+
+	left := make([]float32, 3)
+	right := make([]float32, 3)
+
+	if dtStatusFailed(q.getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+	mid[0] = (left[0] + right[0]) * 0.5
+	mid[1] = (left[1] + right[1]) * 0.5
+	mid[2] = (left[2] + right[2]) * 0.5
+	return DT_SUCCESS
+}
+
+// Returns portal points between two polygons.
+func (q *dtNavMeshQuery) getPortalPoints(from dtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
+	to dtPolyRef, toPoly *DtPoly, toTile *DtMeshTile,
+	left, right []float32) dtStatus {
+
+	// Find the link that points to the 'to' polygon.
+	var link *dtLink
+	for i := fromPoly.FirstLink; i != DT_NULL_LINK; i = fromTile.Links[i].Next {
+		if fromTile.Links[i].Ref == to {
+			link = &fromTile.Links[i]
+			break
+		}
+	}
+	if link == nil {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	// Handle off-mesh connections.
+	if fromPoly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+		// Find link that points to first vertex.
+		for i := fromPoly.FirstLink; i != DT_NULL_LINK; i = fromTile.Links[i].Next {
+			if fromTile.Links[i].Ref == to {
+				// TODO: AR, repass here and test
+				v := fromTile.Links[i].Edge
+				vidx := fromPoly.Verts[v] * 3
+				dtVcopy(left, fromTile.Verts[vidx:vidx+3])
+				dtVcopy(right, fromTile.Verts[vidx:vidx+3])
+				return DT_SUCCESS
+			}
+		}
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	if toPoly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+		for i := toPoly.FirstLink; i != DT_NULL_LINK; i = toTile.Links[i].Next {
+			if toTile.Links[i].Ref == from {
+				// TODO: AR, repass here and test
+				v := toTile.Links[i].Edge
+				vidx := fromPoly.Verts[v] * 3
+				dtVcopy(left, toTile.Verts[vidx:vidx+3])
+				dtVcopy(right, toTile.Verts[vidx:vidx+3])
+				return DT_SUCCESS
+			}
+		}
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	// Find portal vertices.
+	v0 := fromPoly.Verts[link.Edge]
+	v1 := fromPoly.Verts[(link.Edge+1)%fromPoly.VertCount]
+
+	// TODO: AR TO BE TESTED!
+	v0idx := v0 * 3
+	dtVcopy(left, fromTile.Verts[v0idx:v0idx+3])
+	v1idx := v1 * 3
+	dtVcopy(right, fromTile.Verts[v1idx:v1idx+3])
+
+	// If the link is at tile boundary, dtClamp the vertices to
+	// the link width.
+	if link.Side != 0xff {
+		// Unpack portal limits.
+		if link.Bmin != 0 || link.Bmax != 255 {
+			s := float32(1.0 / 255.0)
+			tmin := float32(link.Bmin) * s
+			tmax := float32(link.Bmax) * s
+			dtVlerp(left, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmin)
+			dtVlerp(right, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmax)
+		}
+	}
+
+	return DT_SUCCESS
+}
+
+// Gets the path leading to the specified end node.
+func (q *dtNavMeshQuery) getPathToNode(endNode *dtNode, path *[]dtPolyRef, pathCount *int32, maxPath int32) dtStatus {
+
+	var (
+		curNode *dtNode
+		length  int32
+	)
+	// Find the length of the entire path.
+	curNode = endNode
+
+	for {
+		length++
+		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.pidx))
+		if curNode == nil {
+			break
+		}
+	}
+
+	// If the path cannot be fully stored then advance to the last node we will be able to store.
+	curNode = endNode
+	var writeCount int32
+	for writeCount = length; writeCount > maxPath; writeCount-- {
+		assert.True(curNode != nil, "curNode should not be nil")
+		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.pidx))
+	}
+
+	// Write path
+	for i = writeCount - 1; i >= 0; i-- {
+		assert.True(curNode != nil, "curNode should not be nil")
+		path[i] = curNode.id
+		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.pidx))
+	}
+
+	assert.True(curNode == nil, "curNode should be nil")
+
+	*pathCount = dtMin(length, maxPath)
+
+	if length > maxPath {
+		return DT_SUCCESS | DT_BUFFER_TOO_SMALL
 	}
 
 	return DT_SUCCESS

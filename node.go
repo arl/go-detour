@@ -139,6 +139,10 @@ func (np *dtNodePool) getNode(id dtPolyRef, state uint8) *dtNode {
 	return node
 }
 
+func (np *dtNodePool) getNode2(id dtPolyRef) *dtNode {
+	return np.getNode(id, 0)
+}
+
 func (np *dtNodePool) findNode(id dtPolyRef, state uint8) *dtNode {
 	bucket := dtHashRef(id) & uint32(np.m_hashSize-1)
 	i := np.m_first[bucket]

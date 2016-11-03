@@ -1284,3 +1284,21 @@ func (m *DtNavMesh) getTileRef(tile *DtMeshTile) dtTileRef {
 	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles)))
 	return dtTileRef(m.encodePolyId(tile.Salt, it, 0))
 }
+
+func (m *DtNavMesh) isValidPolyRef(ref dtPolyRef) bool {
+	if ref == 0 {
+		return false
+	}
+	var salt, it, ip uint32
+	m.decodePolyId(ref, &salt, &it, &ip)
+	if it >= uint32(m.MaxTiles) {
+		return false
+	}
+	if m.Tiles[it].Salt != salt || m.Tiles[it].Header == nil {
+		return false
+	}
+	if ip >= uint32(m.Tiles[it].Header.PolyCount) {
+		return false
+	}
+	return true
+}

@@ -11,4 +11,7 @@ const (
 
 	/// A flag that indicates that an off-mesh connection can be traversed in both directions. (Is bidirectional.)
 	DT_OFFMESH_CON_BIDIR uint32 = 1
+
+	/// The maximum number of user defined area ids.
+	DT_MAX_AREAS int32 = 64
 )
