@@ -86,7 +86,7 @@ func (qf *dtQueryFilter) setExcludeFlags(flags uint16) { qf.m_excludeFlags = fla
 ///  @param[in]		ref		The reference id of the polygon test.
 ///  @param[in]		tile	The tile containing the polygon.
 ///  @param[in]		poly  The polygon to test.
-func (qf *dtQueryFilter) passFilter(ref dtPolyRef,
+func (qf *dtQueryFilter) passFilter(ref DtPolyRef,
 	tile *DtMeshTile,
 	poly *DtPoly) bool {
 
@@ -108,9 +108,9 @@ func (qf *dtQueryFilter) passFilter(ref dtPolyRef,
 ///  @param[in]		nextPoly	The next polygon. [opt]
 
 func (qf *dtQueryFilter) getCost(pa, pb []float32,
-	prevRef dtPolyRef, prevTile *DtMeshTile, prevPoly *DtPoly,
-	curRef dtPolyRef, curTile *DtMeshTile, curPoly *DtPoly,
-	nextRef dtPolyRef, nextTile *DtMeshTile, nextPoly *DtPoly) float32 {
+	prevRef DtPolyRef, prevTile *DtMeshTile, prevPoly *DtPoly,
+	curRef DtPolyRef, curTile *DtMeshTile, curPoly *DtPoly,
+	nextRef DtPolyRef, nextTile *DtMeshTile, nextPoly *DtPoly) float32 {
 
 	return dtVdist(pa, pb) * qf.m_areaCost[curPoly.Area()]
 }

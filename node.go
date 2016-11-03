@@ -6,7 +6,7 @@ import (
 	"github.com/aurelien-rainone/assertgo"
 )
 
-func dtHashRef(a dtPolyRef) uint32 {
+func dtHashRef(a DtPolyRef) uint32 {
 	a += ^(a << 15)
 	a ^= (a >> 10)
 	a += (a << 3)
@@ -24,10 +24,10 @@ const (
 	DT_NODE_PARENT_DETACHED             = 0x04 // parent of the node is not adjacent. Found using raycast.
 )
 
-type dtNodeIndex uint16
+type DtNodeIndex uint16
 
 const (
-	DT_NULL_IDX dtNodeIndex = ^dtNodeIndex(0)
+	DT_NULL_IDX DtNodeIndex = ^DtNodeIndex(0)
 )
 
 const (
@@ -35,19 +35,19 @@ const (
 	DT_NODE_STATE_BITS  uint32 = 2
 )
 
-type dtNode struct {
-	pos   [3]float32 ///< Position of the node.
-	cost  float32    ///< Cost from previous node to current node.
-	total float32    ///< Cost up to the node.
+type DtNode struct {
+	Pos   [3]float32 ///< Position of the node.
+	Cost  float32    ///< Cost from previous node to current node.
+	Total float32    ///< Cost up to the node.
 	//unsigned int pidx : DT_NODE_PARENT_BITS;	///< Index to parent node.
 	//unsigned int state : DT_NODE_STATE_BITS;	///< extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
 	//unsigned int flags : 3;						///< Node flags. A combination of dtNodeFlags.
 
 	// fucking C bitfields!!! as we allocate the dtNode ourselves, we can always use:
-	pidx  uint32
-	state uint8
-	flags uint8
-	id    dtPolyRef ///< Polygon ref the node corresponds to.
+	PIdx  uint32
+	State uint8
+	Flags uint8
+	ID    DtPolyRef ///< Polygon ref the node corresponds to.
 }
 
 const (
@@ -55,8 +55,8 @@ const (
 )
 
 type dtNodePool struct {
-	m_nodes         []dtNode
-	m_first, m_next []dtNodeIndex
+	m_nodes         []DtNode
+	m_first, m_next []DtNodeIndex
 	m_maxNodes      int32
 	m_hashSize      int32
 	m_nodeCount     int32
@@ -75,11 +75,11 @@ func newDtNodePool(maxNodes, hashSize int32) *dtNodePool {
 	assert.True(np.m_maxNodes > 0 && np.m_maxNodes <= int32(DT_NULL_IDX) && np.m_maxNodes <= (1<<DT_NODE_PARENT_BITS)-1, "DtNodePool, max nodes check failed")
 
 	//m_nodes = (dtNode*)dtAlloc(sizeof(dtNode)*m_maxNodes, DT_ALLOC_PERM);
-	np.m_nodes = make([]dtNode, np.m_maxNodes)
+	np.m_nodes = make([]DtNode, np.m_maxNodes)
 	//m_next = (dtNodeIndex*)dtAlloc(sizeof(dtNodeIndex)*m_maxNodes, DT_ALLOC_PERM);
-	np.m_next = make([]dtNodeIndex, np.m_maxNodes)
+	np.m_next = make([]DtNodeIndex, np.m_maxNodes)
 	//m_first = (dtNodeIndex*)dtAlloc(sizeof(dtNodeIndex)*hashSize, DT_ALLOC_PERM);
-	np.m_first = make([]dtNodeIndex, hashSize)
+	np.m_first = make([]DtNodeIndex, hashSize)
 
 	assert.True(len(np.m_nodes) > 0, "m_nodes should not be empty")
 	assert.True(len(np.m_next) > 0, "m_next should not be empty")
@@ -106,12 +106,12 @@ func (np *dtNodePool) clear() {
 
 // Get a dtNode by ref and extra state information. If there is none then - allocate
 // There can be more than one node for the same polyRef but with different extra state information
-func (np *dtNodePool) getNode(id dtPolyRef, state uint8) *dtNode {
+func (np *dtNodePool) getNode(id DtPolyRef, state uint8) *DtNode {
 	bucket := dtHashRef(id) & uint32(np.m_hashSize-1)
 	i := np.m_first[bucket]
-	var node *dtNode
+	var node *DtNode
 	for i != DT_NULL_IDX {
-		if np.m_nodes[i].id == id && np.m_nodes[i].state == state {
+		if np.m_nodes[i].ID == id && np.m_nodes[i].State == state {
 			return &np.m_nodes[i]
 		}
 		i = np.m_next[i]
@@ -121,17 +121,17 @@ func (np *dtNodePool) getNode(id dtPolyRef, state uint8) *dtNode {
 		return nil
 	}
 
-	i = dtNodeIndex(np.m_nodeCount)
+	i = DtNodeIndex(np.m_nodeCount)
 	np.m_nodeCount++
 
 	// Init node
 	node = &np.m_nodes[i]
-	node.pidx = 0
-	node.cost = 0
-	node.total = 0
-	node.id = id
-	node.state = state
-	node.flags = 0
+	node.PIdx = 0
+	node.Cost = 0
+	node.Total = 0
+	node.ID = id
+	node.State = state
+	node.Flags = 0
 
 	np.m_next[i] = np.m_first[bucket]
 	np.m_first[bucket] = i
@@ -139,15 +139,15 @@ func (np *dtNodePool) getNode(id dtPolyRef, state uint8) *dtNode {
 	return node
 }
 
-func (np *dtNodePool) getNode2(id dtPolyRef) *dtNode {
+func (np *dtNodePool) getNode2(id DtPolyRef) *DtNode {
 	return np.getNode(id, 0)
 }
 
-func (np *dtNodePool) findNode(id dtPolyRef, state uint8) *dtNode {
+func (np *dtNodePool) findNode(id DtPolyRef, state uint8) *DtNode {
 	bucket := dtHashRef(id) & uint32(np.m_hashSize-1)
 	i := np.m_first[bucket]
 	for i != DT_NULL_IDX {
-		if np.m_nodes[i].id == id && np.m_nodes[i].state == state {
+		if np.m_nodes[i].ID == id && np.m_nodes[i].State == state {
 			return &np.m_nodes[i]
 		}
 		i = np.m_next[i]
@@ -155,12 +155,12 @@ func (np *dtNodePool) findNode(id dtPolyRef, state uint8) *dtNode {
 	return nil
 }
 
-func (np *dtNodePool) findNodes(id dtPolyRef, nodes *[]*dtNode, maxNodes int32) uint32 {
+func (np *dtNodePool) findNodes(id DtPolyRef, nodes *[]*DtNode, maxNodes int32) uint32 {
 	var n uint32
 	bucket := dtHashRef(id) & uint32(np.m_hashSize-1)
 	i := np.m_first[bucket]
 	for i != DT_NULL_IDX {
-		if np.m_nodes[i].id == id {
+		if np.m_nodes[i].ID == id {
 			if n >= uint32(maxNodes) {
 				return n
 			}
@@ -172,7 +172,7 @@ func (np *dtNodePool) findNodes(id dtPolyRef, nodes *[]*dtNode, maxNodes int32) 
 	return n
 }
 
-func (np *dtNodePool) getNodeIdx(node *dtNode) uint32 {
+func (np *dtNodePool) getNodeIdx(node *DtNode) uint32 {
 	if node == nil {
 		return 0
 	}
@@ -184,7 +184,7 @@ func (np *dtNodePool) getNodeIdx(node *dtNode) uint32 {
 	return ip + 1
 }
 
-func (np *dtNodePool) getNodeAtIdx(idx int32) *dtNode {
+func (np *dtNodePool) getNodeAtIdx(idx int32) *DtNode {
 	if idx == 0 {
 		return nil
 	}
@@ -194,9 +194,9 @@ func (np *dtNodePool) getNodeAtIdx(idx int32) *dtNode {
 
 func (np *dtNodePool) getMemUsed() int32 {
 	return int32(unsafe.Sizeof(*np)) +
-		int32(unsafe.Sizeof(dtNode{}))*np.m_maxNodes +
-		int32(unsafe.Sizeof(dtNodeIndex(0)))*np.m_maxNodes +
-		int32(unsafe.Sizeof(dtNodeIndex(0)))*np.m_hashSize
+		int32(unsafe.Sizeof(DtNode{}))*np.m_maxNodes +
+		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.m_maxNodes +
+		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.m_hashSize
 }
 
 func (np *dtNodePool) getMaxNodes() int32 {
@@ -207,11 +207,11 @@ func (np *dtNodePool) getHashSize() int32 {
 	return np.m_hashSize
 }
 
-func (np *dtNodePool) getFirst(bucket int32) dtNodeIndex {
+func (np *dtNodePool) getFirst(bucket int32) DtNodeIndex {
 	return np.m_first[bucket]
 }
 
-func (np *dtNodePool) getNext(i int32) dtNodeIndex {
+func (np *dtNodePool) getNext(i int32) DtNodeIndex {
 	return np.m_next[i]
 }
 
