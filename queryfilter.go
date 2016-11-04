@@ -43,7 +43,7 @@ type DtQueryFilter struct {
 	excludeFlags uint16
 }
 
-func newDtQueryFilter() *DtQueryFilter {
+func NewDtQueryFilter() *DtQueryFilter {
 	qf := DtQueryFilter{
 		includeFlags: 0xffff,
 		excludeFlags: 0,
@@ -57,39 +57,36 @@ func newDtQueryFilter() *DtQueryFilter {
 /// Returns the traversal cost of the area.
 ///  @param[in]		i		The id of the area.
 /// @returns The traversal cost of the area.
-func (qf *DtQueryFilter) getAreaCost(i int32) float32 { return qf.areaCost[i] }
+func (qf *DtQueryFilter) AreaCost(i int32) float32 { return qf.areaCost[i] }
 
 /// Sets the traversal cost of the area.
 ///  @param[in]		i		The id of the area.
 ///  @param[in]		cost	The new cost of traversing the area.
-func (qf *DtQueryFilter) setAreaCost(i int32, cost float32) { qf.areaCost[i] = cost }
+func (qf *DtQueryFilter) SetAreaCost(i int32, cost float32) { qf.areaCost[i] = cost }
 
 /// Returns the include flags for the filter.
 /// Any polygons that include one or more of these flags will be
 /// included in the operation.
-func (qf *DtQueryFilter) getIncludeFlags() uint16 { return qf.includeFlags }
+func (qf *DtQueryFilter) IncludeFlags() uint16 { return qf.includeFlags }
 
 /// Sets the include flags for the filter.
 /// @param[in]		flags	The new flags.
-func (qf *DtQueryFilter) setIncludeFlags(flags uint16) { qf.includeFlags = flags }
+func (qf *DtQueryFilter) SetIncludeFlags(flags uint16) { qf.includeFlags = flags }
 
 /// Returns the exclude flags for the filter.
 /// Any polygons that include one ore more of these flags will be
 /// excluded from the operation.
-func (qf *DtQueryFilter) getExcludeFlags() uint16 { return qf.excludeFlags }
+func (qf *DtQueryFilter) ExcludeFlags() uint16 { return qf.excludeFlags }
 
 /// Sets the exclude flags for the filter.
 /// @param[in]		flags		The new flags.
-func (qf *DtQueryFilter) setExcludeFlags(flags uint16) { qf.excludeFlags = flags }
+func (qf *DtQueryFilter) SetExcludeFlags(flags uint16) { qf.excludeFlags = flags }
 
 /// Returns true if the polygon can be visited.  (I.e. Is traversable.)
 ///  @param[in]		ref		The reference id of the polygon test.
 ///  @param[in]		tile	The tile containing the polygon.
 ///  @param[in]		poly  The polygon to test.
-func (qf *DtQueryFilter) passFilter(ref DtPolyRef,
-	tile *DtMeshTile,
-	poly *DtPoly) bool {
-
+func (qf *DtQueryFilter) passFilter(ref DtPolyRef, tile *DtMeshTile, poly *DtPoly) bool {
 	return (poly.Flags&qf.includeFlags) != 0 && (poly.Flags&qf.excludeFlags) == 0
 }
 
