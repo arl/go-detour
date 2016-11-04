@@ -80,7 +80,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 /// space is full, or there is a tile already at the specified reference.
 ///
 /// The lastRef parameter is used to restore a tile with the same tile
-/// reference it had previously used.  In this case the #dtPolyRef's for the
+/// reference it had previously used.  In this case the #DtPolyRef's for the
 /// tile will be restored to the same values they were before the tile was
 /// removed.
 ///
@@ -351,11 +351,11 @@ func (m *DtNavMesh) connectIntLinks(tile *DtMeshTile) {
 /// Example use case:
 /// @code
 ///
-/// const dtPolyRef base = navmesh.getPolyRefBase(tile);
+/// const DtPolyRef base = navmesh.getPolyRefBase(tile);
 /// for (int i = 0; i < tile.header.polyCount; ++i)
 /// {
 ///     const dtPoly* p = &tile.polys[i];
-///     const dtPolyRef ref = base | (dtPolyRef)i;
+///     const DtPolyRef ref = base | (DtPolyRef)i;
 ///
 ///     // Use the reference to access the polygon data.
 /// }
@@ -410,7 +410,7 @@ func freeLink(tile *DtMeshTile, link uint32) {
 ///  @param[in]	ip		The index of the polygon within the tile.
 func (m *DtNavMesh) encodePolyId(salt, it, ip uint32) DtPolyRef {
 	//#ifdef DT_POLYREF64
-	//return ((dtPolyRef)salt << (DT_POLY_BITS+DT_TILE_BITS)) | ((dtPolyRef)it << DT_POLY_BITS) | (dtPolyRef)ip;
+	//return ((DtPolyRef)salt << (DT_POLY_BITS+DT_TILE_BITS)) | ((DtPolyRef)it << DT_POLY_BITS) | (DtPolyRef)ip;
 	//#else
 	return (DtPolyRef(salt) << (m.polyBits + m.tileBits)) | (DtPolyRef(it) << m.polyBits) | DtPolyRef(ip)
 	//#endif
@@ -516,7 +516,7 @@ const (
 ///  @see #encodePolyId
 func (m *DtNavMesh) decodePolyIdTile(ref DtPolyRef) uint32 {
 	//#ifdef DT_POLYREF64
-	//const dtPolyRef tileMask = ((dtPolyRef)1<<DT_TILE_BITS)-1;
+	//const DtPolyRef tileMask = ((DtPolyRef)1<<DT_TILE_BITS)-1;
 	//return (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
 	//#else
 	tileMask := DtPolyRef((DtPolyRef(1) << m.tileBits) - 1)
@@ -530,7 +530,7 @@ func (m *DtNavMesh) decodePolyIdTile(ref DtPolyRef) uint32 {
 ///  @see #encodePolyId
 func (m *DtNavMesh) decodePolyIdSalt(ref DtPolyRef) uint32 {
 	//#ifdef DT_POLYREF64
-	//const dtPolyRef saltMask = ((dtPolyRef)1<<DT_SALT_BITS)-1;
+	//const DtPolyRef saltMask = ((DtPolyRef)1<<DT_SALT_BITS)-1;
 	//return (unsigned int)((ref >> (DT_POLY_BITS+DT_TILE_BITS)) & saltMask);
 	//#else
 	saltMask := (DtPolyRef(1) << m.saltBits) - 1
@@ -765,7 +765,7 @@ func (m *DtNavMesh) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 ///  @see #encodePolyId
 func (m *DtNavMesh) decodePolyIdPoly(ref DtPolyRef) uint32 {
 	//#ifdef DT_POLYREF64
-	//const dtPolyRef polyMask = ((dtPolyRef)1<<DT_POLY_BITS)-1;
+	//const DtPolyRef polyMask = ((DtPolyRef)1<<DT_POLY_BITS)-1;
 	//return (unsigned int)(ref & polyMask);
 	//#else
 	polyMask := DtPolyRef((1 << m.polyBits) - 1)
@@ -903,9 +903,9 @@ func (m *DtNavMesh) GetTileAndPolyByRefUnsafe(ref DtPolyRef, tile **DtMeshTile, 
 ///  @see #encodePolyId
 func (m *DtNavMesh) DecodePolyId(ref DtPolyRef, salt, it, ip *uint32) {
 	//#ifdef DT_POLYREF64
-	//const dtPolyRef saltMask = ((dtPolyRef)1<<DT_SALT_BITS)-1;
-	//const dtPolyRef tileMask = ((dtPolyRef)1<<DT_TILE_BITS)-1;
-	//const dtPolyRef polyMask = ((dtPolyRef)1<<DT_POLY_BITS)-1;
+	//const DtPolyRef saltMask = ((DtPolyRef)1<<DT_SALT_BITS)-1;
+	//const DtPolyRef tileMask = ((DtPolyRef)1<<DT_TILE_BITS)-1;
+	//const DtPolyRef polyMask = ((DtPolyRef)1<<DT_POLY_BITS)-1;
 	//salt = (unsigned int)((ref >> (DT_POLY_BITS+DT_TILE_BITS)) & saltMask);
 	//it = (unsigned int)((ref >> DT_POLY_BITS) & tileMask);
 	//ip = (unsigned int)(ref & polyMask);
@@ -1308,4 +1308,29 @@ func (m *DtNavMesh) IsValidPolyRef(ref DtPolyRef) bool {
 		return false
 	}
 	return true
+}
+
+func (m *DtNavMesh) getTileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **DtPoly) DtStatus {
+	if ref == 0 {
+		return DT_FAILURE
+	}
+	var salt, it, ip uint32
+	m.DecodePolyId(ref, &salt, &it, &ip)
+	if it >= uint32(m.MaxTiles) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+	if m.Tiles[it].Salt != salt || m.Tiles[it].Header == nil {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+	if ip >= uint32(m.Tiles[it].Header.PolyCount) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+	*tile = &m.Tiles[it]
+	*poly = &m.Tiles[it].Polys[ip]
+	return DT_SUCCESS
+}
+
+func (m *DtNavMesh) calcTileLoc(pos [3]float32, tx, ty *int32) {
+	*tx = int32(math.Floor(float64((pos[0] - m.Orig[0]) / m.TileWidth)))
+	*ty = int32(math.Floor(float64((pos[2] - m.Orig[2]) / m.TileHeight)))
 }
