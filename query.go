@@ -322,15 +322,6 @@ type DtNavMeshQuery struct {
 	/////  @param[in]		ref		The reference id of the polygon to check.
 	///// @returns True if the polygon is in closed list.
 	//bool isInClosedList(DtPolyRef ref) const;
-
-	///// Gets the node pool.
-	///// @returns The node pool.
-	//class dtNodePool* getNodePool() const { return m_nodePool; }
-
-	///// Gets the navigation mesh the query object is using.
-	///// @return The navigation mesh the query object is using.
-	//const dtNavMesh* getAttachedNavMesh() const { return m_nav; }
-
 	///// @}
 
 	//private:
@@ -365,12 +356,12 @@ type DtNavMeshQuery struct {
 	//// Gets the path leading to the specified end node.
 	//dtStatus getPathToNode(struct dtNode* endNode, DtPolyRef* path, int* pathCount, int maxPath) const;
 
-	m_nav   *DtNavMesh  ///< Pointer to navmesh data.
-	m_query dtQueryData ///< Sliced query state.
+	nav   *DtNavMesh  ///< Pointer to navmesh data.
+	query dtQueryData ///< Sliced query state.
 
-	m_tinyNodePool *DtNodePool  ///< Pointer to small node pool.
-	m_nodePool     *DtNodePool  ///< Pointer to node pool.
-	m_openList     *DtNodeQueue ///< Pointer to open list queue.
+	tinyNodePool *DtNodePool  ///< Pointer to small node pool.
+	nodePool     *DtNodePool  ///< Pointer to node pool.
+	openList     *DtNodeQueue ///< Pointer to open list queue.
 }
 
 type dtQueryData struct {
@@ -400,44 +391,44 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatu
 	}
 
 	q := &DtNavMeshQuery{}
-	q.m_nav = nav
+	q.nav = nav
 
-	if q.m_nodePool == nil || q.m_nodePool.getMaxNodes() < maxNodes {
-		if q.m_nodePool != nil {
+	if q.nodePool == nil || q.nodePool.getMaxNodes() < maxNodes {
+		if q.nodePool != nil {
 			//m_nodePool.~dtNodePool();
 			//dtFree(m_nodePool);
-			q.m_nodePool = nil
+			q.nodePool = nil
 		}
 		//m_nodePool = new (dtAlloc(sizeof(dtNodePool), DT_ALLOC_PERM)) dtNodePool(maxNodes, dtNextPow2(maxNodes/4));
-		q.m_nodePool = newDtNodePool(maxNodes, int32(dtNextPow2(uint32(maxNodes/4))))
-		if q.m_nodePool == nil {
+		q.nodePool = newDtNodePool(maxNodes, int32(dtNextPow2(uint32(maxNodes/4))))
+		if q.nodePool == nil {
 			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 	} else {
-		q.m_nodePool.clear()
+		q.nodePool.clear()
 	}
 
-	if q.m_tinyNodePool == nil {
-		q.m_tinyNodePool = newDtNodePool(64, 32)
-		if q.m_tinyNodePool == nil {
+	if q.tinyNodePool == nil {
+		q.tinyNodePool = newDtNodePool(64, 32)
+		if q.tinyNodePool == nil {
 			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 	} else {
-		q.m_tinyNodePool.clear()
+		q.tinyNodePool.clear()
 	}
 
-	if q.m_openList == nil || q.m_openList.getCapacity() < maxNodes {
-		if q.m_openList != nil {
+	if q.openList == nil || q.openList.getCapacity() < maxNodes {
+		if q.openList != nil {
 			//m_openList.~dtNodeQueue();
 			//dtFree(m_openList);
-			q.m_openList = nil
+			q.openList = nil
 		}
-		q.m_openList = newDtNodeQueue(maxNodes)
-		if q.m_openList == nil {
+		q.openList = newDtNodeQueue(maxNodes)
+		if q.openList == nil {
 			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
 	} else {
-		q.m_openList.clear()
+		q.openList.clear()
 	}
 
 	return q, DT_SUCCESS
@@ -477,7 +468,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	}
 
 	// Validate input
-	if !q.m_nav.IsValidPolyRef(startRef) || !q.m_nav.IsValidPolyRef(endRef) ||
+	if !q.nav.IsValidPolyRef(startRef) || !q.nav.IsValidPolyRef(endRef) ||
 		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
 
 		return DT_FAILURE | DT_INVALID_PARAM
@@ -489,33 +480,33 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		return DT_SUCCESS
 	}
 
-	q.m_nodePool.clear()
-	q.m_openList.clear()
+	q.nodePool.clear()
+	q.openList.clear()
 
 	var (
 		startNode, lastBestNode *DtNode
 		lastBestNodeCost        float32
 	)
-	startNode = q.m_nodePool.getNode2(startRef)
+	startNode = q.nodePool.getNode2(startRef)
 	dtVcopy(startNode.Pos[:], startPos)
 	startNode.PIdx = 0
 	startNode.Cost = 0
 	startNode.Total = dtVdist(startPos, endPos) * H_SCALE
 	startNode.ID = startRef
 	startNode.Flags = uint8(DT_NODE_OPEN)
-	q.m_openList.push(startNode)
+	q.openList.push(startNode)
 
 	lastBestNode = startNode
 	lastBestNodeCost = startNode.Total
 
 	outOfNodes := false
 
-	for !q.m_openList.empty() {
+	for !q.openList.empty() {
 
 		var bestNode *DtNode
 
 		// Remove node from open list and put it in closed list.
-		bestNode = q.m_openList.pop()
+		bestNode = q.openList.pop()
 		bestNode.Flags &= ^(uint8(DT_NODE_OPEN))
 		bestNode.Flags |= DT_NODE_CLOSED
 
@@ -536,7 +527,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		bestRef = bestNode.ID
 		bestTile = nil
 		bestPoly = nil
-		q.m_nav.GetTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
+		q.nav.GetTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
 
 		// Get parent poly and tile.
 		var (
@@ -545,10 +536,10 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			parentPoly *DtPoly
 		)
 		if bestNode.PIdx != 0 {
-			parentRef = q.m_nodePool.getNodeAtIdx(int32(bestNode.PIdx)).ID
+			parentRef = q.nodePool.getNodeAtIdx(int32(bestNode.PIdx)).ID
 		}
 		if parentRef != 0 {
-			q.m_nav.GetTileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
+			q.nav.GetTileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
 		}
 
 		var i uint32
@@ -566,7 +557,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 				neighbourTile *DtMeshTile
 				neighbourPoly *DtPoly
 			)
-			q.m_nav.GetTileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
+			q.nav.GetTileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
 
 			if !filter.passFilter(neighbourRef, neighbourTile, neighbourPoly) {
 				continue
@@ -579,7 +570,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			}
 
 			// get the node
-			neighbourNode := q.m_nodePool.getNode(neighbourRef, crossSide)
+			neighbourNode := q.nodePool.getNode(neighbourRef, crossSide)
 			if neighbourNode == nil {
 				outOfNodes = true
 				continue
@@ -631,7 +622,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			}
 
 			// Add or update the node.
-			neighbourNode.PIdx = q.m_nodePool.getNodeIdx(bestNode)
+			neighbourNode.PIdx = q.nodePool.getNodeIdx(bestNode)
 			neighbourNode.ID = neighbourRef
 			neighbourNode.Flags = (neighbourNode.Flags & ^uint8(DT_NODE_CLOSED))
 			neighbourNode.Cost = cost
@@ -639,11 +630,11 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 
 			if (neighbourNode.Flags & uint8(DT_NODE_OPEN)) != 0 {
 				// Already in open, update node location.
-				q.m_openList.modify(neighbourNode)
+				q.openList.modify(neighbourNode)
 			} else {
 				// Put the node in open list.
 				neighbourNode.Flags |= uint8(DT_NODE_OPEN)
-				q.m_openList.push(neighbourNode)
+				q.openList.push(neighbourNode)
 			}
 
 			// Update nearest node to target so far.
@@ -769,7 +760,7 @@ func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathC
 
 	for {
 		length++
-		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.PIdx))
+		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
 		if curNode == nil {
 			break
 		}
@@ -780,14 +771,14 @@ func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathC
 	var writeCount int32
 	for writeCount = length; writeCount > maxPath; writeCount-- {
 		assert.True(curNode != nil, "curNode should not be nil")
-		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.PIdx))
+		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
 	}
 
 	// Write path
 	for i := writeCount - 1; i >= 0; i-- {
 		assert.True(curNode != nil, "curNode should not be nil")
 		(*path)[i] = curNode.ID
-		curNode = q.m_nodePool.getNodeAtIdx(int32(curNode.PIdx))
+		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
 	}
 
 	assert.True(curNode == nil, "curNode should be nil")
@@ -810,13 +801,13 @@ func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathC
 /// See closestPointOnPolyBoundary() for a limited but faster option.
 ///
 func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float32, posOverPoly *bool) DtStatus {
-	assert.True(q.m_nav != nil, "NavMesh should not be nil")
+	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
 		tile *DtMeshTile
 		poly *DtPoly
 	)
 
-	if DtStatusFailed(q.m_nav.getTileAndPolyByRef(ref, &tile, &poly)) {
+	if DtStatusFailed(q.nav.getTileAndPolyByRef(ref, &tile, &poly)) {
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 	if tile == nil {
@@ -934,7 +925,7 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents []float32,
 	filter *DtQueryFilter,
 	nearestRef *DtPolyRef, nearestPt []float32) DtStatus {
 
-	assert.True(q.m_nav != nil, "Nav should not be nil")
+	assert.True(q.nav != nil, "Nav should not be nil")
 
 	if nearestRef == nil {
 		return DT_FAILURE | DT_INVALID_PARAM
@@ -996,7 +987,7 @@ func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
 ///
 func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
 	filter *DtQueryFilter, query DtPolyQuery) DtStatus {
-	assert.True(q.m_nav != nil, "navmesh should not be nill")
+	assert.True(q.nav != nil, "navmesh should not be nill")
 
 	if len(center) != 3 || len(extents) != 3 || filter == nil || query == nil {
 		return DT_FAILURE | DT_INVALID_PARAM
@@ -1008,15 +999,15 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
 
 	// Find tiles the query touches.
 	var minx, miny, maxx, maxy int32
-	q.m_nav.calcTileLoc(bmin, &minx, &miny)
-	q.m_nav.calcTileLoc(bmax, &maxx, &maxy)
+	q.nav.calcTileLoc(bmin, &minx, &miny)
+	q.nav.calcTileLoc(bmax, &maxx, &maxy)
 
 	MAX_NEIS := int32(32)
 	neis := make([]*DtMeshTile, MAX_NEIS)
 
 	for y := miny; y <= maxy; y++ {
 		for x := minx; x <= maxx; x++ {
-			nneis := q.m_nav.GetTilesAt(x, y, neis, MAX_NEIS)
+			nneis := q.nav.GetTilesAt(x, y, neis, MAX_NEIS)
 			for j := int32(0); j < nneis; j++ {
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
@@ -1028,7 +1019,7 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
 
 func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32,
 	filter *DtQueryFilter, query DtPolyQuery) {
-	assert.True(q.m_nav != nil, "navmesh should not be nill")
+	assert.True(q.nav != nil, "navmesh should not be nill")
 	batchSize := int32(32)
 
 	polyRefs := make([]DtPolyRef, batchSize)
@@ -1071,7 +1062,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		bmax[2] = uint16(qfac*maxz+1) | 1
 
 		// Traverse tree
-		base := q.m_nav.getPolyRefBase(tile)
+		base := q.nav.getPolyRefBase(tile)
 		// TODO: probably need to use an index or unsafe.Pointer here
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
@@ -1106,7 +1097,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		}
 	} else {
 		var bmin, bmax [3]float32
-		base := q.m_nav.getPolyRefBase(tile)
+		base := q.nav.getPolyRefBase(tile)
 		for i := int32(0); i < tile.Header.PolyCount; i++ {
 			p := &tile.Polys[i]
 			// Do not return off-mesh connection polygons.
@@ -1147,6 +1138,18 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 	if n > 0 {
 		query.process(tile, polys, polyRefs, n)
 	}
+}
+
+// Gets the node pool.
+// @returns The node pool.
+func (q *DtNavMeshQuery) NodePool() *DtNodePool {
+	return q.nodePool
+}
+
+// Gets the navigation mesh the query object is using.
+// @return The navigation mesh the query object is using.
+func (q *DtNavMeshQuery) AttachedNavMesh() *DtNavMesh {
+	return q.nav
 }
 
 /// Provides custom polygon query behavior.
