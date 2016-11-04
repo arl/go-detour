@@ -1,6 +1,7 @@
 package detour
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"unsafe"
@@ -941,20 +942,16 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents []float32,
 
 	query := newDtFindNearestPolyQuery(q, center)
 
-	// TODO: continuer ici
-	// TODO: continuer ici
-	// TODO: continuer ici on doit implementer queryPolygons
-	// TODO: continuer ici
 	status := q.queryPolygons4(center, extents, filter, query)
 	if DtStatusFailed(status) {
 		return status
 	}
 
-	*nearestRef = query.nearestRef()
+	*nearestRef = query.NearestRef()
 	// Only override nearestPt if we actually found a poly so the nearest point
 	// is valid.
 	if len(nearestPt) == 3 && *nearestRef != 0 {
-		pt := query.nearestPoint()
+		pt := query.NearestPoint()
 		dtVcopy(nearestPt[:], pt[:])
 	}
 	return DT_SUCCESS
@@ -983,8 +980,8 @@ func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
 		return status
 	}
 
-	*polyCount = collector.m_numCollected
-	if collector.m_overflow {
+	*polyCount = collector.numCollected
+	if collector.overflow {
 		return DT_SUCCESS | DT_BUFFER_TOO_SMALL
 	}
 	return DT_SUCCESS
@@ -1021,7 +1018,6 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
 		for x := minx; x <= maxx; x++ {
 			nneis := q.m_nav.GetTilesAt(x, y, neis, MAX_NEIS)
 			for j := int32(0); j < nneis; j++ {
-
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
 		}
@@ -1079,11 +1075,15 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		// TODO: probably need to use an index or unsafe.Pointer here
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
+			fmt.Println("node", node)
 			overlap := dtOverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
+			fmt.Println("overlap", overlap)
+			fmt.Println("node.I", node.I)
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
 				ref := base | DtPolyRef(node.I)
+				fmt.Println("ref", ref)
 				if filter.passFilter(ref, tile, &tile.Polys[node.I]) {
 					polyRefs[n] = ref
 					polys[n] = &tile.Polys[node.I]
@@ -1161,28 +1161,28 @@ type DtPolyQuery interface {
 }
 
 type dtFindNearestPolyQuery struct {
-	m_query              *DtNavMeshQuery
-	center               []float32
-	m_nearestDistanceSqr float32
-	m_nearestRef         DtPolyRef
-	m_nearestPoint       [3]float32
+	query              *DtNavMeshQuery
+	center             []float32
+	nearestDistanceSqr float32
+	nearestRef         DtPolyRef
+	nearestPoint       [3]float32
 }
 
 func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center []float32) *dtFindNearestPolyQuery {
 	return &dtFindNearestPolyQuery{
-		m_query:              query,
-		center:               center,
-		m_nearestDistanceSqr: math.MaxFloat32,
-		m_nearestRef:         0,
+		query:              query,
+		center:             center,
+		nearestDistanceSqr: math.MaxFloat32,
+		nearestRef:         0,
 	}
 }
 
-func (q *dtFindNearestPolyQuery) nearestRef() DtPolyRef {
-	return q.m_nearestRef
+func (q *dtFindNearestPolyQuery) NearestRef() DtPolyRef {
+	return q.nearestRef
 }
 
-func (q *dtFindNearestPolyQuery) nearestPoint() [3]float32 {
-	return q.m_nearestPoint
+func (q *dtFindNearestPolyQuery) NearestPoint() [3]float32 {
+	return q.nearestPoint
 }
 
 func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []DtPolyRef, count int32) {
@@ -1195,7 +1195,7 @@ func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs
 			d             float32
 		)
 		posOverPoly := false
-		q.m_query.closestPointOnPoly(ref, q.center, closestPtPoly[:], &posOverPoly)
+		q.query.closestPointOnPoly(ref, q.center, closestPtPoly[:], &posOverPoly)
 
 		// If a point is directly over a polygon and closer than
 		// climb height, favor that instead of straight line nearest point.
@@ -1211,43 +1211,43 @@ func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs
 			d = dtVlenSqr(diff[:])
 		}
 
-		if d < q.m_nearestDistanceSqr {
-			dtVcopy(q.m_nearestPoint[:], closestPtPoly[:])
+		if d < q.nearestDistanceSqr {
+			dtVcopy(q.nearestPoint[:], closestPtPoly[:])
 
-			q.m_nearestDistanceSqr = d
-			q.m_nearestRef = ref
+			q.nearestDistanceSqr = d
+			q.nearestRef = ref
 		}
 	}
 }
 
 type dtCollectPolysQuery struct {
-	m_polys        []DtPolyRef
-	m_maxPolys     int32
-	m_numCollected int32
-	m_overflow     bool
+	polys        []DtPolyRef
+	maxPolys     int32
+	numCollected int32
+	overflow     bool
 }
 
 func newDtCollectPolysQuery(polys []DtPolyRef, maxPolys int32) *dtCollectPolysQuery {
 
 	return &dtCollectPolysQuery{
-		m_polys:        polys,
-		m_maxPolys:     maxPolys,
-		m_numCollected: 0,
-		m_overflow:     false,
+		polys:        polys,
+		maxPolys:     maxPolys,
+		numCollected: 0,
+		overflow:     false,
 	}
 }
 
 func (q *dtCollectPolysQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []DtPolyRef, count int32) {
 
-	numLeft := q.m_maxPolys - q.m_numCollected
+	numLeft := q.maxPolys - q.numCollected
 	toCopy := count
 	if toCopy > numLeft {
-		q.m_overflow = true
+		q.overflow = true
 		toCopy = numLeft
 	}
 
 	//memcpy(m_polys + m_numCollected, refs, (size_t)toCopy * sizeof(DtPolyRef));
 	//TODO: check that...
-	copy(q.m_polys[q.m_numCollected:], refs[0:toCopy])
-	q.m_numCollected += toCopy
+	copy(q.polys[q.numCollected:], refs[0:toCopy])
+	q.numCollected += toCopy
 }
