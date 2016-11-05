@@ -233,10 +233,8 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 	tile.OffMeshCons = make([]DtOffMeshConnection, hdr.OffMeshConCount)
 	if err = r.readSlice(&tile.OffMeshCons, binary.LittleEndian); err != nil {
-		//if err = binary.Read(r, binary.LittleEndian, &tile.OffMeshCons); err != nil {
 		log.Fatalln("couldn't read tile.OffMeshCons:", err)
 	}
-	fmt.Println("offmeshcons", tile.OffMeshCons)
 
 	// If there are no items in the bvtree, reset the tree pointer.
 	if len(tile.BvTree) == 0 {

@@ -2,7 +2,6 @@ package detour
 
 import (
 	"fmt"
-	"log"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
@@ -831,25 +830,15 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 		return DT_SUCCESS
 	}
 
-	// CAREFUL with unsafe, double check the ip variable is bounded to
-	// tile.Polys length
-	log.Fatal("use of unsafe in closestPointOnPoly")
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
 	ip := uint32(e / unsafe.Sizeof(*poly))
 
-	if ip > uint32(len(tile.Polys)) {
-		log.Fatalln("houston...", ip, ">", len(tile.Polys))
-	} else {
-		log.Fatalln("OK with", ip, "<", len(tile.Polys))
-	}
-	//unsafe.Pointer(poly)
-	//hdr := (*reflect.SliceHeader)(unsafe.Pointer(&tile.Polys)) // case 1
-	//hdr.Data = uintptr(unsafe.Pointer(p))              // case 6 (this case)
-	//hdr.Len = uintptr(n)
-
-	//ip := uint32(poly - tile.Polys)
+	assert.True(ip < uint32(len(tile.Polys)), "ip should be < len(tile.Polys), ip=%d, len(tile.Polys)=%d", ip, len(tile.Polys))
 
 	pd := &tile.DetailMeshes[ip]
+
+	fmt.Println("ip", ip)
+	fmt.Println("pd", pd)
 
 	// Clamp point to be inside the polygon.
 	verts := make([]float32, DT_VERTS_PER_POLYGON*3)

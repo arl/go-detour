@@ -116,20 +116,16 @@ func dtOverlapBounds(amin, amax, bmin, bmax []float32) bool {
 
 func dtDistancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32) bool {
 	// TODO: Replace pnpoly with triArea2D tests?
-	var i, j int32
 	c := false
-	i = 0
-	j = nverts - 1
-	for i < nverts {
-		vi := verts[i*3 : 3]
-		vj := verts[j*3 : 3]
+	for i, j := 0, (nverts - 1); i < int(nverts); i++ {
+		vi := verts[i*3 : i*3+3]
+		vj := verts[j*3 : j*3+3]
 		if ((vi[2] > pt[2]) != (vj[2] > pt[2])) &&
 			(pt[0] < (vj[0]-vi[0])*(pt[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
 			c = !c
 		}
 		ed[j] = dtDistancePtSegSqr2D(pt, vj, vi, &et[j])
-		j = i
-		i++
+		j = int32(i)
 	}
 	return c
 }
