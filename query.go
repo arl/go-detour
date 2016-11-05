@@ -525,7 +525,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		bestRef = bestNode.ID
 		bestTile = nil
 		bestPoly = nil
-		q.nav.GetTileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
+		q.nav.TileAndPolyByRefUnsafe(bestRef, &bestTile, &bestPoly)
 
 		// Get parent poly and tile.
 		var (
@@ -537,7 +537,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			parentRef = q.nodePool.getNodeAtIdx(int32(bestNode.PIdx)).ID
 		}
 		if parentRef != 0 {
-			q.nav.GetTileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
+			q.nav.TileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
 		}
 
 		var i uint32
@@ -555,7 +555,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 				neighbourTile *DtMeshTile
 				neighbourPoly *DtPoly
 			)
-			q.nav.GetTileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
+			q.nav.TileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
 
 			if !filter.passFilter(neighbourRef, neighbourTile, neighbourPoly) {
 				continue
@@ -805,7 +805,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 		poly *DtPoly
 	)
 
-	if DtStatusFailed(q.nav.getTileAndPolyByRef(ref, &tile, &poly)) {
+	if DtStatusFailed(q.nav.TileAndPolyByRef(ref, &tile, &poly)) {
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 	if tile == nil {
@@ -864,8 +864,10 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 				imin = i
 			}
 		}
-		va := verts[imin*3 : 3]
-		vb := verts[((imin+1)%nv)*3 : 3]
+		idx := imin * 3
+		va := verts[idx : idx+3]
+		idx = ((imin + 1) % nv) * 3
+		vb := verts[idx : idx+3]
 		dtVlerp(closest, va, vb, edget[imin])
 
 		if posOverPoly != nil {
@@ -879,15 +881,19 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 
 	// Find height at the location.
 	var j uint8
+	var idx int
 	for j = 0; j < pd.TriCount; j++ {
-		t := tile.DetailTris[(pd.TriBase+uint32(j))*4 : 3]
+		idx = int((pd.TriBase + uint32(j)) * 4)
+		t := tile.DetailTris[idx : idx+3]
 		v := make([][]float32, 3)
 		var k int
 		for k = 0; k < 3; k++ {
 			if t[k] < poly.VertCount {
-				v[k] = tile.Verts[poly.Verts[t[k]]*3 : 3]
+				idx = int(poly.Verts[t[k]] * 3)
+				v[k] = tile.Verts[idx : idx+3]
 			} else {
-				v[k] = tile.DetailVerts[(pd.VertBase+uint32(t[k]-poly.VertCount))*3 : 3]
+				idx = int((pd.VertBase + uint32(t[k]-poly.VertCount)) * 3)
+				v[k] = tile.DetailVerts[idx : idx+3]
 			}
 		}
 		var h float32
@@ -996,7 +1002,7 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
 
 	for y := miny; y <= maxy; y++ {
 		for x := minx; x <= maxx; x++ {
-			nneis := q.nav.GetTilesAt(x, y, neis, MAX_NEIS)
+			nneis := q.nav.TilesAt(x, y, neis, MAX_NEIS)
 			for j := int32(0); j < nneis; j++ {
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
