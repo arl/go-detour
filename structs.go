@@ -64,7 +64,7 @@ type DtMeshTile struct {
 	// (Will be null if bounding volumes are disabled.)
 	BvTree []dtBVNode
 	// The tile off-mesh connections. [Size: dtMeshHeader::offMeshConCount]
-	OffMeshCons []dtOffMeshConnection
+	OffMeshCons []DtOffMeshConnection
 
 	Data     []uint8     // The tile data. (Not directly accessed under normal situations.)
 	DataSize int32       // Size of the tile data.

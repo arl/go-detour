@@ -225,16 +225,18 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		log.Fatalln("couldn't read tile.BvTree:", err)
 	}
 
-	for idx, node := range tile.BvTree {
+	for _, node := range tile.BvTree {
 		if node.I > hdr.BvNodeCount {
 			assert.True(false, "node.I > hdr.BvNodeCount: 0x%x 0x%x\n", node.I, hdr.BvNodeCount)
 		}
 	}
 
-	tile.OffMeshCons = make([]dtOffMeshConnection, hdr.OffMeshConCount)
-	if err = binary.Read(r, binary.LittleEndian, &tile.OffMeshCons); err != nil {
+	tile.OffMeshCons = make([]DtOffMeshConnection, hdr.OffMeshConCount)
+	if err = r.readSlice(&tile.OffMeshCons, binary.LittleEndian); err != nil {
+		//if err = binary.Read(r, binary.LittleEndian, &tile.OffMeshCons); err != nil {
 		log.Fatalln("couldn't read tile.OffMeshCons:", err)
 	}
+	fmt.Println("offmeshcons", tile.OffMeshCons)
 
 	// If there are no items in the bvtree, reset the tree pointer.
 	if len(tile.BvTree) == 0 {
@@ -459,7 +461,7 @@ type dtBVNode struct {
 
 /// Defines an navigation mesh off-mesh connection within a dtMeshTile object.
 /// An off-mesh connection is a user defined traversable connection made up to two vertices.
-type dtOffMeshConnection struct {
+type DtOffMeshConnection struct {
 	/// The endpoints of the connection. [(ax, ay, az, bx, by, bz)]
 	Pos [6]float32
 
@@ -551,7 +553,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 
 	var (
 		i    int32
-		con  *dtOffMeshConnection
+		con  *DtOffMeshConnection
 		poly *DtPoly
 	)
 
