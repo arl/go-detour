@@ -680,7 +680,7 @@ func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromT
 	left, right []float32) DtStatus {
 
 	// Find the link that points to the 'to' polygon.
-	var link *dtLink
+	var link *DtLink
 	for i := fromPoly.FirstLink; i != DT_NULL_LINK; i = fromTile.Links[i].Next {
 		if fromTile.Links[i].Ref == to {
 			link = &fromTile.Links[i]
@@ -833,6 +833,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 
 	// CAREFUL with unsafe, double check the ip variable is bounded to
 	// tile.Polys length
+	log.Fatal("use of unsafe in closestPointOnPoly")
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
 	ip := uint32(e / unsafe.Sizeof(*poly))
 
@@ -1072,8 +1073,12 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
+				fmt.Println("base | DtPolyRef(node.I)", base, "|", DtPolyRef(node.I))
 				ref := base | DtPolyRef(node.I)
+				fmt.Printf("0x%x | 0x%x = 0x%x\n", base, DtPolyRef(node.I), ref)
 				fmt.Println("ref", ref)
+				fmt.Println("node.I", node.I)
+				fmt.Println("len(tile.Poly)", len(tile.Polys))
 				if filter.passFilter(ref, tile, &tile.Polys[node.I]) {
 					polyRefs[n] = ref
 					polys[n] = &tile.Polys[node.I]

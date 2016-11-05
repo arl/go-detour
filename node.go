@@ -1,6 +1,7 @@
 package detour
 
 import (
+	"log"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
@@ -67,7 +68,6 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 		MaxNodes: maxNodes,
 		HashSize: hashSize,
 	}
-
 	assert.True(dtNextPow2(uint32(np.HashSize)) == uint32(np.HashSize), "m_hashSize should be a power of 2")
 
 	// pidx is special as 0 means "none" and 1 is the first node. For that reason
@@ -81,9 +81,9 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 	//m_first = (dtNodeIndex*)dtAlloc(sizeof(dtNodeIndex)*hashSize, DT_ALLOC_PERM);
 	np.First = make([]DtNodeIndex, hashSize)
 
-	assert.True(len(np.Nodes) > 0, "m_nodes should not be empty")
-	assert.True(len(np.Next) > 0, "m_next should not be empty")
-	assert.True(len(np.First) > 0, "m_first should not be empty")
+	assert.True(len(np.Nodes) > 0, "Nodes should not be empty")
+	assert.True(len(np.Next) > 0, "Next should not be empty")
+	assert.True(len(np.First) > 0, "First should not be empty")
 
 	for idx := range np.First {
 		np.First[idx] = 0xff
@@ -91,8 +91,6 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 	for idx := range np.Next {
 		np.Next[idx] = 0xff
 	}
-	///memset(m_first, 0xff, sizeof(dtNodeIndex)*m_hashSize);
-	//memset(m_next, 0xff, sizeof(dtNodeIndex)*m_maxNodes);
 	return np
 }
 
@@ -181,6 +179,7 @@ func (np *DtNodePool) getNodeIdx(node *DtNode) uint32 {
 	// TODO: use unsafe.Pointer here...
 	e := uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.Nodes[0]))
 	ip := uint32(e / unsafe.Sizeof(node))
+	log.Fatal("use of unsafe in getNodeIdx")
 	return ip + 1
 }
 
@@ -193,6 +192,7 @@ func (np *DtNodePool) getNodeAtIdx(idx int32) *DtNode {
 }
 
 func (np *DtNodePool) getMemUsed() int32 {
+	log.Fatal("use of unsafe in getMemUsed")
 	return int32(unsafe.Sizeof(*np)) +
 		int32(unsafe.Sizeof(DtNode{}))*np.MaxNodes +
 		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.MaxNodes +

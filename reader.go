@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"reflect"
 )
 
 type Reader struct{}
@@ -68,9 +69,61 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 		}
 		status := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef, nil)
 		if status&DT_FAILURE != 0 {
-			log.Fatal("mesh.addTile() returned 0x%x\n", status)
+			log.Fatalf("mesh.addTile() returned 0x%x\n", status)
 		}
 	}
 	log.Println(hdr.NumTiles, "tiles added successfully")
 	return &mesh, nil
+}
+
+// alignedReader performs aligned reading operations. It ensures that after a
+// successfull Read operation, the file offset has been moved by a multiple of
+// the specified alignment. It is useful to read binary packed arrays or
+// structures.
+type alignedReader struct {
+	r     io.ReadSeeker // ReadSeeker to which calls are forwarded
+	align uint          // byte alignment
+}
+
+func align(x, a uint) uint {
+	r := x % a
+	if r == 0 {
+		return x
+	}
+	return x + (a - r)
+}
+
+// newAlignedReader returns an alignedReader, performing read operations aligned
+// on align bytes.
+func newAlignedReader(r io.ReadSeeker, align uint) *alignedReader {
+	return &alignedReader{r: r, align: align}
+}
+
+func (ar *alignedReader) Read(b []byte) (n int, err error) {
+	n, err = ar.r.Read(b)
+	pad := align(uint(n), ar.align) - uint(n)
+	if pad != 0 {
+		_, err = ar.r.Seek(int64(pad), io.SeekCurrent)
+		if err != nil {
+			return n, fmt.Errorf("couldn't seek %d padding bytes", pad)
+		}
+	}
+	return
+}
+
+func (ar *alignedReader) readSlice(data interface{}, order binary.ByteOrder) error {
+	var err error
+	rt := reflect.TypeOf(data)
+	rv := reflect.ValueOf(data)
+
+	if rt.Kind() != reflect.Ptr || rv.Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("data must be a pointer to slice")
+	}
+	for idx := 0; idx < rv.Elem().Len(); idx++ {
+		err = binary.Read(ar, order, rv.Elem().Index(idx).Addr().Interface())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

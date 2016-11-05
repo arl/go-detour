@@ -1,6 +1,7 @@
 package detour
 
 import (
+	"log"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
@@ -83,6 +84,7 @@ func (q *DtNodeQueue) empty() bool {
 }
 
 func (q *DtNodeQueue) getMemUsed() int32 {
+	log.Fatal("use of unsafe in getMemUsed")
 	return int32(unsafe.Sizeof(*q)) +
 		int32(unsafe.Sizeof(DtNode{}))*(q.capacity+1)
 }

@@ -7,6 +7,8 @@ import (
 	"log"
 	"math"
 	"unsafe"
+
+	"github.com/aurelien-rainone/assertgo"
 )
 
 /// A navigation mesh based on tiles of convex polygons.
@@ -74,27 +76,32 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	return DT_SUCCESS
 }
 
-/// @par
-///
-/// The add operation will fail if the data is in the wrong format, the allocated tile
-/// space is full, or there is a tile already at the specified reference.
-///
-/// The lastRef parameter is used to restore a tile with the same tile
-/// reference it had previously used.  In this case the #DtPolyRef's for the
-/// tile will be restored to the same values they were before the tile was
-/// removed.
-///
-/// The nav mesh assumes exclusive access to the data passed and will make
-/// changes to the dynamic portion of the data. For that reason the data
-/// should not be reused in other nav meshes until the tile has been successfully
-/// removed from this nav mesh.
-///
-/// @see dtCreateNavMeshData, #removeTile
+// addTile adds a tile to the navigation mesh.
+//  @param[in]		data		Data for the new tile mesh. (See: #dtCreateNavMeshData)
+//  @param[in]		dataSize	Data size of the new tile mesh.
+//  @param[in]		flags		Tile flags. (See: #dtTileFlags)
+//  @param[in]		lastRef		The desired reference for the tile. (When reloading a tile.) [opt] [Default: 0]
+//  @param[out]	result		The tile reference. (If the tile was succesfully added.) [opt]
+// @return The status flags for the operation.
+//
+// The add operation will fail if the data is in the wrong format, the allocated tile
+// space is full, or there is a tile already at the specified reference.
+//
+// The lastRef parameter is used to restore a tile with the same tile
+// reference it had previously used.  In this case the #DtPolyRef's for the
+// tile will be restored to the same values they were before the tile was
+// removed.
+//
+// The nav mesh assumes exclusive access to the data passed and will make
+// changes to the dynamic portion of the data. For that reason the data
+// should not be reused in other nav meshes until the tile has been successfully
+// removed from this nav mesh.
+//
+// @see dtCreateNavMeshData, #removeTileBvTree
 func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) DtStatus {
-
 	var hdr DtMeshHeader
 	// prepare a reader on the received data
-	r := bytes.NewReader(data)
+	r := newAlignedReader(bytes.NewReader(data), 4)
 	binary.Read(r, binary.LittleEndian, &hdr)
 
 	// Make sure the data is in right format.
@@ -160,70 +167,77 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	tile.Next = m.posLookup[h]
 	m.posLookup[h] = tile
 
-	// Patch header pointers.
-	headerSize := dtAlign4(uint32(unsafe.Sizeof(DtMeshHeader{})))
-	vertsSize := dtAlign4(uint32(unsafe.Sizeof(float32(0))) * 3 * uint32(hdr.VertCount))
-	polysSize := dtAlign4(uint32(unsafe.Sizeof(DtPoly{})) * uint32(hdr.PolyCount))
-	linksSize := dtAlign4(uint32(unsafe.Sizeof(dtLink{})) * uint32(hdr.MaxLinkCount))
-	detailMeshesSize := dtAlign4(uint32(unsafe.Sizeof(dtPolyDetail{})) * uint32(hdr.DetailMeshCount))
-	detailVertsSize := dtAlign4(uint32(unsafe.Sizeof(float32(0))) * 3 * uint32(hdr.DetailVertCount))
-	detailTrisSize := dtAlign4(uint32(unsafe.Sizeof(uint8(0))) * 4 * uint32(hdr.DetailTriCount))
-	bvtreeSize := dtAlign4(uint32(unsafe.Sizeof(dtBVNode{})) * uint32(hdr.BvNodeCount))
-	offMeshLinksSize := dtAlign4(uint32(unsafe.Sizeof(dtOffMeshConnection{})) * uint32(hdr.OffMeshConCount))
-
-	log.Println("headerSize", headerSize)
-	log.Println("vertsSize", vertsSize)
-	log.Println("polysSize", polysSize)
-	log.Println("linksSize", linksSize)
-	log.Println("detailMeshesSize", detailMeshesSize)
-	log.Println("detailVertsSize", detailVertsSize)
-	log.Println("detailTrisSize", detailTrisSize)
-	log.Println("bvtreeSize", bvtreeSize)
-	log.Println("offMeshLinksSize", offMeshLinksSize)
-
-	//unsigned char* d = data + headerSize;
-	//tile.verts = dtGetThenAdvanceBufferPointer<float>(d, vertsSize);
+	// Read header from binary data
 	tile.Verts = make([]float32, 3*hdr.VertCount)
-	binary.Read(r, binary.LittleEndian, &tile.Verts)
-	fmt.Println("verts", tile.Verts)
+	var err error
+	if err = r.readSlice(&tile.Verts, binary.LittleEndian); err != nil {
+		log.Fatalln("couldn't read tile.Verts:", err)
+	}
 
-	//tile.polys = dtGetThenAdvanceBufferPointer<dtPoly>(d, polysSize);
 	tile.Polys = make([]DtPoly, hdr.PolyCount)
-	binary.Read(r, binary.LittleEndian, &tile.Polys)
-	fmt.Println("polys", tile.Polys)
+	if err = r.readSlice(&tile.Polys, binary.LittleEndian); err != nil {
+		log.Fatalln("couldn't read tile.Polys:", err)
+	}
 
-	//tile.links = dtGetThenAdvanceBufferPointer<dtLink>(d, linksSize);
-	tile.Links = make([]dtLink, hdr.MaxLinkCount)
-	binary.Read(r, binary.LittleEndian, &tile.Links)
-	fmt.Println("links", tile.Links)
+	tile.Links = make([]DtLink, hdr.MaxLinkCount)
+	if err = r.readSlice(&tile.Links, binary.LittleEndian); err != nil {
+		log.Fatalln("couldn't read tile.Links:", err)
+	}
 
-	//tile.detailMeshes = dtGetThenAdvanceBufferPointer<dtPolyDetail>(d, detailMeshesSize);
-	tile.DetailMeshes = make([]dtPolyDetail, hdr.DetailMeshCount)
-	binary.Read(r, binary.LittleEndian, &tile.DetailMeshes)
-	fmt.Println("detailMeshes", tile.DetailMeshes)
+	tile.DetailMeshes = make([]DtPolyDetail, hdr.DetailMeshCount)
+	if err = r.readSlice(&tile.DetailMeshes, binary.LittleEndian); err != nil {
+		log.Fatalln("couldn't read tile.DetailMeshes:", err)
+	}
 
-	//tile.detailVerts = dtGetThenAdvanceBufferPointer<float>(d, detailVertsSize);
 	tile.DetailVerts = make([]float32, 3*hdr.DetailVertCount)
-	binary.Read(r, binary.LittleEndian, &tile.DetailVerts)
-	fmt.Println("detailVerts", tile.DetailVerts)
+	if err = r.readSlice(&tile.DetailVerts, binary.LittleEndian); err != nil {
+		log.Fatalln("couldn't read tile.DetailVerts:", err)
+	}
 
-	//tile.detailTris = dtGetThenAdvanceBufferPointer<unsigned char>(d, detailTrisSize);
-	tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
-	binary.Read(r, binary.LittleEndian, &tile.DetailTris)
-	fmt.Println("detailTris", tile.DetailTris)
+	// TODO: check the code that use detailTris, in the original c/c++ code, the
+	// 4th, and unused byte if kept in memory for alignment reasons. We keep
+	// here for reference both methods, the first just keeps the first 3 bytes,
+	// nothing is wasted
+	if false {
+		tile.DetailTris = make([]uint8, 3*hdr.DetailTriCount)
+		for i := int32(0); i < hdr.DetailTriCount; i++ {
+			// one Detail Tri takes actually 4 bytes (for alignment) even if only
+			// the first 3 are significant. So we read them 4 by 4 and just keep the
+			// first 3.
+			tmp := make([]uint8, 4)
+			if err = binary.Read(r, binary.LittleEndian, &tmp); err != nil {
+				log.Fatalln("couldn't read tile.DetailTris:", err)
+			}
+			copy(tile.DetailTris[i*3:i*3+3], tmp[0:3])
+		}
 
-	//tile.bvTree = dtGetThenAdvanceBufferPointer<dtBVNode>(d, bvtreeSize);
+	} else {
+		// this second method keep all, we just have to adjust when indexing the
+		// DetailTris slice for usage
+		tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
+		if err = binary.Read(r, binary.LittleEndian, &tile.DetailTris); err != nil {
+			log.Fatalln("couldn't read tile.DetailTris:", err)
+		}
+	}
+
 	tile.BvTree = make([]dtBVNode, hdr.BvNodeCount)
-	binary.Read(r, binary.LittleEndian, &tile.BvTree)
-	fmt.Println("bvTree", tile.BvTree)
+	if err = r.readSlice(&tile.BvTree, binary.LittleEndian); err != nil {
+		log.Fatalln("couldn't read tile.BvTree:", err)
+	}
 
-	//tile.offMeshCons = dtGetThenAdvanceBufferPointer<dtOffMeshConnection>(d, offMeshLinksSize);
+	for idx, node := range tile.BvTree {
+		if node.I > hdr.BvNodeCount {
+			assert.True(false, "node.I > hdr.BvNodeCount: 0x%x 0x%x\n", node.I, hdr.BvNodeCount)
+		}
+	}
+
 	tile.OffMeshCons = make([]dtOffMeshConnection, hdr.OffMeshConCount)
-	binary.Read(r, binary.LittleEndian, &tile.OffMeshCons)
-	fmt.Println("offMeshCons", tile.OffMeshCons)
+	if err = binary.Read(r, binary.LittleEndian, &tile.OffMeshCons); err != nil {
+		log.Fatalln("couldn't read tile.OffMeshCons:", err)
+	}
 
 	// If there are no items in the bvtree, reset the tree pointer.
-	if bvtreeSize == 0 {
+	if len(tile.BvTree) == 0 {
 		tile.BvTree = nil
 	}
 
@@ -364,16 +378,12 @@ func (m *DtNavMesh) getPolyRefBase(tile *DtMeshTile) DtPolyRef {
 	if tile == nil {
 		return 0
 	}
-	//it := uint32(tile - m.m_tiles)
-	//it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.m_tiles[0])))
 
 	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0]))
 	ip := uint32(e / unsafe.Sizeof(*tile))
 
-	//if it > uint32(len(m.m_tiles)) {
-	//fmt.Println("e", e, "ip", ip)
-	//log.Fatalln("houston...", it, ">", len(m.m_tiles))
-	//}
+	assert.True(ip < uint32(len(m.Tiles)),
+		"we should have ip < len(m.Tiles), instead ip = %d and len(m.Tiles) = %d", ip, len(m.Tiles))
 
 	return m.encodePolyId(tile.Salt, ip, 0)
 }
@@ -416,18 +426,12 @@ func (m *DtNavMesh) encodePolyId(salt, it, ip uint32) DtPolyRef {
 	//#endif
 }
 
-const (
-	DT_SALT_BITS uint32 = 16
-	DT_TILE_BITS uint32 = 28
-	DT_POLY_BITS uint32 = 20
-)
-
 type DtPolyRef uint32
 
 /// Defines a link between polygons.
 /// @note This structure is rarely if ever used by the end user.
 /// @see dtMeshTile
-type dtLink struct {
+type DtLink struct {
 	Ref  DtPolyRef ///< Neighbour reference. (The neighbor that is linked to.)
 	Next uint32    ///< Index of the next link.
 	Edge uint8     ///< Index of the polygon edge that owns this link.
@@ -437,7 +441,7 @@ type dtLink struct {
 }
 
 /// Defines the location of detail sub-mesh data within a dtMeshTile.
-type dtPolyDetail struct {
+type DtPolyDetail struct {
 	VertBase  uint32 ///< The offset of the vertices in the dtMeshTile::detailVerts array.
 	TriBase   uint32 ///< The offset of the triangles in the dtMeshTile::detailTris array.
 	VertCount uint8  ///< The number of vertices in the sub-mesh.
@@ -664,6 +668,7 @@ func (m *DtNavMesh) findNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 func (m *DtNavMesh) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, polys []DtPolyRef, maxPolys int32) int32 {
 	if tile.BvTree != nil {
 
+		log.Fatalf("queryPolygonsInTile")
 		var (
 			// AR: those won't be needed once nodeIdx and endIdx are correctcly
 			// used
@@ -807,6 +812,7 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 
 	// CAREFUL with unsafe, double check the ip variable is bounded to
 	// tile.Polys length
+	log.Fatal("use of unsafe in ClosestPointOnPoly")
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
 	ip := uint32(e / unsafe.Sizeof(*poly))
 
@@ -1288,6 +1294,7 @@ func (m *DtNavMesh) GetTileRef(tile *DtMeshTile) dtTileRef {
 	}
 
 	//const unsigned int it = (unsigned int)(tile - m_tiles);
+	log.Fatal("use of unsafe in GetTileRef")
 	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles)))
 	return dtTileRef(m.encodePolyId(tile.Salt, it, 0))
 }
