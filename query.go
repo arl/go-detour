@@ -492,6 +492,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		lastBestNodeCost        float32
 	)
 	startNode = q.nodePool.getNode2(startRef)
+	fmt.Println("startNode", startNode.Pos, startNode.Cost)
 	dtVcopy(startNode.Pos[:], startPos)
 	startNode.PIdx = 0
 	startNode.Cost = 0
@@ -593,11 +594,11 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			// Special case for last node.
 			if neighbourRef == endRef {
 				// Cost
-				curCost := filter.getCost(bestNode.Pos[:], neighbourNode.Pos[:],
+				curCost := filter.Cost(bestNode.Pos[:], neighbourNode.Pos[:],
 					parentRef, parentTile, parentPoly,
 					bestRef, bestTile, bestPoly,
 					neighbourRef, neighbourTile, neighbourPoly)
-				endCost := filter.getCost(neighbourNode.Pos[:], endPos[:],
+				endCost := filter.Cost(neighbourNode.Pos[:], endPos[:],
 					bestRef, bestTile, bestPoly,
 					neighbourRef, neighbourTile, neighbourPoly,
 					0, nil, nil)
@@ -606,7 +607,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 				heuristic = 0
 			} else {
 				// Cost
-				curCost := filter.getCost(bestNode.Pos[:], neighbourNode.Pos[:],
+				curCost := filter.Cost(bestNode.Pos[:], neighbourNode.Pos[:],
 					parentRef, parentTile, parentPoly,
 					bestRef, bestTile, bestPoly,
 					neighbourRef, neighbourTile, neighbourPoly)

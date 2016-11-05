@@ -104,7 +104,7 @@ func (qf *DtQueryFilter) passFilter(ref DtPolyRef, tile *DtMeshTile, poly *DtPol
 ///  @param[in]		nextTile	The tile containing the next polygon. [opt]
 ///  @param[in]		nextPoly	The next polygon. [opt]
 
-func (qf *DtQueryFilter) getCost(pa, pb []float32,
+func (qf *DtQueryFilter) Cost(pa, pb []float32,
 	prevRef DtPolyRef, prevTile *DtMeshTile, prevPoly *DtPoly,
 	curRef DtPolyRef, curTile *DtMeshTile, curPoly *DtPoly,
 	nextRef DtPolyRef, nextTile *DtMeshTile, nextPoly *DtPoly) float32 {
