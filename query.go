@@ -457,6 +457,12 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	filter *DtQueryFilter,
 	path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
 
+	if len(*path) < int(maxPath) {
+		// immediately check the provided slice
+		// is big enough to store maxPath nodes
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
 	//dtAssert(q.m_nav);
 	//dtAssert(q.m_nodePool);
 	//dtAssert(q.m_openList);
@@ -775,6 +781,8 @@ func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathC
 	// Write path
 	for i := writeCount - 1; i >= 0; i-- {
 		assert.True(curNode != nil, "curNode should not be nil")
+		assert.True(int(i) < len(*path), "i:%d should be < len(*path):%d", i, len(*path))
+
 		(*path)[i] = curNode.ID
 		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
 	}

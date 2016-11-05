@@ -86,18 +86,21 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 	assert.True(len(np.First) > 0, "First should not be empty")
 
 	for idx := range np.First {
-		np.First[idx] = 0xff
+		//np.First[idx] = 0xff
+		np.First[idx] = DT_NULL_IDX
 	}
 	for idx := range np.Next {
-		np.Next[idx] = 0xff
+		np.Next[idx] = DT_NULL_IDX
 	}
 	return np
 }
 
 func (np *DtNodePool) clear() {
 	//memset(m_first, 0xff, sizeof(dtNodeIndex)*m_hashSize)
+	//panic("clear")
+	assert.True(int(np.HashSize) == len(np.First), "np.HashSize == len(np.First)")
 	for idx := range np.First {
-		np.First[idx] = 0xff
+		np.First[idx] = DT_NULL_IDX
 	}
 	np.NodeCount = 0
 }
@@ -106,7 +109,15 @@ func (np *DtNodePool) clear() {
 // There can be more than one node for the same polyRef but with different extra state information
 func (np *DtNodePool) getNode(id DtPolyRef, state uint8) *DtNode {
 	bucket := dtHashRef(id) & uint32(np.HashSize-1)
-	i := np.First[bucket]
+
+	//fmt.Println("len(np.First):", len(np.First))
+	//fmt.Println("bucket:", bucket)
+	var i DtNodeIndex
+	i = np.First[bucket]
+	//fmt.Println("i:", i)
+	//fmt.Println("len(np.Nodes):", len(np.Nodes))
+	//fmt.Println("DT_NULL_IDX:", DT_NULL_IDX)
+	//fmt.Println("DT_NULL_IDX:", DT_NULL_IDX)
 	var node *DtNode
 	for i != DT_NULL_IDX {
 		if np.Nodes[i].ID == id && np.Nodes[i].State == state {
@@ -178,8 +189,11 @@ func (np *DtNodePool) getNodeIdx(node *DtNode) uint32 {
 
 	// TODO: use unsafe.Pointer here...
 	e := uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.Nodes[0]))
-	ip := uint32(e / unsafe.Sizeof(node))
-	log.Fatal("use of unsafe in getNodeIdx")
+	ip := uint32(e / unsafe.Sizeof(*node))
+
+	assert.True(ip < uint32(len(np.Nodes)), "ip should be < len(np.Npdes), ip=%d, len(np.Nodes)=%d", ip, len(np.Nodes))
+
+	//log.Fatal("use of unsafe in getNodeIdx")
 	return ip + 1
 }
 

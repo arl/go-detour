@@ -1306,6 +1306,10 @@ func (m *DtNavMesh) IsValidPolyRef(ref DtPolyRef) bool {
 	return true
 }
 
+// Returns the tile and polygon for the specified polygon reference.
+//  @param[in]         ref             A known valid reference for a polygon.
+//  @param[out]        tile    The tile containing the polygon.
+//  @param[out]        poly    The polygon.
 func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **DtPoly) DtStatus {
 	if ref == 0 {
 		return DT_FAILURE
