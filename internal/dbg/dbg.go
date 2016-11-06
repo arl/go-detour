@@ -21,10 +21,9 @@ func main() {
 		f    *os.File
 		err  error
 		mesh *detour.DtNavMesh
-		//out  *os.File
 	)
 
-	f, err = os.Open("navmesh.bin")
+	f, err = os.Open("testdata/navmesh.bin")
 	check(err)
 	defer f.Close()
 
@@ -36,102 +35,102 @@ func main() {
 	}
 	fmt.Println("mesh loaded successfully")
 	fmt.Printf("mesh params: %#v\n", mesh.Params)
-
-	//firstTile, mesh
-
-	tile := mesh.Tiles[0]
-	fmt.Println("tile header", tile.Header)
-	fmt.Println("tile min AABB", tile.Header.Bmin, tile.Header.Bmax)
-	fmt.Println("tile poly count", tile.Header.PolyCount)
-	fmt.Println("tile vert count", tile.Header.VertCount)
-
-	//out, err = os.Create("out")
-	//check(err)
-	//defer out.Close()
-	//out.WriteString(fmt.Sprintf("tile_0\n"))
-
-	for pidx, poly := range tile.Polys[0:tile.Header.PolyCount] {
-		fmt.Printf("poly_%d [%d vertices]:\n", pidx, poly.VertCount)
-
-		var j uint8
-		for j = 0; j < poly.VertCount; j++ {
-			start := poly.Verts[j] * 3
-			fmt.Println("vertices", tile.Verts[start:start+3])
-		}
-		centroid := make([]float32, 3)
-		detour.DtCalcPolyCenter(centroid, poly.Verts[:], int32(poly.VertCount), tile.Verts)
-		fmt.Println("centroid", centroid)
-	}
-
 	fmt.Println("Navigation Query")
-	q, st := detour.NewDtNavMeshQuery(mesh, 10)
+
+	org := [3]float32{3, 0, 1}
+	dst := [3]float32{50, 0, 30}
+
+	// findPath ok with:
+	//org := [3]float32{5, 0, 10}
+	//dst := [3]float32{50, 0, 30}
+
+	path, err := findPath(mesh, org, dst)
+	if err != nil {
+		log.Fatalln("findPath failed", err)
+	}
+	log.Println("findPath success, path:", path)
+}
+
+func findPath(mesh *detour.DtNavMesh, org, dst [3]float32) ([]detour.DtPolyRef, error) {
+	var (
+		orgRef, dstRef detour.DtPolyRef       // references of org/dst polygon refs
+		query          *detour.DtNavMeshQuery // the query instance
+		filter         *detour.DtQueryFilter  // filter to use for various queries
+		extents        [3]float32             // search distance for polygon search (3 axis)
+		nearestPt      [3]float32
+		st             detour.DtStatus
+		path           []detour.DtPolyRef
+	)
+
+	query, st = detour.NewDtNavMeshQuery(mesh, 1000)
 	if detour.DtStatusFailed(st) {
-		log.Fatalf("NewDtNavMeshQuery failed with status 0x%x\n", st)
+		return path, fmt.Errorf("query creation failed with status 0x%x\n", st)
 	}
-	fmt.Println("q", q)
-	//fmt.Println("tile 17", mesh.Tiles[17])
-	//fmt.Println("tile 18", mesh.Tiles[18])
+	// define the extents vector for the nearest polygon query
+	extents = [3]float32{0, 2, 0}
 
-	// Origin: get PolyRef from point
-	org := []float32{40, 1, 20}
-	extents := []float32{0, 2, 0}
+	// create a default query filter
+	filter = detour.NewDtQueryFilter()
+
+	// get org polygon reference
+	st = query.FindNearestPoly(org[:], extents[:], filter, &orgRef, nearestPt[:])
+	if detour.DtStatusFailed(st) {
+		return path, fmt.Errorf("FindNearestPoly failed with 0x%x\n", st)
+	} else if orgRef == 0 {
+		return path, fmt.Errorf("org doesn't intersect any polygons")
+	}
+	assert.True(mesh.IsValidPolyRef(orgRef), "%d is not a valid poly ref")
+	copy(org[:], nearestPt[:])
+	log.Println("org is now", org)
+
+	// get dst polygon reference
+	st = query.FindNearestPoly(dst[:], extents[:], filter, &dstRef, nearestPt[:])
+	if detour.DtStatusFailed(st) {
+		return path, fmt.Errorf("FindNearestPoly failed with 0x%x\n", st)
+	} else if dstRef == 0 {
+		return path, fmt.Errorf("dst doesn't intersect any polygons")
+	}
+	assert.True(mesh.IsValidPolyRef(orgRef), "%d is not a valid poly ref")
+	copy(dst[:], nearestPt[:])
+	log.Println("dst is now", dst)
+
+	// FindPath
 	var (
-		orgPolyRef detour.DtPolyRef
-		nearestPt  [3]float32
-	)
-	filter := detour.NewDtQueryFilter()
-
-	// Origin: FindNearestPoly
-	status := q.FindNearestPoly(org, extents, filter, &orgPolyRef, nearestPt[:])
-	if detour.DtStatusFailed(status) {
-		fmt.Printf("FindNearestPoly failed with 0x%x\n", status)
-	}
-	fmt.Println("ref:", orgPolyRef, "nearestPt:", nearestPt)
-	org = nearestPt[:]
-	assert.True(mesh.IsValidPolyRef(orgPolyRef), "%d is not a valid poly ref")
-
-	// TileAndPolyByRef
-	var (
-		ptile *detour.DtMeshTile
-		ppoly *detour.DtPoly
-	)
-	status = mesh.TileAndPolyByRef(orgPolyRef, &ptile, &ppoly)
-	if detour.DtStatusFailed(status) {
-		fmt.Printf("TileAndPolyByRef failed with 0x%x\n", status)
-	}
-	fmt.Print("got tile ", ptile.Header.X, ", ", ptile.Header.Y)
-	fmt.Print("got poly ", *ppoly)
-
-	// Destination: get PolyRef from point
-	dst := []float32{4, 1, 4}
-
-	var dstPolyRef detour.DtPolyRef
-
-	// Destination: FindNearestPoly
-	status = q.FindNearestPoly(dst, extents, filter, &dstPolyRef, nearestPt[:])
-	if detour.DtStatusFailed(status) {
-		fmt.Printf("FindNearestPoly failed with 0x%x\n", status)
-	}
-	fmt.Println("ref:", dstPolyRef, "nearestPt:", nearestPt)
-	dst = nearestPt[:]
-	assert.True(mesh.IsValidPolyRef(dstPolyRef), "%d is not a valid poly ref")
-
-	//
-	mesh.TileAndPolyByRefUnsafe(dstPolyRef, &ptile, &ppoly)
-	fmt.Println("TileAndPolyByRefUnsafe")
-	fmt.Println(*ptile)
-	fmt.Println(*ppoly)
-
-	var (
-		path      []detour.DtPolyRef
 		pathCount int32
 	)
 	path = make([]detour.DtPolyRef, 100)
-	status = q.FindPath(orgPolyRef, dstPolyRef, org, dst, filter, &path, &pathCount, 100)
-	if detour.DtStatusFailed(status) {
-		fmt.Printf("FindPath failed with 0x%x\n", status)
+	st = query.FindPath(orgRef, dstRef, org[:], dst[:], filter, &path, &pathCount, 100)
+	if detour.DtStatusFailed(st) {
+		return path, fmt.Errorf("query.FindPath failed with 0x%x\n", st)
 	}
+	return path[:pathCount], nil
 
-	fmt.Println("FindPath set pathCount to", pathCount)
-	fmt.Println("path", path)
+	//fmt.Println("FindPath", "org:", org, "dst:", dst, "orgRef:", orgRef, "dstRef:", dstRef)
+	//fmt.Println("FindPath set pathCount to", pathCount)
+	//fmt.Println("path", path)
+	//fmt.Println("actual path returned", path[:pathCount])
+
+	//// If the end polygon cannot be reached through the navigation graph,
+	//// the last polygon in the path will be the nearest the end polygon.
+	//// check for that
+	//if path[len(path)-1] == dstRef {
+	//fmt.Println("no path found, as last poly in path in dstPoly")
+	//} else {
+	//fmt.Println("path found")
+	//for _, polyRef := range path[:pathCount] {
+	//fmt.Println("-poly ref", polyRef)
+	//mesh.TileAndPolyByRefUnsafe(polyRef, &ptile, &ppoly)
+	//polyIdx := mesh.DecodePolyIdPoly(polyRef)
+	//poly := ptile.Polys[polyIdx]
+
+	//centroid := make([]float32, 3)
+	//detour.DtCalcPolyCenter(centroid, poly.Verts[:], int32(poly.VertCount), ptile.Verts)
+	//fmt.Println("poly center: ", centroid)
+
+	////for _, v := range poly.Verts[0:poly.VertCount] {
+	////fmt.Println("poly vertex", ptile.Verts[3*v:3*v+3])
+	////}
+	//}
+	//}
+	return path, nil
 }
