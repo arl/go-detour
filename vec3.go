@@ -111,6 +111,24 @@ func dtVlerp(dest, v1, v2 []float32, t float32) {
 	dest[2] = v1[2] + (v2[2]-v1[2])*t
 }
 
+/// Derives the cross product of two vectors. (@p v1 x @p v2)
+///  @param[out]	dest	The cross product. [(x, y, z)]
+///  @param[in]		v1		A Vector [(x, y, z)]
+///  @param[in]		v2		A vector [(x, y, z)]
+func dtVcross(dest, v1, v2 []float32) {
+	dest[0] = v1[1]*v2[2] - v1[2]*v2[1]
+	dest[1] = v1[2]*v2[0] - v1[0]*v2[2]
+	dest[2] = v1[0]*v2[1] - v1[1]*v2[0]
+}
+
+/// Derives the dot product of two vectors. (@p v1 . @p v2)
+///  @param[in]		v1	A Vector [(x, y, z)]
+///  @param[in]		v2	A vector [(x, y, z)]
+/// @return The dot product.
+func dtVdot(v1, v2 []float32) float32 {
+	return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2]
+}
+
 /// Derives the dot product of two vectors on the xz-plane. (@p u . @p v)
 ///  @param[in]		u		A vector [(x, y, z)]
 ///  @param[in]		v		A vector [(x, y, z)]
