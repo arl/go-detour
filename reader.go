@@ -57,8 +57,6 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 			break
 		}
 
-		log.Println("reading tile header", i, tileHdr)
-
 		data := make([]byte, tileHdr.DataSize)
 		if data == nil {
 			break

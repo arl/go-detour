@@ -1,7 +1,7 @@
 package detour
 
 import (
-	"fmt"
+	"log"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
@@ -368,9 +368,9 @@ type dtQueryData struct {
 	lastBestNodeCost float32
 	startRef, endRef DtPolyRef
 	startPos, endPos [3]float32
-	//filter           *dtQueryFilter   // TODO: AR not defined for now
-	options         uint32
-	raycastLimitSqr float32
+	filter           *DtQueryFilter
+	options          uint32
+	raycastLimitSqr  float32
 }
 
 /// Initializes the query object.
@@ -474,7 +474,6 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	// Validate input
 	if !q.nav.IsValidPolyRef(startRef) || !q.nav.IsValidPolyRef(endRef) ||
 		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
-
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 
@@ -492,13 +491,12 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		lastBestNodeCost        float32
 	)
 	startNode = q.nodePool.getNode2(startRef)
-	fmt.Println("startNode", startNode.Pos, startNode.Cost)
 	dtVcopy(startNode.Pos[:], startPos)
 	startNode.PIdx = 0
 	startNode.Cost = 0
 	startNode.Total = dtVdist(startPos, endPos) * H_SCALE
 	startNode.ID = startRef
-	startNode.Flags = uint8(DT_NODE_OPEN)
+	startNode.Flags = DT_NODE_OPEN
 	q.openList.push(startNode)
 
 	lastBestNode = startNode
@@ -512,7 +510,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 
 		// Remove node from open list and put it in closed list.
 		bestNode = q.openList.pop()
-		bestNode.Flags &= ^(uint8(DT_NODE_OPEN))
+		bestNode.Flags &= ^DT_NODE_OPEN
 		bestNode.Flags |= DT_NODE_CLOSED
 
 		// Reached the goal, stop searching.
@@ -583,9 +581,13 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 
 			// If the node is visited the first time, calculate node position.
 			if neighbourNode.Flags == 0 {
-				q.getEdgeMidPoint(bestRef, bestPoly, bestTile,
+
+				status := q.getEdgeMidPoint(bestRef, bestPoly, bestTile,
 					neighbourRef, neighbourPoly, neighbourTile,
 					neighbourNode.Pos[:])
+				if DtStatusFailed(status) {
+					log.Fatalf("getEdgeMidPoint failed")
+				}
 			}
 
 			// Calculate cost and heuristic.
@@ -618,27 +620,27 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			total := cost + heuristic
 
 			// The node is already in open list and the new result is worse, skip.
-			if (neighbourNode.Flags&uint8(DT_NODE_OPEN)) != 0 && total >= neighbourNode.Total {
+			if (neighbourNode.Flags&DT_NODE_OPEN) != 0 && total >= neighbourNode.Total {
 				continue
 			}
 			// The node is already visited and process, and the new result is worse, skip.
-			if (neighbourNode.Flags&uint8(DT_NODE_CLOSED)) != 0 && total >= neighbourNode.Total {
+			if (neighbourNode.Flags&DT_NODE_CLOSED) != 0 && total >= neighbourNode.Total {
 				continue
 			}
 
 			// Add or update the node.
 			neighbourNode.PIdx = q.nodePool.getNodeIdx(bestNode)
 			neighbourNode.ID = neighbourRef
-			neighbourNode.Flags = (neighbourNode.Flags & ^uint8(DT_NODE_CLOSED))
+			neighbourNode.Flags = (neighbourNode.Flags & dtNodeFlags(^dtNodeFlags(DT_NODE_CLOSED)))
 			neighbourNode.Cost = cost
 			neighbourNode.Total = total
 
-			if (neighbourNode.Flags & uint8(DT_NODE_OPEN)) != 0 {
+			if (neighbourNode.Flags & DT_NODE_OPEN) != 0 {
 				// Already in open, update node location.
 				q.openList.modify(neighbourNode)
 			} else {
 				// Put the node in open list.
-				neighbourNode.Flags |= uint8(DT_NODE_OPEN)
+				neighbourNode.Flags |= DT_NODE_OPEN
 				q.openList.push(neighbourNode)
 			}
 
@@ -845,9 +847,6 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 	assert.True(ip < uint32(len(tile.Polys)), "ip should be < len(tile.Polys), ip=%d, len(tile.Polys)=%d", ip, len(tile.Polys))
 
 	pd := &tile.DetailMeshes[ip]
-
-	fmt.Println("ip", ip)
-	fmt.Println("pd", pd)
 
 	// Clamp point to be inside the polygon.
 	verts := make([]float32, DT_VERTS_PER_POLYGON*3)
@@ -1070,19 +1069,11 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		// TODO: probably need to use an index or unsafe.Pointer here
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
-			fmt.Println("node", node)
 			overlap := dtOverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
-			fmt.Println("overlap", overlap)
-			fmt.Println("node.I", node.I)
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
-				fmt.Println("base | DtPolyRef(node.I)", base, "|", DtPolyRef(node.I))
 				ref := base | DtPolyRef(node.I)
-				fmt.Printf("0x%x | 0x%x = 0x%x\n", base, DtPolyRef(node.I), ref)
-				fmt.Println("ref", ref)
-				fmt.Println("node.I", node.I)
-				fmt.Println("len(tile.Poly)", len(tile.Polys))
 				if filter.passFilter(ref, tile, &tile.Polys[node.I]) {
 					polyRefs[n] = ref
 					polys[n] = &tile.Polys[node.I]

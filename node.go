@@ -17,7 +17,7 @@ func dtHashRef(a DtPolyRef) uint32 {
 	return uint32(a)
 }
 
-type dtNodeFlags uint32
+type dtNodeFlags uint8
 
 const (
 	DT_NODE_OPEN            dtNodeFlags = 0x01
@@ -47,7 +47,8 @@ type DtNode struct {
 	// fucking C bitfields!!! as we allocate the dtNode ourselves, we can always use:
 	PIdx  uint32
 	State uint8
-	Flags uint8
+	//Flags uint8
+	Flags dtNodeFlags
 	ID    DtPolyRef ///< Polygon ref the node corresponds to.
 }
 
@@ -201,7 +202,6 @@ func (np *DtNodePool) getNodeAtIdx(idx int32) *DtNode {
 	if idx == 0 {
 		return nil
 	}
-
 	return &np.Nodes[idx-1]
 }
 
