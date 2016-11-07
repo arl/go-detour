@@ -111,14 +111,8 @@ func (np *DtNodePool) clear() {
 func (np *DtNodePool) getNode(id DtPolyRef, state uint8) *DtNode {
 	bucket := dtHashRef(id) & uint32(np.HashSize-1)
 
-	//fmt.Println("len(np.First):", len(np.First))
-	//fmt.Println("bucket:", bucket)
 	var i DtNodeIndex
 	i = np.First[bucket]
-	//fmt.Println("i:", i)
-	//fmt.Println("len(np.Nodes):", len(np.Nodes))
-	//fmt.Println("DT_NULL_IDX:", DT_NULL_IDX)
-	//fmt.Println("DT_NULL_IDX:", DT_NULL_IDX)
 	var node *DtNode
 	for i != DT_NULL_IDX {
 		if np.Nodes[i].ID == id && np.Nodes[i].State == state {

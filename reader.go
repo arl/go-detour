@@ -4,13 +4,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"reflect"
 )
 
 type Reader struct{}
-
-//func (r Reader) Read(p []byte) (n int, err error)
 
 // Decode reads a PNG image from r and returns it as an image.Image.
 // The type of Image returned depends on the PNG contents.
@@ -25,7 +22,6 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(hdr)
 
 	if hdr.Magic != NAVMESHSET_MAGIC {
 		return nil, fmt.Errorf("wrong magic number: %x", hdr.Magic)
@@ -40,8 +36,6 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 	if DtStatusFailed(status) {
 		return nil, fmt.Errorf("status failed 0x%x", status)
 	}
-
-	fmt.Println("numTiles", hdr.NumTiles)
 
 	// Read tiles.
 	var i int32
@@ -67,10 +61,9 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 		}
 		status := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef, nil)
 		if status&DT_FAILURE != 0 {
-			log.Fatalf("mesh.addTile() returned 0x%x\n", status)
+			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
 		}
 	}
-	log.Println(hdr.NumTiles, "tiles added successfully")
 	return &mesh, nil
 }
 
