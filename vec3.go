@@ -12,6 +12,17 @@ func dtVadd(dest, v1, v2 []float32) {
 	dest[2] = v1[2] + v2[2]
 }
 
+/// Performs a scaled vector addition. (@p v1 + (@p v2 * @p s))
+///  @param[out]	dest	The result vector. [(x, y, z)]
+///  @param[in]		v1		The base vector. [(x, y, z)]
+///  @param[in]		v2		The vector to scale and add to @p v1. [(x, y, z)]
+///  @param[in]		s		The amount to scale @p v2 by before adding to @p v1.
+func dtVmad(dest, v1, v2 []float32, s float32) {
+	dest[0] = v1[0] + v2[0]*s
+	dest[1] = v1[1] + v2[1]*s
+	dest[2] = v1[2] + v2[2]*s
+}
+
 /// Performs a vector subtraction. (@p v1 - @p v2)
 ///  @param[out]	dest	The result vector. [(x, y, z)]
 ///  @param[in]		v1		The base vector. [(x, y, z)]

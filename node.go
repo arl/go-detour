@@ -180,15 +180,12 @@ func (np *DtNodePool) getNodeIdx(node *DtNode) uint32 {
 	if node == nil {
 		return 0
 	}
-	//return uint32(node-np.m_nodes) + 1
 
-	// TODO: use unsafe.Pointer here...
 	e := uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.Nodes[0]))
 	ip := uint32(e / unsafe.Sizeof(*node))
 
 	assert.True(ip < uint32(len(np.Nodes)), "ip should be < len(np.Npdes), ip=%d, len(np.Nodes)=%d", ip, len(np.Nodes))
 
-	//log.Fatal("use of unsafe in getNodeIdx")
 	return ip + 1
 }
 
