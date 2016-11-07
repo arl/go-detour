@@ -38,7 +38,6 @@ func dtIlog2(v uint32) uint32 {
 }
 
 func dtAlign4(x uint32) uint32 {
-	//return (x+3) & ~3;
 	return ((x + 3) &^ 3)
 }
 

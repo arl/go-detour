@@ -57,79 +57,74 @@ const (
 )
 
 type DtNodePool struct {
-	Nodes       []DtNode
-	First, Next []DtNodeIndex
-	MaxNodes    int32
-	HashSize    int32
-	NodeCount   int32
+	nodes       []DtNode
+	first, next []DtNodeIndex
+	maxNodes    int32
+	hashSize    int32
+	nodeCount   int32
 }
 
 func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 	np := &DtNodePool{
-		MaxNodes: maxNodes,
-		HashSize: hashSize,
+		maxNodes: maxNodes,
+		hashSize: hashSize,
 	}
-	assert.True(dtNextPow2(uint32(np.HashSize)) == uint32(np.HashSize), "m_hashSize should be a power of 2")
+	assert.True(dtNextPow2(uint32(np.hashSize)) == uint32(np.hashSize), "m_hashSize should be a power of 2")
 
 	// pidx is special as 0 means "none" and 1 is the first node. For that reason
 	// we have 1 fewer nodes available than the number of values it can contain.
-	assert.True(np.MaxNodes > 0 && np.MaxNodes <= int32(DT_NULL_IDX) && np.MaxNodes <= (1<<DT_NODE_PARENT_BITS)-1, "DtNodePool, max nodes check failed")
+	assert.True(np.maxNodes > 0 && np.maxNodes <= int32(DT_NULL_IDX) && np.maxNodes <= (1<<DT_NODE_PARENT_BITS)-1, "DtNodePool, max nodes check failed")
 
-	//m_nodes = (dtNode*)dtAlloc(sizeof(dtNode)*m_maxNodes, DT_ALLOC_PERM);
-	np.Nodes = make([]DtNode, np.MaxNodes)
-	//m_next = (dtNodeIndex*)dtAlloc(sizeof(dtNodeIndex)*m_maxNodes, DT_ALLOC_PERM);
-	np.Next = make([]DtNodeIndex, np.MaxNodes)
-	//m_first = (dtNodeIndex*)dtAlloc(sizeof(dtNodeIndex)*hashSize, DT_ALLOC_PERM);
-	np.First = make([]DtNodeIndex, hashSize)
+	np.nodes = make([]DtNode, np.maxNodes)
+	np.next = make([]DtNodeIndex, np.maxNodes)
+	np.first = make([]DtNodeIndex, hashSize)
 
-	assert.True(len(np.Nodes) > 0, "Nodes should not be empty")
-	assert.True(len(np.Next) > 0, "Next should not be empty")
-	assert.True(len(np.First) > 0, "First should not be empty")
+	assert.True(len(np.nodes) > 0, "Nodes should not be empty")
+	assert.True(len(np.next) > 0, "Next should not be empty")
+	assert.True(len(np.first) > 0, "First should not be empty")
 
-	for idx := range np.First {
+	for idx := range np.first {
 		//np.First[idx] = 0xff
-		np.First[idx] = DT_NULL_IDX
+		np.first[idx] = DT_NULL_IDX
 	}
-	for idx := range np.Next {
-		np.Next[idx] = DT_NULL_IDX
+	for idx := range np.next {
+		np.next[idx] = DT_NULL_IDX
 	}
 	return np
 }
 
 func (np *DtNodePool) clear() {
-	//memset(m_first, 0xff, sizeof(dtNodeIndex)*m_hashSize)
-	//panic("clear")
-	assert.True(int(np.HashSize) == len(np.First), "np.HashSize == len(np.First)")
-	for idx := range np.First {
-		np.First[idx] = DT_NULL_IDX
+	assert.True(int(np.hashSize) == len(np.first), "np.HashSize == len(np.First)")
+	for idx := range np.first {
+		np.first[idx] = DT_NULL_IDX
 	}
-	np.NodeCount = 0
+	np.nodeCount = 0
 }
 
 // Get a dtNode by ref and extra state information. If there is none then - allocate
 // There can be more than one node for the same polyRef but with different extra state information
-func (np *DtNodePool) getNode(id DtPolyRef, state uint8) *DtNode {
-	bucket := dtHashRef(id) & uint32(np.HashSize-1)
+func (np *DtNodePool) Node(id DtPolyRef, state uint8) *DtNode {
+	bucket := dtHashRef(id) & uint32(np.hashSize-1)
 
 	var i DtNodeIndex
-	i = np.First[bucket]
+	i = np.first[bucket]
 	var node *DtNode
 	for i != DT_NULL_IDX {
-		if np.Nodes[i].ID == id && np.Nodes[i].State == state {
-			return &np.Nodes[i]
+		if np.nodes[i].ID == id && np.nodes[i].State == state {
+			return &np.nodes[i]
 		}
-		i = np.Next[i]
+		i = np.next[i]
 	}
 
-	if np.NodeCount >= np.MaxNodes {
+	if np.nodeCount >= np.maxNodes {
 		return nil
 	}
 
-	i = DtNodeIndex(np.NodeCount)
-	np.NodeCount++
+	i = DtNodeIndex(np.nodeCount)
+	np.nodeCount++
 
 	// Init node
-	node = &np.Nodes[i]
+	node = &np.nodes[i]
 	node.PIdx = 0
 	node.Cost = 0
 	node.Total = 0
@@ -137,41 +132,41 @@ func (np *DtNodePool) getNode(id DtPolyRef, state uint8) *DtNode {
 	node.State = state
 	node.Flags = 0
 
-	np.Next[i] = np.First[bucket]
-	np.First[bucket] = i
+	np.next[i] = np.first[bucket]
+	np.first[bucket] = i
 
 	return node
 }
 
 func (np *DtNodePool) getNode2(id DtPolyRef) *DtNode {
-	return np.getNode(id, 0)
+	return np.Node(id, 0)
 }
 
 func (np *DtNodePool) findNode(id DtPolyRef, state uint8) *DtNode {
-	bucket := dtHashRef(id) & uint32(np.HashSize-1)
-	i := np.First[bucket]
+	bucket := dtHashRef(id) & uint32(np.hashSize-1)
+	i := np.first[bucket]
 	for i != DT_NULL_IDX {
-		if np.Nodes[i].ID == id && np.Nodes[i].State == state {
-			return &np.Nodes[i]
+		if np.nodes[i].ID == id && np.nodes[i].State == state {
+			return &np.nodes[i]
 		}
-		i = np.Next[i]
+		i = np.next[i]
 	}
 	return nil
 }
 
 func (np *DtNodePool) findNodes(id DtPolyRef, nodes *[]*DtNode, maxNodes int32) uint32 {
 	var n uint32
-	bucket := dtHashRef(id) & uint32(np.HashSize-1)
-	i := np.First[bucket]
+	bucket := dtHashRef(id) & uint32(np.hashSize-1)
+	i := np.first[bucket]
 	for i != DT_NULL_IDX {
-		if np.Nodes[i].ID == id {
+		if np.nodes[i].ID == id {
 			if n >= uint32(maxNodes) {
 				return n
 			}
-			(*nodes)[n] = &np.Nodes[i]
+			(*nodes)[n] = &np.nodes[i]
 			n++
 		}
-		i = np.Next[i]
+		i = np.next[i]
 	}
 	return n
 }
@@ -181,10 +176,10 @@ func (np *DtNodePool) getNodeIdx(node *DtNode) uint32 {
 		return 0
 	}
 
-	e := uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.Nodes[0]))
+	e := uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.nodes[0]))
 	ip := uint32(e / unsafe.Sizeof(*node))
 
-	assert.True(ip < uint32(len(np.Nodes)), "ip should be < len(np.Npdes), ip=%d, len(np.Nodes)=%d", ip, len(np.Nodes))
+	assert.True(ip < uint32(len(np.nodes)), "ip should be < len(np.Npdes), ip=%d, len(np.Nodes)=%d", ip, len(np.nodes))
 
 	return ip + 1
 }
@@ -193,33 +188,33 @@ func (np *DtNodePool) getNodeAtIdx(idx int32) *DtNode {
 	if idx == 0 {
 		return nil
 	}
-	return &np.Nodes[idx-1]
+	return &np.nodes[idx-1]
 }
 
 func (np *DtNodePool) getMemUsed() int32 {
 	log.Fatal("use of unsafe in getMemUsed")
 	return int32(unsafe.Sizeof(*np)) +
-		int32(unsafe.Sizeof(DtNode{}))*np.MaxNodes +
-		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.MaxNodes +
-		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.HashSize
+		int32(unsafe.Sizeof(DtNode{}))*np.maxNodes +
+		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.maxNodes +
+		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.hashSize
 }
 
 func (np *DtNodePool) getMaxNodes() int32 {
-	return np.MaxNodes
+	return np.maxNodes
 }
 
 func (np *DtNodePool) getHashSize() int32 {
-	return np.HashSize
+	return np.hashSize
 }
 
 func (np *DtNodePool) getFirst(bucket int32) DtNodeIndex {
-	return np.First[bucket]
+	return np.first[bucket]
 }
 
 func (np *DtNodePool) getNext(i int32) DtNodeIndex {
-	return np.Next[i]
+	return np.next[i]
 }
 
 func (np *DtNodePool) getNodeCount() int32 {
-	return np.NodeCount
+	return np.nodeCount
 }

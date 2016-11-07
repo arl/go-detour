@@ -573,7 +573,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 			}
 
 			// get the node
-			neighbourNode := q.nodePool.getNode(neighbourRef, crossSide)
+			neighbourNode := q.nodePool.Node(neighbourRef, crossSide)
 			if neighbourNode == nil {
 				outOfNodes = true
 				continue
