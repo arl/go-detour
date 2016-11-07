@@ -3,7 +3,6 @@ package detour
 import "testing"
 
 func TestVcross(t *testing.T) {
-
 	vecTests := []struct {
 		v1, v2 [3]float32
 		want   [3]float32
@@ -35,7 +34,6 @@ func TestVcross(t *testing.T) {
 }
 
 func TestVdot(t *testing.T) {
-
 	vecTests := []struct {
 		v1, v2 [3]float32
 		want   float32
@@ -61,7 +59,6 @@ func TestVdot(t *testing.T) {
 }
 
 func TestVmad(t *testing.T) {
-
 	vecTests := []struct {
 		v1, v2 [3]float32
 		s      float32
@@ -96,7 +93,6 @@ func TestVmad(t *testing.T) {
 }
 
 func TestVadd(t *testing.T) {
-
 	vecTests := []struct {
 		v1, v2 [3]float32
 		want   [3]float32
