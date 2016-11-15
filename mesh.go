@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
+	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/math32"
 )
 
@@ -673,12 +674,12 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 
 		// Calculate quantized box
 		// dtClamp query box to world box.
-		minx := dtClamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
-		miny := dtClamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
-		minz := dtClamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
-		maxx := dtClamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
-		maxy := dtClamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
-		maxz := dtClamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
+		minx := f32.Clamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
+		miny := f32.Clamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
+		minz := f32.Clamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
+		maxx := f32.Clamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
+		maxy := f32.Clamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
+		maxz := f32.Clamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
 		// Quantize
 		bmin[0] = uint16(uint32(qfac*minx) & 0xfffe)
 		bmin[1] = uint16(uint32(qfac*miny) & 0xfffe)
@@ -1042,16 +1043,16 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 						if tmin > tmax {
 							tmin, tmax = tmax, tmin
 						}
-						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
-						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
+						link.Bmin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
+						link.Bmax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					} else if dir == 2 || dir == 6 {
 						tmin := (neia[k*2+0] - va[0]) / (vb[0] - va[0])
 						tmax := (neia[k*2+1] - va[0]) / (vb[0] - va[0])
 						if tmin > tmax {
 							tmin, tmax = tmax, tmin
 						}
-						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
-						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
+						link.Bmin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
+						link.Bmax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					}
 				}
 			}

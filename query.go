@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
+	"github.com/aurelien-rainone/gogeo/f32"
 )
 
 const (
@@ -1050,12 +1051,12 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		// Calculate quantized box
 		var bmin, bmax [3]uint16
 		// dtClamp query box to world box.
-		minx := dtClamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
-		miny := dtClamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
-		minz := dtClamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
-		maxx := dtClamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
-		maxy := dtClamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
-		maxz := dtClamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
+		minx := f32.Clamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
+		miny := f32.Clamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
+		minz := f32.Clamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
+		maxx := f32.Clamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
+		maxy := f32.Clamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
+		maxz := f32.Clamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
 		// Quantize
 		bmin[0] = uint16(qfac*minx) & 0xfffe
 		bmin[1] = uint16(qfac*miny) & 0xfffe

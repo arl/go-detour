@@ -41,21 +41,6 @@ func dtAlign4(x uint32) uint32 {
 	return ((x + 3) &^ 3)
 }
 
-/// Clamps the value to the specified range.
-///  @param[in]		v	The value to clamp.
-///  @param[in]		mn	The minimum permitted return value.
-///  @param[in]		mx	The maximum permitted return value.
-///  @return The value, clamped to the specified range.
-func dtClamp(v, mn, mx float32) float32 {
-	if v < mn {
-		return mn
-	}
-	if v > mx {
-		return mx
-	}
-	return v
-}
-
 /// Determines if two axis-aligned bounding boxes overlap.
 ///  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
 ///  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
