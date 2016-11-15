@@ -1,6 +1,6 @@
 package detour
 
-import "math"
+import "github.com/aurelien-rainone/math32"
 
 /// Provides custom polygon query behavior.
 /// Used by dtNavMeshQuery::queryPolygons.
@@ -25,7 +25,7 @@ func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center []float32) *dtFindN
 	return &dtFindNearestPolyQuery{
 		query:              query,
 		center:             center,
-		nearestDistanceSqr: math.MaxFloat32,
+		nearestDistanceSqr: math32.MaxFloat32,
 		nearestRef:         0,
 	}
 }
@@ -54,7 +54,7 @@ func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs
 		// climb height, favor that instead of straight line nearest point.
 		dtVsub(diff[:], q.center, closestPtPoly[:])
 		if posOverPoly {
-			d = dtAbs(diff[1]) - tile.Header.WalkableClimb
+			d = math32.Abs(diff[1]) - tile.Header.WalkableClimb
 			if d > 0 {
 				d = d * d
 			} else {

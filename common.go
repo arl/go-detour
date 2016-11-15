@@ -41,21 +41,6 @@ func dtAlign4(x uint32) uint32 {
 	return ((x + 3) &^ 3)
 }
 
-/// Returns the square of the value.
-func dtSqr(v float32) float32 {
-	return v * v
-}
-
-/// Returns the absolute value.
-///  @param[in]		a	The value.
-///  @return The absolute value of the specified value.
-func dtAbs(a float32) float32 {
-	if a < 0 {
-		return -a
-	}
-	return a
-}
-
 /// Clamps the value to the specified range.
 ///  @param[in]		v	The value to clamp.
 ///  @param[in]		mn	The minimum permitted return value.

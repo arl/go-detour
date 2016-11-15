@@ -1,6 +1,6 @@
 package detour
 
-import "math"
+import "github.com/aurelien-rainone/math32"
 
 type Vec3 []float32
 
@@ -87,7 +87,7 @@ func dtVdist(v1, v2 Vec3) float32 {
 	dx := v2[0] - v1[0]
 	dy := v2[1] - v1[1]
 	dz := v2[2] - v1[2]
-	return float32(math.Sqrt(float64(dx*dx + dy*dy + dz*dz)))
+	return math32.Sqrt(dx*dx + dy*dy + dz*dz)
 }
 
 // Performs a linear interpolation between two vectors. v1 toward v2

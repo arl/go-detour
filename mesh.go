@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"math"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
+	"github.com/aurelien-rainone/math32"
 )
 
 /// A navigation mesh based on tiles of convex polygons.
@@ -565,7 +565,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 			continue
 		}
 		// findNearestPoly may return too optimistic results, further check to make sure.
-		if dtSqr(nearestPt[0]-p[0])+dtSqr(nearestPt[2]-p[2]) > dtSqr(con.Rad) {
+		if math32.Sqr(nearestPt[0]-p[0])+math32.Sqr(nearestPt[2]-p[2]) > math32.Sqr(con.Rad) {
 			continue
 		}
 		// Make sure the location is on current mesh.
@@ -617,7 +617,7 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 
 	// Find nearest polygon amongst the nearby polygons.
 	var nearest DtPolyRef
-	nearestDistanceSqr := float32(math.MaxFloat32)
+	nearestDistanceSqr := math32.MaxFloat32
 	var i int32
 	for i = 0; i < polyCount; i++ {
 		ref := polys[i]
@@ -633,7 +633,7 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 		// climb height, favor that instead of straight line nearest point.
 		dtVsub(diff, center, closestPtPoly)
 		if posOverPoly {
-			d = dtAbs(diff[1]) - tile.Header.WalkableClimb
+			d = math32.Abs(diff[1]) - tile.Header.WalkableClimb
 			if d > 0 {
 				d = d * d
 			} else {
@@ -923,7 +923,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 
 		panic("here9")
 		// findNearestPoly may return too optimistic results, further check to make sure.
-		if dtSqr(nearestPt[0]-p[0])+dtSqr(nearestPt[2]-p[2]) > dtSqr(targetCon.Rad) {
+		if math32.Sqr(nearestPt[0]-p[0])+math32.Sqr(nearestPt[2]-p[2]) > math32.Sqr(targetCon.Rad) {
 			continue
 		}
 
@@ -1095,7 +1095,7 @@ func (m *DtNavMesh) FindConnectingPolys(va, vb []float32, tile *DtMeshTile, side
 			bpos := getSlabCoord(vc, side)
 
 			// Segments are not close enough.
-			if dtAbs(apos-bpos) > 0.01 {
+			if math32.Abs(apos-bpos) > 0.01 {
 				continue
 			}
 
@@ -1184,7 +1184,7 @@ func overlapSlabs(amin, amax, bmin, bmax []float32, px, py float32) bool {
 	}
 
 	// Check for overlap at endpoints.
-	thr := dtSqr(py * 2)
+	thr := math32.Sqr(py * 2)
 	if dmin*dmin <= thr || dmax*dmax <= thr {
 		return true
 	}
@@ -1291,6 +1291,6 @@ func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **Dt
 }
 
 func (m *DtNavMesh) calcTileLoc(pos [3]float32, tx, ty *int32) {
-	*tx = int32(math.Floor(float64((pos[0] - m.Orig[0]) / m.TileWidth)))
-	*ty = int32(math.Floor(float64((pos[2] - m.Orig[2]) / m.TileHeight)))
+	*tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
+	*ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))
 }
