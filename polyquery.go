@@ -1,6 +1,9 @@
 package detour
 
-import "github.com/aurelien-rainone/math32"
+import (
+	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
+)
 
 /// Provides custom polygon query behavior.
 /// Used by dtNavMeshQuery::queryPolygons.
@@ -15,18 +18,19 @@ type DtPolyQuery interface {
 
 type dtFindNearestPolyQuery struct {
 	query              *DtNavMeshQuery
-	center             []float32
+	center             d3.Vec3
 	nearestDistanceSqr float32
 	nearestRef         DtPolyRef
-	nearestPoint       [3]float32
+	nearestPoint       d3.Vec3
 }
 
-func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center []float32) *dtFindNearestPolyQuery {
+func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center d3.Vec3) *dtFindNearestPolyQuery {
 	return &dtFindNearestPolyQuery{
 		query:              query,
 		center:             center,
 		nearestDistanceSqr: math32.MaxFloat32,
 		nearestRef:         0,
+		nearestPoint:       d3.NewVec3(),
 	}
 }
 
@@ -34,7 +38,7 @@ func (q *dtFindNearestPolyQuery) NearestRef() DtPolyRef {
 	return q.nearestRef
 }
 
-func (q *dtFindNearestPolyQuery) NearestPoint() [3]float32 {
+func (q *dtFindNearestPolyQuery) NearestPoint() d3.Vec3 {
 	return q.nearestPoint
 }
 
@@ -43,16 +47,16 @@ func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs
 	for i := int32(0); i < count; i++ {
 		ref := refs[i]
 		var (
-			closestPtPoly [3]float32
-			diff          [3]float32
+			closestPtPoly d3.Vec3
 			d             float32
 		)
 		posOverPoly := false
-		q.query.closestPointOnPoly(ref, q.center, closestPtPoly[:], &posOverPoly)
+		closestPtPoly = d3.NewVec3()
+		q.query.closestPointOnPoly(ref, q.center, closestPtPoly, &posOverPoly)
 
 		// If a point is directly over a polygon and closer than
 		// climb height, favor that instead of straight line nearest point.
-		dtVsub(diff[:], q.center, closestPtPoly[:])
+		diff := q.center.Sub(closestPtPoly)
 		if posOverPoly {
 			d = math32.Abs(diff[1]) - tile.Header.WalkableClimb
 			if d > 0 {
@@ -61,11 +65,11 @@ func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs
 				d = 0
 			}
 		} else {
-			d = dtVlenSqr(diff[:])
+			d = diff.LenSqr()
 		}
 
 		if d < q.nearestDistanceSqr {
-			dtVcopy(q.nearestPoint[:], closestPtPoly[:])
+			q.nearestPoint.Assign(closestPtPoly)
 
 			q.nearestDistanceSqr = d
 			q.nearestRef = ref

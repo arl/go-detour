@@ -9,6 +9,7 @@ import (
 
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
 )
 
@@ -606,11 +607,9 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 }
 
 // FindNearestPolyInTile finds the nearest polygon within a tile.
-func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nearestPt []float32) DtPolyRef {
-	bmin := make([]float32, 3)
-	bmax := make([]float32, 3)
-	dtVsub(bmin, center, extents)
-	dtVadd(bmax, center, extents)
+func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nearestPt d3.Vec3) DtPolyRef {
+	bmin := center.Add(extents)
+	bmax := center.Add(extents)
 
 	// Get nearby polygons from proximity grid.
 	var polys [128]DtPolyRef
@@ -626,13 +625,12 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 			posOverPoly bool
 			d           float32
 		)
-		closestPtPoly := make([]float32, 3)
-		diff := make([]float32, 3)
+		closestPtPoly := d3.NewVec3()
 		m.ClosestPointOnPoly(ref, center, closestPtPoly, &posOverPoly)
 
 		// If a point is directly over a polygon and closer than
 		// climb height, favor that instead of straight line nearest point.
-		dtVsub(diff, center, closestPtPoly)
+		diff := center.Sub(closestPtPoly)
 		if posOverPoly {
 			d = math32.Abs(diff[1]) - tile.Header.WalkableClimb
 			if d > 0 {
@@ -641,11 +639,11 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 				d = 0
 			}
 		} else {
-			d = dtVlenSqr(diff)
+			d = diff.LenSqr()
 		}
 
 		if d < nearestDistanceSqr {
-			dtVcopy(nearestPt, closestPtPoly)
+			nearestPt.Assign(closestPtPoly)
 			nearestDistanceSqr = d
 			nearest = ref
 		}
@@ -732,8 +730,8 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 			var j uint8
 			for j = 1; j < p.VertCount; j++ {
 				v = tile.Verts[p.Verts[j]*3 : 3]
-				dtVmin(bmin, v)
-				dtVmax(bmax, v)
+				d3.Vec3Min(bmin, v)
+				d3.Vec3Max(bmax, v)
 			}
 			if dtOverlapBounds(qmin, qmax, bmin, bmax) {
 				if n < maxPolys {
@@ -1109,8 +1107,8 @@ func (m *DtNavMesh) FindConnectingPolys(va, vb []float32, tile *DtMeshTile, side
 
 			// Add return value.
 			if n < maxcon {
-				conarea[n*2+0] = dtMax(amin[0], bmin[0])
-				conarea[n*2+1] = dtMin(amax[0], bmax[0])
+				conarea[n*2+0] = math32.Max(amin[0], bmin[0])
+				conarea[n*2+1] = math32.Min(amax[0], bmax[0])
 				con[n] = base | DtPolyRef(i)
 				n++
 			}
@@ -1161,8 +1159,8 @@ func overlapSlabs(amin, amax, bmin, bmax []float32, px, py float32) bool {
 	// Check for horizontal overlap.
 	// The segment is shrunken a little so that slabs which touch
 	// at end points are not connected.
-	minx := dtMax(amin[0]+px, bmin[0]+px)
-	maxx := dtMin(amax[0]-px, bmax[0]-px)
+	minx := math32.Max(amin[0]+px, bmin[0]+px)
+	maxx := math32.Min(amax[0]-px, bmax[0]-px)
 	if minx > maxx {
 		return false
 	}
@@ -1291,7 +1289,7 @@ func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **Dt
 	return DT_SUCCESS
 }
 
-func (m *DtNavMesh) calcTileLoc(pos [3]float32, tx, ty *int32) {
+func (m *DtNavMesh) calcTileLoc(pos d3.Vec3, tx, ty *int32) {
 	*tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
 	*ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))
 }

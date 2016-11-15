@@ -1,5 +1,7 @@
 package detour
 
+import "github.com/aurelien-rainone/gogeo/f32/d3"
+
 func dtNextPow2(v uint32) uint32 {
 	v--
 	v |= v >> 1
@@ -119,19 +121,16 @@ func dtDistancePtSegSqr2D(pt, p, q []float32, t *float32) float32 {
 	return dx*dx + dz*dz
 }
 
-func dtClosestHeightPointTriangle(p, a, b, c []float32, h *float32) bool {
-	v0 := make([]float32, 3)
-	v1 := make([]float32, 3)
-	v2 := make([]float32, 3)
-	dtVsub(v0, c, a)
-	dtVsub(v1, b, a)
-	dtVsub(v2, p, a)
+func dtClosestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
+	v0 := c.Sub(a)
+	v1 := b.Sub(a)
+	v2 := p.Sub(a)
 
-	dot00 := dtVdot2D(v0, v0)
-	dot01 := dtVdot2D(v0, v1)
-	dot02 := dtVdot2D(v0, v2)
-	dot11 := dtVdot2D(v1, v1)
-	dot12 := dtVdot2D(v1, v2)
+	dot00 := v0.Dot2D(v0)
+	dot01 := v0.Dot2D(v1)
+	dot02 := v0.Dot2D(v2)
+	dot11 := v1.Dot2D(v1)
+	dot12 := v1.Dot2D(v2)
 
 	// Compute barycentric coordinates
 	invDenom := 1.0 / (dot00*dot11 - dot01*dot01)

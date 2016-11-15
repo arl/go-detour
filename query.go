@@ -6,6 +6,7 @@ import (
 
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 const (
@@ -925,9 +926,9 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 /// return #DT_SUCCESS, but @p nearestRef will be zero. So if in doubt, check
 /// @p nearestRef before using @p nearestPt.
 ///
-func (q *DtNavMeshQuery) FindNearestPoly(center, extents []float32,
+func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 	filter *DtQueryFilter,
-	nearestRef *DtPolyRef, nearestPt []float32) DtStatus {
+	nearestRef *DtPolyRef, nearestPt d3.Vec3) DtStatus {
 
 	assert.True(q.nav != nil, "Nav should not be nil")
 
@@ -947,7 +948,7 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents []float32,
 	// is valid.
 	if len(nearestPt) == 3 && *nearestRef != 0 {
 		pt := query.NearestPoint()
-		dtVcopy(nearestPt[:], pt[:])
+		nearestPt.Assign(pt)
 	}
 	return DT_SUCCESS
 }
@@ -989,7 +990,7 @@ func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
 /// passed to this function. The dtPolyQuery::process function is invoked multiple
 /// times until all overlapping polygons have been processed.
 ///
-func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
+func (q *DtNavMeshQuery) queryPolygons4(center, extents d3.Vec3,
 	filter *DtQueryFilter, query DtPolyQuery) DtStatus {
 	assert.True(q.nav != nil, "navmesh should not be nill")
 
@@ -997,9 +998,8 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents []float32,
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 
-	var bmin, bmax [3]float32
-	dtVsub(bmin[:], center, extents)
-	dtVadd(bmax[:], center, extents)
+	bmin := center.Sub(extents)
+	bmax := center.Sub(extents)
 
 	// Find tiles the query touches.
 	var minx, miny, maxx, maxy int32
@@ -1117,8 +1117,8 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 			for j := uint8(1); j < p.VertCount; j++ {
 				vidx = p.Verts[j] * 3
 				v = tile.Verts[vidx : vidx+3]
-				dtVmin(bmin[:], v)
-				dtVmax(bmax[:], v)
+				d3.Vec3Min(bmin[:], v)
+				d3.Vec3Max(bmax[:], v)
 			}
 			if dtOverlapBounds(qmin, qmax, bmin[:], bmax[:]) {
 				polyRefs[n] = ref
