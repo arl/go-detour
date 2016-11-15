@@ -369,7 +369,7 @@ type dtQueryData struct {
 	lastBestNode     *DtNode
 	lastBestNodeCost float32
 	startRef, endRef DtPolyRef
-	startPos, endPos [3]float32
+	startPos, endPos d3.Vec3
 	filter           *DtQueryFilter
 	options          uint32
 	raycastLimitSqr  float32
@@ -1032,7 +1032,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		var (
 			node            *dtBVNode
 			nodeIdx, endIdx int32
-			tbmin, tbmax    [3]float32
+			tbmin, tbmax    d3.Vec3
 			qfac            float32
 		)
 
@@ -1041,8 +1041,8 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		nodeIdx = 0
 		endIdx = tile.Header.BvNodeCount
 
-		tbmin = tile.Header.Bmin
-		tbmax = tile.Header.Bmax
+		tbmin = d3.NewVec3From(tile.Header.Bmin[:])
+		tbmax = d3.NewVec3From(tile.Header.Bmax[:])
 		qfac = tile.Header.BvQuantFactor
 
 		// Calculate quantized box
@@ -1093,7 +1093,9 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 			}
 		}
 	} else {
-		var bmin, bmax [3]float32
+		var bmin, bmax d3.Vec3
+		bmin = d3.NewVec3()
+		bmax = d3.NewVec3()
 		base := q.nav.getPolyRefBase(tile)
 		for i := int32(0); i < tile.Header.PolyCount; i++ {
 			p := &tile.Polys[i]
@@ -1109,13 +1111,13 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 			// Calc polygon bounds.
 			vidx := p.Verts[0] * 3
 			v := tile.Verts[vidx : vidx+3]
-			copy(bmin[:], v)
-			copy(bmax[:], v)
+			bmin.Assign(v)
+			bmax.Assign(v)
 			for j := uint8(1); j < p.VertCount; j++ {
 				vidx = p.Verts[j] * 3
 				v = tile.Verts[vidx : vidx+3]
-				d3.Vec3Min(bmin[:], v)
-				d3.Vec3Max(bmax[:], v)
+				d3.Vec3Min(bmin, v)
+				d3.Vec3Max(bmax, v)
 			}
 			if dtOverlapBounds(qmin, qmax, bmin[:], bmax[:]) {
 				polyRefs[n] = ref
