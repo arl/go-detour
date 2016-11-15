@@ -7,6 +7,12 @@
 			"path": "github.com/aurelien-rainone/assertgo",
 			"revision": "f5c43014071ffdc0e7470a34b858f877c2691d5e",
 			"revisionTime": "2016-11-04T20:36:14Z"
+		},
+		{
+			"checksumSHA1": "DszWfs53NqOpwVE+ddGnRT0kUAg=",
+			"path": "github.com/aurelien-rainone/math32",
+			"revision": "b5e375192229cbce8b357ce2df6ad9fda33e8d3f",
+			"revisionTime": "2016-11-15T08:09:37Z"
 		}
 	],
 	"rootPath": "github.com/aurelien-rainone/go-detour"
