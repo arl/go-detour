@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "sx2BzP/s5moPSDjdH376nXgDDI8=",
+			"path": "github.com/aurelien-rainone/assertgo",
+			"revision": "f5c43014071ffdc0e7470a34b858f877c2691d5e",
+			"revisionTime": "2016-11-04T20:36:14Z"
+		}
+	],
+	"rootPath": "github.com/aurelien-rainone/go-detour"
+}
