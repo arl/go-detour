@@ -13,8 +13,15 @@ func dtNextPow2(v uint32) uint32 {
 	return v
 }
 
-func dtIlog2(v uint32) uint32 {
+// dtiMin returns the minimum of two int32 values.
+func dtiMin(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
+}
 
+func dtIlog2(v uint32) uint32 {
 	boolToUInt32 := func(b bool) uint32 {
 		if b {
 			return 1
@@ -23,7 +30,6 @@ func dtIlog2(v uint32) uint32 {
 	}
 
 	var r, shift uint32
-
 	r = boolToUInt32(v > 0xffff) << 4
 	v >>= r
 	shift = boolToUInt32(v > 0xff) << 3
@@ -39,17 +45,13 @@ func dtIlog2(v uint32) uint32 {
 	return r
 }
 
-func dtAlign4(x uint32) uint32 {
-	return ((x + 3) &^ 3)
-}
-
-/// Determines if two axis-aligned bounding boxes overlap.
-///  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
-///  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
-///  @param[in]		bmin	Minimum bounds of box B. [(x, y, z)]
-///  @param[in]		bmax	Maximum bounds of box B. [(x, y, z)]
-/// @return True if the two AABB's overlap.
-/// @see dtOverlapBounds
+// Determines if two axis-aligned bounding boxes overlap.
+//  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
+//  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
+//  @param[in]		bmin	Minimum bounds of box B. [(x, y, z)]
+//  @param[in]		bmax	Maximum bounds of box B. [(x, y, z)]
+// @return True if the two AABB's overlap.
+// @see dtOverlapBounds
 func dtOverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
 		return false

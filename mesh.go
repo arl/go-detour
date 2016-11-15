@@ -462,7 +462,8 @@ type dtBVNode struct {
 // two vertices.
 type DtOffMeshConnection struct {
 	// The endpoints of the connection. [(ax, ay, az, bx, by, bz)]
-	Pos [6]float32
+	//Pos [6]float32
+	PosA, PosB d3.Vec3
 
 	// The radius of the endpoints. [Limit: >= 0]
 	Rad float32
@@ -560,7 +561,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 		ext = []float32{con.Rad, tile.Header.WalkableClimb, con.Rad}
 
 		// Find polygon to connect to.
-		p = con.Pos[0:3] // First vertex
+		p = con.PosA // First vertex
 		nearestPt := make([]float32, 3)
 		ref := m.FindNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
@@ -571,8 +572,9 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 			continue
 		}
 		// Make sure the location is on current mesh.
-		v := tile.Verts[poly.Verts[0]*3 : 3]
-		dtVcopy(v, nearestPt)
+		var v d3.Vec3
+		v = tile.Verts[poly.Verts[0]*3 : poly.Verts[0]*3+3]
+		v.Assign(nearestPt)
 
 		// Link off-mesh connection to target poly.
 		idx := allocLink(tile)
@@ -713,8 +715,8 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 
 	} else {
 
-		bmin := make([]float32, 3)
-		bmax := make([]float32, 3)
+		bmin := d3.NewVec3()
+		bmax := d3.NewVec3()
 		var n, i int32
 		base := m.getPolyRefBase(tile)
 		for i = 0; i < tile.Header.PolyCount; i++ {
@@ -725,8 +727,8 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 			}
 			// Calc polygon bounds.
 			v := tile.Verts[p.Verts[0]*3 : 3]
-			dtVcopy(bmin, v)
-			dtVcopy(bmax, v)
+			bmin.Assign(v)
+			bmax.Assign(v)
 			var j uint8
 			for j = 1; j < p.VertCount; j++ {
 				v = tile.Verts[p.Verts[j]*3 : 3]
@@ -757,7 +759,7 @@ func (m *DtNavMesh) decodePolyIdPoly(ref DtPolyRef) uint32 {
 // pos         [in]	The position to check. [(x, y, z)]
 // closest     [out]	The closest point on the polygon. [(x, y, z)]
 // posOverPoly [out]	True of the position is over the polygon.
-func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, posOverPoly *bool) {
+func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posOverPoly *bool) {
 	var (
 		tile *DtMeshTile
 		poly *DtPoly
@@ -768,15 +770,15 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 	// Off-mesh connections don't have detail polygons.
 	if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
 		var (
-			v0, v1    []float32
+			v0, v1    d3.Vec3
 			d0, d1, u float32
 		)
 		v0 = tile.Verts[poly.Verts[0]*3 : 3]
 		v1 = tile.Verts[poly.Verts[1]*3 : 3]
-		d0 = dtVdist(pos, v0)
-		d1 = dtVdist(pos, v1)
+		d0 = pos.Dist(v0)
+		d1 = pos.Dist(v1)
 		u = d0 / (d0 + d1)
-		dtVlerp(closest, v0, v1, u)
+		closest = v0.Lerp(v1, u)
 		if posOverPoly != nil {
 			*posOverPoly = false
 		}
@@ -807,10 +809,10 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 		// TODO: could probably use copy
 		idx := i * 3
 		jdx := poly.Verts[i] * 3
-		dtVcopy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
+		copy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
 	}
 
-	dtVcopy(closest, pos)
+	closest.Assign(pos)
 	if !dtDistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
@@ -821,9 +823,9 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 				imin = i
 			}
 		}
-		va := verts[imin*3 : 3]
-		vb := verts[((imin+1)%nv)*3 : 3]
-		dtVlerp(closest, va, vb, edget[imin])
+		va := d3.NewVec3From(verts[imin*3 : 3])
+		vb := d3.NewVec3From(verts[((imin+1)%nv)*3 : 3])
+		closest = va.Lerp(vb, edget[imin])
 
 		if posOverPoly != nil {
 			*posOverPoly = false
@@ -913,8 +915,8 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 		ext := []float32{targetCon.Rad, target.Header.WalkableClimb, targetCon.Rad}
 
 		// Find polygon to connect to.
-		p := targetCon.Pos[3:6]
-		nearestPt := make([]float32, 3)
+		p := targetCon.PosB
+		nearestPt := d3.NewVec3()
 		ref := m.FindNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
 			continue
@@ -928,8 +930,10 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 
 		panic("here10")
 		// Make sure the location is on current mesh.
-		v := target.Verts[targetPoly.Verts[1]*3 : 3]
-		dtVcopy(v, nearestPt)
+		var v d3.Vec3
+		vidx := targetPoly.Verts[1] * 3
+		v = target.Verts[vidx : vidx+3]
+		v.Assign(nearestPt)
 
 		// Link off-mesh connection to target poly.
 		idx := allocLink(target)

@@ -455,7 +455,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatu
 /// (The y-values impact the result.)
 ///
 func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
-	startPos, endPos []float32,
+	startPos, endPos d3.Vec3,
 	filter *DtQueryFilter,
 	path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
 
@@ -464,10 +464,6 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		// is big enough to store maxPath nodes
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
-
-	//dtAssert(q.m_nav);
-	//dtAssert(q.m_nodePool);
-	//dtAssert(q.m_openList);
 
 	if pathCount != nil {
 		*pathCount = 0
@@ -493,10 +489,10 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 		lastBestNodeCost        float32
 	)
 	startNode = q.nodePool.getNode2(startRef)
-	dtVcopy(startNode.Pos[:], startPos)
+	startNode.Pos.Assign(startPos)
 	startNode.PIdx = 0
 	startNode.Cost = 0
-	startNode.Total = dtVdist(startPos, endPos) * H_SCALE
+	startNode.Total = startPos.Dist(endPos) * H_SCALE
 	startNode.ID = startRef
 	startNode.Flags = DT_NODE_OPEN
 	q.openList.push(startNode)
@@ -616,7 +612,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 					bestRef, bestTile, bestPoly,
 					neighbourRef, neighbourTile, neighbourPoly)
 				cost = bestNode.Cost + curCost
-				heuristic = dtVdist(neighbourNode.Pos[:], endPos[:]) * H_SCALE
+				heuristic = neighbourNode.Pos.Dist(endPos) * H_SCALE
 			}
 
 			total := cost + heuristic
@@ -687,7 +683,7 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 // Returns portal points between two polygons.
 func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
 	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile,
-	left, right []float32) DtStatus {
+	left, right d3.Vec3) DtStatus {
 
 	// Find the link that points to the 'to' polygon.
 	var link *DtLink
@@ -709,8 +705,8 @@ func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromT
 				// TODO: AR, repass here and test
 				v := fromTile.Links[i].Edge
 				vidx := fromPoly.Verts[v] * 3
-				dtVcopy(left, fromTile.Verts[vidx:vidx+3])
-				dtVcopy(right, fromTile.Verts[vidx:vidx+3])
+				copy(left, fromTile.Verts[vidx:vidx+3])
+				copy(right, fromTile.Verts[vidx:vidx+3])
 				return DT_SUCCESS
 			}
 		}
@@ -723,8 +719,8 @@ func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromT
 				// TODO: AR, repass here and test
 				v := toTile.Links[i].Edge
 				vidx := fromPoly.Verts[v] * 3
-				dtVcopy(left, toTile.Verts[vidx:vidx+3])
-				dtVcopy(right, toTile.Verts[vidx:vidx+3])
+				copy(left, toTile.Verts[vidx:vidx+3])
+				copy(right, toTile.Verts[vidx:vidx+3])
 				return DT_SUCCESS
 			}
 		}
@@ -737,9 +733,9 @@ func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromT
 
 	// TODO: AR TO BE TESTED!
 	v0idx := v0 * 3
-	dtVcopy(left, fromTile.Verts[v0idx:v0idx+3])
+	copy(left, fromTile.Verts[v0idx:v0idx+3])
 	v1idx := v1 * 3
-	dtVcopy(right, fromTile.Verts[v1idx:v1idx+3])
+	copy(right, fromTile.Verts[v1idx:v1idx+3])
 
 	// If the link is at tile boundary, dtClamp the vertices to
 	// the link width.
@@ -749,8 +745,8 @@ func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromT
 			s := float32(1.0 / 255.0)
 			tmin := float32(link.Bmin) * s
 			tmax := float32(link.Bmax) * s
-			dtVlerp(left, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmin)
-			dtVlerp(right, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmax)
+			d3.Vec3Lerp(left, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmin)
+			d3.Vec3Lerp(right, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmax)
 		}
 	}
 
@@ -811,7 +807,7 @@ func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathC
 ///
 /// See closestPointOnPolyBoundary() for a limited but faster option.
 ///
-func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float32, posOverPoly *bool) DtStatus {
+func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posOverPoly *bool) DtStatus {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
 		tile *DtMeshTile
@@ -828,15 +824,17 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 	// Off-mesh connections don't have detail polygons.
 	if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
 		var (
-			v0, v1    []float32
+			v0, v1    d3.Vec3
 			d0, d1, u float32
 		)
-		v0 = tile.Verts[poly.Verts[0]*3 : 3]
-		v1 = tile.Verts[poly.Verts[1]*3 : 3]
-		d0 = dtVdist(pos, v0)
-		d1 = dtVdist(pos, v1)
+		vidx := poly.Verts[0] * 3
+		v0 = tile.Verts[vidx : vidx+3]
+		vidx = poly.Verts[1] * 3
+		v1 = tile.Verts[vidx : vidx+3]
+		d0 = pos.Dist(v0)
+		d1 = pos.Dist(v1)
 		u = d0 / (d0 + d1)
-		dtVlerp(closest, v0, v1, u)
+		d3.Vec3Lerp(closest, v0, v1, u)
 		if posOverPoly != nil {
 			*posOverPoly = false
 		}
@@ -860,10 +858,10 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 		// TODO: could probably use copy
 		idx := i * 3
 		jdx := poly.Verts[i] * 3
-		dtVcopy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
+		copy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
 	}
 
-	dtVcopy(closest, pos)
+	closest.Assign(pos)
 	if !dtDistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
@@ -878,7 +876,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest []float3
 		va := verts[idx : idx+3]
 		idx = ((imin + 1) % nv) * 3
 		vb := verts[idx : idx+3]
-		dtVlerp(closest, va, vb, edget[imin])
+		d3.Vec3Lerp(closest, va, vb, edget[imin])
 
 		if posOverPoly != nil {
 			*posOverPoly = false
@@ -1017,7 +1015,6 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents d3.Vec3,
 			}
 		}
 	}
-
 	return DT_SUCCESS
 }
 
@@ -1112,8 +1109,8 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 			// Calc polygon bounds.
 			vidx := p.Verts[0] * 3
 			v := tile.Verts[vidx : vidx+3]
-			dtVcopy(bmin[:], v)
-			dtVcopy(bmax[:], v)
+			copy(bmin[:], v)
+			copy(bmax[:], v)
 			for j := uint8(1); j < p.VertCount; j++ {
 				vidx = p.Verts[j] * 3
 				v = tile.Verts[vidx : vidx+3]
