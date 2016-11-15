@@ -1040,7 +1040,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 						tmin := (neia[k*2+0] - va[2]) / (vb[2] - va[2])
 						tmax := (neia[k*2+1] - va[2]) / (vb[2] - va[2])
 						if tmin > tmax {
-							dtSwap(&tmin, &tmax)
+							tmin, tmax = tmax, tmin
 						}
 						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
 						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
@@ -1048,7 +1048,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 						tmin := (neia[k*2+0] - va[0]) / (vb[0] - va[0])
 						tmax := (neia[k*2+1] - va[0]) / (vb[0] - va[0])
 						if tmin > tmax {
-							dtSwap(&tmin, &tmax)
+							tmin, tmax = tmax, tmin
 						}
 						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
 						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
