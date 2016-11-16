@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 func checkt(t *testing.T, err error) {
@@ -34,12 +36,12 @@ func TestFindPath(t *testing.T) {
 	)
 
 	pathTests := []struct {
-		org, dst [3]float32
+		org, dst d3.Vec3
 		want     []DtPolyRef
 	}{
 		{
-			[3]float32{5, 0, 10},
-			[3]float32{50, 0, 30},
+			d3.Vec3{5, 0, 10},
+			d3.Vec3{50, 0, 30},
 			[]DtPolyRef{0x440000, 0x460007, 0x520007, 0x540003, 0x5c0001, 0x5e0000, 0x600000, 0x620000},
 		},
 	}
@@ -52,8 +54,8 @@ func TestFindPath(t *testing.T) {
 			orgRef, dstRef DtPolyRef       // refs for org and dst polys
 			query          *DtNavMeshQuery // the query instance
 			filter         *DtQueryFilter  // filter to use for various queries
-			extents        [3]float32      // poly search distance for poly (3 axis)
-			nearestPt      [3]float32
+			extents        d3.Vec3         // poly search distance for poly (3 axis)
+			nearestPt      d3.Vec3
 			st             DtStatus
 			path           []DtPolyRef
 		)
@@ -63,13 +65,13 @@ func TestFindPath(t *testing.T) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
 		// define the extents vector for the nearest polygon query
-		extents = [3]float32{0, 2, 0}
+		extents = d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
 		filter = NewDtQueryFilter()
 
 		// get org polygon reference
-		st = query.FindNearestPoly(tt.org[:], extents[:], filter, &orgRef, nearestPt[:])
+		st = query.FindNearestPoly(tt.org, extents, filter, &orgRef, nearestPt)
 		if DtStatusFailed(st) {
 			t.Errorf("FindNearestPoly failed with 0x%x\n", st)
 		} else if orgRef == 0 {
@@ -79,10 +81,10 @@ func TestFindPath(t *testing.T) {
 		if !mesh.IsValidPolyRef(orgRef) {
 			t.Errorf("%d is not a valid poly ref", orgRef)
 		}
-		copy(tt.org[:], nearestPt[:])
+		copy(tt.org, nearestPt)
 
 		// get dst polygon reference
-		st = query.FindNearestPoly(tt.dst[:], extents[:], filter, &dstRef, nearestPt[:])
+		st = query.FindNearestPoly(tt.dst, extents, filter, &dstRef, nearestPt)
 		if DtStatusFailed(st) {
 			t.Errorf("FindNearestPoly failed with 0x%x\n", st)
 		} else if dstRef == 0 {
@@ -91,14 +93,14 @@ func TestFindPath(t *testing.T) {
 		if !mesh.IsValidPolyRef(dstRef) {
 			t.Errorf("%d is not a valid poly ref", dstRef)
 		}
-		copy(tt.dst[:], nearestPt[:])
+		copy(tt.dst, nearestPt)
 
 		// FindPath
 		var (
 			pathCount int32
 		)
 		path = make([]DtPolyRef, 100)
-		st = query.FindPath(orgRef, dstRef, tt.org[:], tt.dst[:], filter, &path, &pathCount, 100)
+		st = query.FindPath(orgRef, dstRef, tt.org, tt.dst, filter, &path, &pathCount, 100)
 		if DtStatusFailed(st) {
 			t.Errorf("query.FindPath failed with 0x%x\n", st)
 		}

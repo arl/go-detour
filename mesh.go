@@ -15,26 +15,23 @@ import (
 
 /// A navigation mesh based on tiles of convex polygons.
 type DtNavMesh struct {
-	Params                DtNavMeshParams ///< Current initialization params. TODO: do not store this info twice.
-	Orig                  [3]float32      ///< Origin of the tile (0,0)
-	TileWidth, TileHeight float32         ///< Dimensions of each tile.
-	MaxTiles              int32           ///< Max number of tiles.
-	TileLUTSize           int32           ///< Tile hash lookup size (must be pot).
-	TileLUTMask           int32           ///< Tile hash lookup mask.
-
-	//m_posLookup **dtMeshTile ///< Tile hash lookup.
-	posLookup []*DtMeshTile ///< Tile hash lookup.
-	nextFree  *DtMeshTile   ///< Freelist of tiles.
-	Tiles     []DtMeshTile  ///< List of tiles.
-
-	saltBits uint32 ///< Number of salt bits in the tile ID.
-	tileBits uint32 ///< Number of tile bits in the tile ID.
-	polyBits uint32 ///< Number of poly bits in the tile ID.
+	Params                DtNavMeshParams // Current initialization params. TODO: do not store this info twice.
+	Orig                  d3.Vec3         // Origin of the tile (0,0)
+	TileWidth, TileHeight float32         // Dimensions of each tile.
+	MaxTiles              int32           // Max number of tiles.
+	TileLUTSize           int32           // Tile hash lookup size (must be pot).
+	TileLUTMask           int32           // Tile hash lookup mask.
+	posLookup             []*DtMeshTile   // Tile hash lookup.
+	nextFree              *DtMeshTile     // Freelist of tiles.
+	Tiles                 []DtMeshTile    // List of tiles.
+	saltBits              uint32          // Number of salt bits in the tile ID.
+	tileBits              uint32          // Number of tile bits in the tile ID.
+	polyBits              uint32          // Number of poly bits in the tile ID.
 }
 
 func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	m.Params = *params
-	m.Orig = params.Orig
+	m.Orig = d3.NewVec3From(params.Orig[0:3])
 	m.TileWidth = params.TileWidth
 	m.TileHeight = params.TileHeight
 
@@ -47,13 +44,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	m.TileLUTMask = m.TileLUTSize - 1
 
 	m.Tiles = make([]DtMeshTile, m.MaxTiles, m.MaxTiles)
-	//if (!m_tiles)
-	//return DT_FAILURE | DT_OUT_OF_MEMORY;
 	m.posLookup = make([]*DtMeshTile, m.TileLUTSize, m.TileLUTSize)
-	//if (!m_posLookup)
-	//return DT_FAILURE | DT_OUT_OF_MEMORY;
-	//memset(m_tiles, 0, sizeof(dtMeshTile)*m_maxTiles);
-	//memset(m_posLookup, 0, sizeof(dtMeshTile*)*m_tileLutSize);
 	m.nextFree = nil
 	for i := m.MaxTiles - 1; i >= 0; i-- {
 		m.Tiles[i].Salt = 1
@@ -102,6 +93,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 // @see dtCreateNavMeshData, #removeTileBvTree
 func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) DtStatus {
 	var hdr DtMeshHeader
+
 	// prepare a reader on the received data
 	r := newAlignedReader(bytes.NewReader(data), 4)
 	binary.Read(r, binary.LittleEndian, &hdr)
@@ -116,6 +108,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 	// Make sure the location is free.
 	if m.GetTileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
+		fmt.Println("GetTileAt failed")
 		return DT_FAILURE
 	}
 
@@ -655,21 +648,21 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 }
 
 // QueryPolygonsInTile queries polygons within a tile.
-func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, polys []DtPolyRef, maxPolys int32) int32 {
+func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, polys []DtPolyRef, maxPolys int32) int32 {
 	if tile.BvTree != nil {
 		log.Fatalf("queryPolygonsInTile")
 		var (
 			node            *dtBVNode
 			nodeIdx, endIdx int32
-			tbmin, tbmax    [3]float32
+			tbmin, tbmax    d3.Vec3
 			qfac            float32
 			bmin, bmax      [3]uint16
 		)
 		nodeIdx = 0
 		endIdx = tile.Header.BvNodeCount
 
-		tbmin = tile.Header.Bmin
-		tbmin = tile.Header.Bmax
+		tbmin = d3.NewVec3From(tile.Header.Bmin[:])
+		tbmax = d3.NewVec3From(tile.Header.Bmax[:])
 		qfac = tile.Header.BvQuantFactor
 
 		// Calculate quantized box
