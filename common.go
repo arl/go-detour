@@ -1,6 +1,9 @@
 package detour
 
-import "github.com/aurelien-rainone/gogeo/f32/d3"
+import (
+	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
+)
 
 func dtNextPow2(v uint32) uint32 {
 	v--
@@ -43,6 +46,39 @@ func dtIlog2(v uint32) uint32 {
 	r |= shift
 	r |= (v >> 1)
 	return r
+}
+
+/// @}
+/// @name Computational geometry helper functions.
+/// @{
+
+/// Derives the signed xz-plane area of the triangle ABC, or the relationship of line AB to point C.
+///  @param[in]		a		Vertex A. [(x, y, z)]
+///  @param[in]		b		Vertex B. [(x, y, z)]
+///  @param[in]		c		Vertex C. [(x, y, z)]
+/// @return The signed xz-plane area of the triangle.
+func dtTriArea2D(a, b, c d3.Vec3) float32 {
+	abx := b[0] - a[0]
+	abz := b[2] - a[2]
+	acx := c[0] - a[0]
+	acz := c[2] - a[2]
+	return acx*abz - abx*acz
+}
+
+func vperpXZ(a, b d3.Vec3) float32 {
+	return a[0]*b[2] - a[2]*b[0]
+}
+
+func DtIntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
+	u := aq.Sub(ap)
+	v := bq.Sub(bp)
+	w := ap.Sub(bp)
+
+	d := vperpXZ(u, v)
+	if math32.Abs(d) < 1e-6 {
+		return hit, s, t
+	}
+	return true, vperpXZ(v, w) / d, vperpXZ(u, w) / d
 }
 
 // Determines if two axis-aligned bounding boxes overlap.

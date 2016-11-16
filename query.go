@@ -7,6 +7,7 @@ import (
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
 )
 
 const (
@@ -336,9 +337,6 @@ type DtNavMeshQuery struct {
 	///// Returns portal points between two polygons.
 	//dtStatus getPortalPoints(DtPolyRef from, DtPolyRef to, float* left, float* right,
 	//unsigned char& fromType, unsigned char& toType) const;
-	//dtStatus getPortalPoints(DtPolyRef from, const DtPoly* fromPoly, const DtMeshTile* fromTile,
-	//DtPolyRef to, const DtPoly* toPoly, const DtMeshTile* toTile,
-	//float* left, float* right) const;
 
 	///// Returns edge mid point between two polygons.
 	//dtStatus getEdgeMidPoint(DtPolyRef from, DtPolyRef to, float* mid) const;
@@ -663,6 +661,348 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	return status
 }
 
+/// Finds the straight path from the start to the end position within the polygon corridor.
+///  @param[in]		startPos			Path start position. [(x, y, z)]
+///  @param[in]		endPos				Path end position. [(x, y, z)]
+///  @param[in]		path				An array of polygon references that represent the path corridor.
+///  @param[in]		pathSize			The number of polygons in the @p path array.
+///  @param[out]	straightPath		Points describing the straight path. [(x, y, z) * @p straightPathCount].
+///  @param[out]	straightPathFlags	Flags describing each point. (See: #dtStraightPathFlags) [opt]
+///  @param[out]	straightPathRefs	The reference id of the polygon that is being entered at each point. [opt]
+///  @param[out]	straightPathCount	The number of points in the straight path.
+///  @param[in]		maxStraightPath		The maximum number of points the straight path arrays can hold.  [Limit: > 0]
+///  @param[in]		options				Query options. (see: #dtStraightPathOptions)
+/// @returns The status flags for the query.
+func (q *DtNavMeshQuery) findStraightPath(startPos, endPos d3.Vec3,
+	path *[]DtPolyRef, pathSize int32,
+	straightPath *[]d3.Vec3, straightPathFlags *[]uint8, straightPathRefs *[]DtPolyRef,
+	straightPathCount *int32, maxStraightPath int32, options int32) DtStatus {
+
+	assert.True(q.nav != nil, "NavMesh should not be nil")
+
+	*straightPathCount = 0
+
+	if maxStraightPath == 0 {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	if path == nil {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	stat := DtStatus(0)
+
+	// TODO: Should this be callers responsibility?
+	closestStartPos := d3.NewVec3()
+	if DtStatusFailed(q.closestPointOnPolyBoundary((*path)[0], startPos, closestStartPos)) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	closestEndPos := d3.NewVec3()
+	if DtStatusFailed(q.closestPointOnPolyBoundary((*path)[pathSize-1], endPos, closestEndPos)) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	// Add start point.
+	stat = q.appendVertex(closestStartPos, DT_STRAIGHTPATH_START, (*path)[0],
+		straightPath, straightPathFlags, straightPathRefs,
+		straightPathCount, maxStraightPath)
+	if stat != DT_IN_PROGRESS {
+		return stat
+	}
+
+	if pathSize > 1 {
+		portalApex := d3.NewVec3From(closestStartPos)
+		portalLeft := d3.NewVec3From(portalApex)
+		portalRight := d3.NewVec3From(portalApex)
+		var (
+			apexIndex     int32
+			leftIndex     int32
+			rightIndex    int32
+			leftPolyType  uint8
+			rightPolyType uint8
+		)
+
+		leftPolyRef := (*path)[0]
+		rightPolyRef := (*path)[0]
+
+		for i := int32(0); i < pathSize; i++ {
+			left := d3.NewVec3()
+			right := d3.NewVec3()
+			var toType uint8
+
+			if i+1 < pathSize {
+				var fromType uint8 // fromType is ignored.
+
+				// Next portal.
+				if DtStatusFailed(q.getPortalPoints6((*path)[i], (*path)[i+1], left, right, &fromType, &toType)) {
+					// Failed to get portal points, in practice this means that path[i+1] is invalid polygon.
+					// Clamp the end point to path[i], and return the path so far.
+
+					if DtStatusFailed(q.closestPointOnPolyBoundary((*path)[i], endPos, closestEndPos)) {
+						// This should only happen when the first polygon is invalid.
+						return DT_FAILURE | DT_INVALID_PARAM
+					}
+
+					// Apeend portals along the current straight path segment.
+					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+						// Ignore status return value as we're just about to return anyway.
+						q.appendPortals(apexIndex, i, closestEndPos, path,
+							straightPath, straightPathFlags, straightPathRefs,
+							straightPathCount, maxStraightPath, options)
+					}
+
+					// Ignore status return value as we're just about to return anyway.
+					q.appendVertex(closestEndPos, 0, (*path)[i],
+						straightPath, straightPathFlags, straightPathRefs,
+						straightPathCount, maxStraightPath)
+
+					stat = DT_SUCCESS | DT_PARTIAL_RESULT
+					if *straightPathCount >= maxStraightPath {
+						stat |= DT_BUFFER_TOO_SMALL
+					}
+					return stat
+				}
+
+				// If starting really close the portal, advance.
+				if i == 0 {
+					var t float32
+					if dtDistancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
+						continue
+					}
+				}
+			} else {
+				// End of the path.
+				left.Assign(closestEndPos)
+				right.Assign(closestEndPos)
+				toType = uint8(DT_POLYTYPE_GROUND)
+			}
+
+			// Right vertex.
+			if dtTriArea2D(portalApex, portalRight, right) <= 0.0 {
+				if portalApex.Approx(portalRight) || dtTriArea2D(portalApex, portalLeft, right) > 0.0 {
+					portalRight.Assign(right)
+					if i+1 < pathSize {
+						rightPolyRef = (*path)[i+1]
+					} else {
+						rightPolyRef = 0
+					}
+					rightPolyType = toType
+					rightIndex = i
+				} else {
+					// Append portals along the current straight path segment.
+					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+						stat = q.appendPortals(apexIndex, leftIndex, portalLeft, path,
+							straightPath, straightPathFlags, straightPathRefs,
+							straightPathCount, maxStraightPath, options)
+						if stat != DT_IN_PROGRESS {
+							return stat
+						}
+					}
+
+					portalApex.Assign(portalLeft)
+					apexIndex = leftIndex
+
+					var flags uint8
+					if leftPolyRef == 0 {
+						flags = DT_STRAIGHTPATH_END
+					} else if leftPolyType == DT_POLYTYPE_OFFMESH_CONNECTION {
+						flags = DT_STRAIGHTPATH_OFFMESH_CONNECTION
+					}
+					ref := leftPolyRef
+
+					// Append or update vertex
+					stat = q.appendVertex(portalApex, flags, ref,
+						straightPath, straightPathFlags, straightPathRefs,
+						straightPathCount, maxStraightPath)
+					if stat != DT_IN_PROGRESS {
+						return stat
+					}
+
+					portalLeft.Assign(portalApex)
+					portalRight.Assign(portalApex)
+					leftIndex = apexIndex
+					rightIndex = apexIndex
+
+					// Restart
+					i = apexIndex
+
+					continue
+				}
+			}
+
+			// Left vertex.
+			if dtTriArea2D(portalApex, portalLeft, left) >= 0.0 {
+				if portalApex.Approx(portalLeft) || dtTriArea2D(portalApex, portalRight, left) < 0.0 {
+					portalLeft.Assign(left)
+					if i+1 < pathSize {
+						leftPolyRef = (*path)[i+1]
+					} else {
+						leftPolyRef = 0
+					}
+					leftPolyType = toType
+					leftIndex = i
+				} else {
+					// Append portals along the current straight path segment.
+					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+						stat = q.appendPortals(apexIndex, rightIndex, portalRight, path,
+							straightPath, straightPathFlags, straightPathRefs,
+							straightPathCount, maxStraightPath, options)
+						if stat != DT_IN_PROGRESS {
+							return stat
+						}
+					}
+
+					portalApex.Assign(portalRight)
+					apexIndex = rightIndex
+
+					var flags uint8
+					if rightPolyRef == 0 {
+						flags = DT_STRAIGHTPATH_END
+					} else if rightPolyType == DT_POLYTYPE_OFFMESH_CONNECTION {
+						flags = DT_STRAIGHTPATH_OFFMESH_CONNECTION
+					}
+					ref := rightPolyRef
+
+					// Append or update vertex
+					stat = q.appendVertex(portalApex, flags, ref,
+						straightPath, straightPathFlags, straightPathRefs,
+						straightPathCount, maxStraightPath)
+					if stat != DT_IN_PROGRESS {
+						return stat
+					}
+
+					portalLeft.Assign(portalApex)
+					portalRight.Assign(portalApex)
+					leftIndex = apexIndex
+					rightIndex = apexIndex
+
+					// Restart
+					i = apexIndex
+
+					continue
+				}
+			}
+		}
+
+		// Append portals along the current straight path segment.
+		if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+			stat = q.appendPortals(apexIndex, pathSize-1, closestEndPos, path,
+				straightPath, straightPathFlags, straightPathRefs,
+				straightPathCount, maxStraightPath, options)
+			if stat != DT_IN_PROGRESS {
+				return stat
+			}
+		}
+	}
+
+	// Ignore status return value as we're just about to return anyway.
+	q.appendVertex(closestEndPos, DT_STRAIGHTPATH_END, 0,
+		straightPath, straightPathFlags, straightPathRefs,
+		straightPathCount, maxStraightPath)
+
+	stat = DT_SUCCESS
+	if *straightPathCount >= maxStraightPath {
+		stat |= DT_BUFFER_TOO_SMALL
+	}
+	return stat
+}
+
+// Appends intermediate portal points to a straight path.
+
+func (q *DtNavMeshQuery) appendPortals(startIdx, endIdx int32, endPos d3.Vec3, path *[]DtPolyRef,
+	straightPath *[]d3.Vec3, straightPathFlags *[]uint8, straightPathRefs *[]DtPolyRef,
+	straightPathCount *int32, maxStraightPath, options int32) DtStatus {
+	startPos := (*straightPath)[(*straightPathCount-1)*3]
+	// Append or update last vertex
+	var stat DtStatus
+	for i := startIdx; i < endIdx; i++ {
+		// Calculate portal
+		from := (*path)[i]
+		var (
+			fromTile *DtMeshTile
+			fromPoly *DtPoly
+		)
+		if DtStatusFailed(q.nav.TileAndPolyByRef(from, &fromTile, &fromPoly)) {
+			return DT_FAILURE | DT_INVALID_PARAM
+		}
+
+		to := (*path)[i+1]
+		var (
+			toTile *DtMeshTile
+			toPoly *DtPoly
+		)
+		if DtStatusFailed(q.nav.TileAndPolyByRef(to, &toTile, &toPoly)) {
+
+			return DT_FAILURE | DT_INVALID_PARAM
+		}
+
+		left := d3.NewVec3()
+		right := d3.NewVec3()
+		if DtStatusFailed(q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
+			break
+		}
+
+		if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS)) != 0 {
+			// Skip intersection if only area crossings are requested.
+			if fromPoly.Area() == toPoly.Area() {
+				continue
+			}
+		}
+
+		// Append intersection
+		if hit, _, t := DtIntersectSegSeg2D(startPos, endPos, left, right); hit {
+			pt := d3.NewVec3()
+			d3.Vec3Lerp(pt, left, right, t)
+
+			stat = q.appendVertex(pt, 0, (*path)[i+1],
+				straightPath, straightPathFlags, straightPathRefs,
+				straightPathCount, maxStraightPath)
+			if stat != DT_IN_PROGRESS {
+				return stat
+			}
+		}
+	}
+	return DT_IN_PROGRESS
+}
+
+// Appends vertex to a straight path
+func (q *DtNavMeshQuery) appendVertex(pos d3.Vec3, flags uint8, ref DtPolyRef,
+	straightPath *[]d3.Vec3, straightPathFlags *[]uint8, straightPathRefs *[]DtPolyRef,
+	straightPathCount *int32, maxStraightPath int32) DtStatus {
+
+	if (*straightPathCount) > 0 && pos.Approx((*straightPath)[((*straightPathCount)-1)]) {
+		// The vertices are equal, update flags and poly.
+		if len(*straightPathFlags) > 0 {
+			(*straightPathFlags)[(*straightPathCount)-1] = flags
+		}
+		if len(*straightPathRefs) > 0 {
+			(*straightPathRefs)[(*straightPathCount)-1] = ref
+		}
+	} else {
+		// Append new vertex.
+		(*straightPath)[(*straightPathCount)*3].Assign(pos)
+		if len(*straightPathFlags) > 0 {
+			(*straightPathFlags)[(*straightPathCount)] = flags
+		}
+		if len(*straightPathRefs) > 0 {
+			(*straightPathRefs)[(*straightPathCount)] = ref
+		}
+		(*straightPathCount)++
+
+		// If there is no space to append more vertices, return.
+		if (*straightPathCount) >= maxStraightPath {
+			return DT_SUCCESS | DT_BUFFER_TOO_SMALL
+		}
+
+		// If reached end of path, return.
+		if flags == DT_STRAIGHTPATH_END {
+			return DT_SUCCESS
+		}
+	}
+	return DT_IN_PROGRESS
+}
+
 // Returns edge mid point between two polygons.
 func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 	fromPoly *DtPoly, fromTile *DtMeshTile,
@@ -671,7 +1011,7 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 	left := make([]float32, 3)
 	right := make([]float32, 3)
 
-	if DtStatusFailed(q.getPortalPoints(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
+	if DtStatusFailed(q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 	mid[0] = (left[0] + right[0]) * 0.5
@@ -680,8 +1020,32 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 	return DT_SUCCESS
 }
 
+func (q *DtNavMeshQuery) getPortalPoints6(from, to DtPolyRef, left, right d3.Vec3, fromType, toType *uint8) DtStatus {
+	assert.True(q.nav != nil, "NavMesh should not be nil")
+
+	var (
+		fromTile *DtMeshTile
+		fromPoly *DtPoly
+	)
+	if DtStatusFailed(q.nav.TileAndPolyByRef(from, &fromTile, &fromPoly)) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+	*fromType = fromPoly.Type()
+
+	var (
+		toTile *DtMeshTile
+		toPoly *DtPoly
+	)
+	if DtStatusFailed(q.nav.TileAndPolyByRef(to, &toTile, &toPoly)) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+	*toType = toPoly.Type()
+
+	return q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)
+}
+
 // Returns portal points between two polygons.
-func (q *DtNavMeshQuery) getPortalPoints(from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
+func (q *DtNavMeshQuery) getPortalPoints8(from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
 	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile,
 	left, right d3.Vec3) DtStatus {
 
@@ -910,6 +1274,64 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 			break
 		}
 	}
+	return DT_SUCCESS
+}
+
+/// @par
+///
+/// Much faster than closestPointOnPoly().
+///
+/// If the provided position lies within the polygon's xz-bounds (above or below),
+/// then @p pos and @p closest will be equal.
+///
+/// The height of @p closest will be the polygon boundary.  The height detail is not used.
+///
+/// @p pos does not have to be within the bounds of the polybon or the navigation mesh.
+///
+func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest d3.Vec3) DtStatus {
+
+	assert.True(q.nav != nil, "NavMesh should not be nil")
+
+	var (
+		tile *DtMeshTile
+		poly *DtPoly
+	)
+	if DtStatusFailed(q.nav.TileAndPolyByRef(ref, &tile, &poly)) {
+		return DT_FAILURE | DT_INVALID_PARAM
+	}
+
+	// Collect vertices.
+	var (
+		verts [DT_VERTS_PER_POLYGON * 3]float32
+		edged [DT_VERTS_PER_POLYGON]float32
+		edget [DT_VERTS_PER_POLYGON]float32
+		nv    int32
+	)
+	for i := uint8(0); i < poly.VertCount; i++ {
+		copy(verts[nv*3:nv*3+3], tile.Verts[poly.Verts[i]*3:poly.Verts[i]*3+3])
+		nv++
+	}
+
+	inside := dtDistancePtPolyEdgesSqr(pos, verts[:], nv, edged[:], edget[:])
+	if inside {
+		// Point is inside the polygon, return the point.
+		closest.Assign(pos)
+	} else {
+		// Point is outside the polygon, dtClamp to nearest edge.
+		dmin := edged[0]
+		imin := int32(0)
+		for i := int32(1); i < nv; i++ {
+			if edged[i] < dmin {
+				dmin = edged[i]
+				imin = i
+			}
+		}
+		va := verts[imin*3 : imin*3+3]
+		vidx := ((imin + 1) % nv) * 3
+		vb := verts[vidx : vidx+3]
+		d3.Vec3Lerp(closest, va, vb, edget[imin])
+	}
+
 	return DT_SUCCESS
 }
 
