@@ -1,5 +1,10 @@
 package detour
 
+import (
+	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
+)
+
 func dtNextPow2(v uint32) uint32 {
 	v--
 	v |= v >> 1
@@ -11,8 +16,15 @@ func dtNextPow2(v uint32) uint32 {
 	return v
 }
 
-func dtIlog2(v uint32) uint32 {
+// dtiMin returns the minimum of two int32 values.
+func dtiMin(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
+}
 
+func dtIlog2(v uint32) uint32 {
 	boolToUInt32 := func(b bool) uint32 {
 		if b {
 			return 1
@@ -21,7 +33,6 @@ func dtIlog2(v uint32) uint32 {
 	}
 
 	var r, shift uint32
-
 	r = boolToUInt32(v > 0xffff) << 4
 	v >>= r
 	shift = boolToUInt32(v > 0xff) << 3
@@ -37,47 +48,46 @@ func dtIlog2(v uint32) uint32 {
 	return r
 }
 
-func dtAlign4(x uint32) uint32 {
-	return ((x + 3) &^ 3)
+/// @}
+/// @name Computational geometry helper functions.
+/// @{
+
+/// Derives the signed xz-plane area of the triangle ABC, or the relationship of line AB to point C.
+///  @param[in]		a		Vertex A. [(x, y, z)]
+///  @param[in]		b		Vertex B. [(x, y, z)]
+///  @param[in]		c		Vertex C. [(x, y, z)]
+/// @return The signed xz-plane area of the triangle.
+func dtTriArea2D(a, b, c d3.Vec3) float32 {
+	abx := b[0] - a[0]
+	abz := b[2] - a[2]
+	acx := c[0] - a[0]
+	acz := c[2] - a[2]
+	return acx*abz - abx*acz
 }
 
-/// Returns the square of the value.
-func dtSqr(v float32) float32 {
-	return v * v
+func vperpXZ(a, b d3.Vec3) float32 {
+	return a[0]*b[2] - a[2]*b[0]
 }
 
-/// Returns the absolute value.
-///  @param[in]		a	The value.
-///  @return The absolute value of the specified value.
-func dtAbs(a float32) float32 {
-	if a < 0 {
-		return -a
+func DtIntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
+	u := aq.Sub(ap)
+	v := bq.Sub(bp)
+	w := ap.Sub(bp)
+
+	d := vperpXZ(u, v)
+	if math32.Abs(d) < 1e-6 {
+		return hit, s, t
 	}
-	return a
+	return true, vperpXZ(v, w) / d, vperpXZ(u, w) / d
 }
 
-/// Clamps the value to the specified range.
-///  @param[in]		v	The value to clamp.
-///  @param[in]		mn	The minimum permitted return value.
-///  @param[in]		mx	The maximum permitted return value.
-///  @return The value, clamped to the specified range.
-func dtClamp(v, mn, mx float32) float32 {
-	if v < mn {
-		return mn
-	}
-	if v > mx {
-		return mx
-	}
-	return v
-}
-
-/// Determines if two axis-aligned bounding boxes overlap.
-///  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
-///  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
-///  @param[in]		bmin	Minimum bounds of box B. [(x, y, z)]
-///  @param[in]		bmax	Maximum bounds of box B. [(x, y, z)]
-/// @return True if the two AABB's overlap.
-/// @see dtOverlapBounds
+// Determines if two axis-aligned bounding boxes overlap.
+//  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
+//  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
+//  @param[in]		bmin	Minimum bounds of box B. [(x, y, z)]
+//  @param[in]		bmax	Maximum bounds of box B. [(x, y, z)]
+// @return True if the two AABB's overlap.
+// @see dtOverlapBounds
 func dtOverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
 		return false
@@ -149,19 +159,16 @@ func dtDistancePtSegSqr2D(pt, p, q []float32, t *float32) float32 {
 	return dx*dx + dz*dz
 }
 
-func dtClosestHeightPointTriangle(p, a, b, c []float32, h *float32) bool {
-	v0 := make([]float32, 3)
-	v1 := make([]float32, 3)
-	v2 := make([]float32, 3)
-	dtVsub(v0, c, a)
-	dtVsub(v1, b, a)
-	dtVsub(v2, p, a)
+func dtClosestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
+	v0 := c.Sub(a)
+	v1 := b.Sub(a)
+	v2 := p.Sub(a)
 
-	dot00 := dtVdot2D(v0, v0)
-	dot01 := dtVdot2D(v0, v1)
-	dot02 := dtVdot2D(v0, v2)
-	dot11 := dtVdot2D(v1, v1)
-	dot12 := dtVdot2D(v1, v2)
+	dot00 := v0.Dot2D(v0)
+	dot01 := v0.Dot2D(v1)
+	dot02 := v0.Dot2D(v2)
+	dot11 := v1.Dot2D(v1)
+	dot12 := v1.Dot2D(v2)
 
 	// Compute barycentric coordinates
 	invDenom := 1.0 / (dot00*dot11 - dot01*dot01)
@@ -183,14 +190,4 @@ func dtClosestHeightPointTriangle(p, a, b, c []float32, h *float32) bool {
 
 func dtOppositeTile(side int32) int32 {
 	return (side + 4) & 0x7
-}
-
-/// Swaps the values of the two parameters.
-///  @param[in,out]	a	Value A
-///  @param[in,out]	b	Value B
-func dtSwap(a, b *float32) {
-	var t float32
-	t = *a
-	*a = *b
-	*b = t
 }

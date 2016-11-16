@@ -1,5 +1,7 @@
 package detour
 
+import "github.com/aurelien-rainone/gogeo/f32/d3"
+
 /// Defines polygon filtering and traversal costs for navigation mesh query operations.
 /// @ingroup detour
 /// @class dtQueryFilter
@@ -104,10 +106,10 @@ func (qf *DtQueryFilter) passFilter(ref DtPolyRef, tile *DtMeshTile, poly *DtPol
 ///  @param[in]		nextTile	The tile containing the next polygon. [opt]
 ///  @param[in]		nextPoly	The next polygon. [opt]
 
-func (qf *DtQueryFilter) Cost(pa, pb []float32,
+func (qf *DtQueryFilter) Cost(pa, pb d3.Vec3,
 	prevRef DtPolyRef, prevTile *DtMeshTile, prevPoly *DtPoly,
 	curRef DtPolyRef, curTile *DtMeshTile, curPoly *DtPoly,
 	nextRef DtPolyRef, nextTile *DtMeshTile, nextPoly *DtPoly) float32 {
 
-	return dtVdist(pa, pb) * qf.areaCost[curPoly.Area()]
+	return pa.Dist(pb) * qf.areaCost[curPoly.Area()]
 }

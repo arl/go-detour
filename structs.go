@@ -12,11 +12,11 @@ type NavMeshSetHeader struct {
 // @see dtNavMesh::init()
 // @ingroup detour
 type DtNavMeshParams struct {
-	Orig       [3]float32 ///< The world space origin of the navigation mesh's tile space. [(x, y, z)]
-	TileWidth  float32    ///< The width of each tile. (Along the x-axis.)
-	TileHeight float32    ///< The height of each tile. (Along the z-axis.)
-	MaxTiles   uint32     ///< The maximum number of tiles the navigation mesh can contain.
-	MaxPolys   uint32     ///< The maximum number of polygons each tile can contain.
+	Orig       [3]float32 // The world space origin of the navigation mesh's tile space. [(x, y, z)]
+	TileWidth  float32    // The width of each tile. (Along the x-axis.)
+	TileHeight float32    // The height of each tile. (Along the z-axis.)
+	MaxTiles   uint32     // The maximum number of tiles the navigation mesh can contain.
+	MaxPolys   uint32     // The maximum number of polygons each tile can contain.
 }
 
 // Provides high level information related to a dtMeshTile object.

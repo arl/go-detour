@@ -5,6 +5,7 @@ import (
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 func dtHashRef(a DtPolyRef) uint32 {
@@ -37,9 +38,9 @@ const (
 )
 
 type DtNode struct {
-	Pos   [3]float32 ///< Position of the node.
-	Cost  float32    ///< Cost from previous node to current node.
-	Total float32    ///< Cost up to the node.
+	Pos   d3.Vec3 // Position of the node.
+	Cost  float32 // Cost from previous node to current node.
+	Total float32 // Cost up to the node.
 	//unsigned int pidx : DT_NODE_PARENT_BITS;	///< Index to parent node.
 	//unsigned int state : DT_NODE_STATE_BITS;	///< extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
 	//unsigned int flags : 3;						///< Node flags. A combination of dtNodeFlags.
@@ -50,6 +51,12 @@ type DtNode struct {
 	//Flags uint8
 	Flags dtNodeFlags
 	ID    DtPolyRef ///< Polygon ref the node corresponds to.
+}
+
+func newDtNode() DtNode {
+	return DtNode{
+		Pos: d3.NewVec3(),
+	}
 }
 
 const (
@@ -76,6 +83,9 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 	assert.True(np.maxNodes > 0 && np.maxNodes <= int32(DT_NULL_IDX) && np.maxNodes <= (1<<DT_NODE_PARENT_BITS)-1, "DtNodePool, max nodes check failed")
 
 	np.nodes = make([]DtNode, np.maxNodes)
+	for i := range np.nodes {
+		np.nodes[i] = newDtNode()
+	}
 	np.next = make([]DtNodeIndex, np.maxNodes)
 	np.first = make([]DtNodeIndex, hashSize)
 

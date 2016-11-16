@@ -5,34 +5,33 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"math"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
+	"github.com/aurelien-rainone/gogeo/f32"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
 )
 
 /// A navigation mesh based on tiles of convex polygons.
 type DtNavMesh struct {
-	Params                DtNavMeshParams ///< Current initialization params. TODO: do not store this info twice.
-	Orig                  [3]float32      ///< Origin of the tile (0,0)
-	TileWidth, TileHeight float32         ///< Dimensions of each tile.
-	MaxTiles              int32           ///< Max number of tiles.
-	TileLUTSize           int32           ///< Tile hash lookup size (must be pot).
-	TileLUTMask           int32           ///< Tile hash lookup mask.
-
-	//m_posLookup **dtMeshTile ///< Tile hash lookup.
-	posLookup []*DtMeshTile ///< Tile hash lookup.
-	nextFree  *DtMeshTile   ///< Freelist of tiles.
-	Tiles     []DtMeshTile  ///< List of tiles.
-
-	saltBits uint32 ///< Number of salt bits in the tile ID.
-	tileBits uint32 ///< Number of tile bits in the tile ID.
-	polyBits uint32 ///< Number of poly bits in the tile ID.
+	Params                DtNavMeshParams // Current initialization params. TODO: do not store this info twice.
+	Orig                  d3.Vec3         // Origin of the tile (0,0)
+	TileWidth, TileHeight float32         // Dimensions of each tile.
+	MaxTiles              int32           // Max number of tiles.
+	TileLUTSize           int32           // Tile hash lookup size (must be pot).
+	TileLUTMask           int32           // Tile hash lookup mask.
+	posLookup             []*DtMeshTile   // Tile hash lookup.
+	nextFree              *DtMeshTile     // Freelist of tiles.
+	Tiles                 []DtMeshTile    // List of tiles.
+	saltBits              uint32          // Number of salt bits in the tile ID.
+	tileBits              uint32          // Number of tile bits in the tile ID.
+	polyBits              uint32          // Number of poly bits in the tile ID.
 }
 
 func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	m.Params = *params
-	m.Orig = params.Orig
+	m.Orig = d3.NewVec3From(params.Orig[0:3])
 	m.TileWidth = params.TileWidth
 	m.TileHeight = params.TileHeight
 
@@ -45,13 +44,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	m.TileLUTMask = m.TileLUTSize - 1
 
 	m.Tiles = make([]DtMeshTile, m.MaxTiles, m.MaxTiles)
-	//if (!m_tiles)
-	//return DT_FAILURE | DT_OUT_OF_MEMORY;
 	m.posLookup = make([]*DtMeshTile, m.TileLUTSize, m.TileLUTSize)
-	//if (!m_posLookup)
-	//return DT_FAILURE | DT_OUT_OF_MEMORY;
-	//memset(m_tiles, 0, sizeof(dtMeshTile)*m_maxTiles);
-	//memset(m_posLookup, 0, sizeof(dtMeshTile*)*m_tileLutSize);
 	m.nextFree = nil
 	for i := m.MaxTiles - 1; i >= 0; i-- {
 		m.Tiles[i].Salt = 1
@@ -100,6 +93,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 // @see dtCreateNavMeshData, #removeTileBvTree
 func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) DtStatus {
 	var hdr DtMeshHeader
+
 	// prepare a reader on the received data
 	r := newAlignedReader(bytes.NewReader(data), 4)
 	binary.Read(r, binary.LittleEndian, &hdr)
@@ -113,7 +107,8 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	}
 
 	// Make sure the location is free.
-	if m.GetTileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
+	if m.TileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
+		fmt.Println("TileAt failed")
 		return DT_FAILURE
 	}
 
@@ -300,7 +295,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	return DT_SUCCESS
 }
 
-func (m *DtNavMesh) GetTileAt(x, y, layer int32) *DtMeshTile {
+func (m *DtNavMesh) TileAt(x, y, layer int32) *DtMeshTile {
 	var (
 		h    int32
 		tile *DtMeshTile
@@ -314,7 +309,6 @@ func (m *DtNavMesh) GetTileAt(x, y, layer int32) *DtMeshTile {
 			tile.Header.X == x &&
 			tile.Header.Y == y &&
 			tile.Header.Layer == layer {
-			fmt.Println("return", tile)
 			return tile
 		}
 		tile = tile.Next
@@ -460,7 +454,8 @@ type dtBVNode struct {
 // two vertices.
 type DtOffMeshConnection struct {
 	// The endpoints of the connection. [(ax, ay, az, bx, by, bz)]
-	Pos [6]float32
+	//Pos [6]float32
+	PosA, PosB d3.Vec3
 
 	// The radius of the endpoints. [Limit: >= 0]
 	Rad float32
@@ -558,19 +553,20 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 		ext = []float32{con.Rad, tile.Header.WalkableClimb, con.Rad}
 
 		// Find polygon to connect to.
-		p = con.Pos[0:3] // First vertex
+		p = con.PosA // First vertex
 		nearestPt := make([]float32, 3)
 		ref := m.FindNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
 			continue
 		}
 		// findNearestPoly may return too optimistic results, further check to make sure.
-		if dtSqr(nearestPt[0]-p[0])+dtSqr(nearestPt[2]-p[2]) > dtSqr(con.Rad) {
+		if math32.Sqr(nearestPt[0]-p[0])+math32.Sqr(nearestPt[2]-p[2]) > math32.Sqr(con.Rad) {
 			continue
 		}
 		// Make sure the location is on current mesh.
-		v := tile.Verts[poly.Verts[0]*3 : 3]
-		dtVcopy(v, nearestPt)
+		var v d3.Vec3
+		v = tile.Verts[poly.Verts[0]*3 : poly.Verts[0]*3+3]
+		v.Assign(nearestPt)
 
 		// Link off-mesh connection to target poly.
 		idx := allocLink(tile)
@@ -605,11 +601,9 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 }
 
 // FindNearestPolyInTile finds the nearest polygon within a tile.
-func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nearestPt []float32) DtPolyRef {
-	bmin := make([]float32, 3)
-	bmax := make([]float32, 3)
-	dtVsub(bmin, center, extents)
-	dtVadd(bmax, center, extents)
+func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nearestPt d3.Vec3) DtPolyRef {
+	bmin := center.Sub(extents)
+	bmax := center.Add(extents)
 
 	// Get nearby polygons from proximity grid.
 	var polys [128]DtPolyRef
@@ -617,7 +611,7 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 
 	// Find nearest polygon amongst the nearby polygons.
 	var nearest DtPolyRef
-	nearestDistanceSqr := float32(math.MaxFloat32)
+	nearestDistanceSqr := math32.MaxFloat32
 	var i int32
 	for i = 0; i < polyCount; i++ {
 		ref := polys[i]
@@ -625,26 +619,25 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 			posOverPoly bool
 			d           float32
 		)
-		closestPtPoly := make([]float32, 3)
-		diff := make([]float32, 3)
+		closestPtPoly := d3.NewVec3()
 		m.ClosestPointOnPoly(ref, center, closestPtPoly, &posOverPoly)
 
 		// If a point is directly over a polygon and closer than
 		// climb height, favor that instead of straight line nearest point.
-		dtVsub(diff, center, closestPtPoly)
+		diff := center.Sub(closestPtPoly)
 		if posOverPoly {
-			d = dtAbs(diff[1]) - tile.Header.WalkableClimb
+			d = math32.Abs(diff[1]) - tile.Header.WalkableClimb
 			if d > 0 {
 				d = d * d
 			} else {
 				d = 0
 			}
 		} else {
-			d = dtVlenSqr(diff)
+			d = diff.LenSqr()
 		}
 
-		if d < nearestDistanceSqr {
-			dtVcopy(nearestPt, closestPtPoly)
+		if d <= nearestDistanceSqr {
+			nearestPt.Assign(closestPtPoly)
 			nearestDistanceSqr = d
 			nearest = ref
 		}
@@ -654,31 +647,30 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 }
 
 // QueryPolygonsInTile queries polygons within a tile.
-func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, polys []DtPolyRef, maxPolys int32) int32 {
+func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, polys []DtPolyRef, maxPolys int32) int32 {
 	if tile.BvTree != nil {
-		log.Fatalf("queryPolygonsInTile")
 		var (
 			node            *dtBVNode
 			nodeIdx, endIdx int32
-			tbmin, tbmax    [3]float32
+			tbmin, tbmax    d3.Vec3
 			qfac            float32
 			bmin, bmax      [3]uint16
 		)
 		nodeIdx = 0
 		endIdx = tile.Header.BvNodeCount
 
-		tbmin = tile.Header.Bmin
-		tbmin = tile.Header.Bmax
+		tbmin = d3.NewVec3From(tile.Header.Bmin[:])
+		tbmax = d3.NewVec3From(tile.Header.Bmax[:])
 		qfac = tile.Header.BvQuantFactor
 
 		// Calculate quantized box
 		// dtClamp query box to world box.
-		minx := dtClamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
-		miny := dtClamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
-		minz := dtClamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
-		maxx := dtClamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
-		maxy := dtClamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
-		maxz := dtClamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
+		minx := f32.Clamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
+		miny := f32.Clamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
+		minz := f32.Clamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
+		maxx := f32.Clamp(qmax[0], tbmin[0], tbmax[0]) - tbmin[0]
+		maxy := f32.Clamp(qmax[1], tbmin[1], tbmax[1]) - tbmin[1]
+		maxz := f32.Clamp(qmax[2], tbmin[2], tbmax[2]) - tbmin[2]
 		// Quantize
 		bmin[0] = uint16(uint32(qfac*minx) & 0xfffe)
 		bmin[1] = uint16(uint32(qfac*miny) & 0xfffe)
@@ -714,8 +706,8 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 
 	} else {
 
-		bmin := make([]float32, 3)
-		bmax := make([]float32, 3)
+		bmin := d3.NewVec3()
+		bmax := d3.NewVec3()
 		var n, i int32
 		base := m.getPolyRefBase(tile)
 		for i = 0; i < tile.Header.PolyCount; i++ {
@@ -726,13 +718,13 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32, 
 			}
 			// Calc polygon bounds.
 			v := tile.Verts[p.Verts[0]*3 : 3]
-			dtVcopy(bmin, v)
-			dtVcopy(bmax, v)
+			bmin.Assign(v)
+			bmax.Assign(v)
 			var j uint8
 			for j = 1; j < p.VertCount; j++ {
 				v = tile.Verts[p.Verts[j]*3 : 3]
-				dtVmin(bmin, v)
-				dtVmax(bmax, v)
+				d3.Vec3Min(bmin, v)
+				d3.Vec3Max(bmax, v)
 			}
 			if dtOverlapBounds(qmin, qmax, bmin, bmax) {
 				if n < maxPolys {
@@ -758,7 +750,7 @@ func (m *DtNavMesh) decodePolyIdPoly(ref DtPolyRef) uint32 {
 // pos         [in]	The position to check. [(x, y, z)]
 // closest     [out]	The closest point on the polygon. [(x, y, z)]
 // posOverPoly [out]	True of the position is over the polygon.
-func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, posOverPoly *bool) {
+func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posOverPoly *bool) {
 	var (
 		tile *DtMeshTile
 		poly *DtPoly
@@ -769,32 +761,23 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 	// Off-mesh connections don't have detail polygons.
 	if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
 		var (
-			v0, v1    []float32
+			v0, v1    d3.Vec3
 			d0, d1, u float32
 		)
 		v0 = tile.Verts[poly.Verts[0]*3 : 3]
 		v1 = tile.Verts[poly.Verts[1]*3 : 3]
-		d0 = dtVdist(pos, v0)
-		d1 = dtVdist(pos, v1)
+		d0 = pos.Dist(v0)
+		d1 = pos.Dist(v1)
 		u = d0 / (d0 + d1)
-		dtVlerp(closest, v0, v1, u)
+		closest = v0.Lerp(v1, u)
 		if posOverPoly != nil {
 			*posOverPoly = false
 		}
 		return
 	}
 
-	// CAREFUL with unsafe, double check the ip variable is bounded to
-	// tile.Polys length
-	log.Fatal("use of unsafe in ClosestPointOnPoly")
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
 	ip := uint32(e / unsafe.Sizeof(*poly))
-
-	if ip > uint32(len(tile.Polys)) {
-		log.Fatalln("houston...", ip, ">", len(tile.Polys))
-	} else {
-		log.Fatalln("OK with", ip, "<", len(tile.Polys))
-	}
 
 	pd := &tile.DetailMeshes[ip]
 
@@ -808,10 +791,10 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 		// TODO: could probably use copy
 		idx := i * 3
 		jdx := poly.Verts[i] * 3
-		dtVcopy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
+		copy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
 	}
 
-	dtVcopy(closest, pos)
+	closest.Assign(pos)
 	if !dtDistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
@@ -822,9 +805,10 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 				imin = i
 			}
 		}
-		va := verts[imin*3 : 3]
-		vb := verts[((imin+1)%nv)*3 : 3]
-		dtVlerp(closest, va, vb, edget[imin])
+		va := d3.NewVec3From(verts[imin*3 : imin*3+3])
+		vidx := ((imin + 1) % nv) * 3
+		vb := d3.NewVec3From(verts[vidx : vidx+3])
+		closest = va.Lerp(vb, edget[imin])
 
 		if posOverPoly != nil {
 			*posOverPoly = false
@@ -838,14 +822,19 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest []float32, po
 	// Find height at the location.
 	var j uint8
 	for j = 0; j < pd.TriCount; j++ {
-		t := tile.DetailTris[(pd.TriBase+uint32(j))*4 : 3]
-		v := make([][]float32, 3)
-		var k int
+		vidx := (pd.TriBase + uint32(j)) * 4
+		t := tile.DetailTris[vidx : vidx+3]
+		var (
+			v [3]d3.Vec3
+			k int
+		)
 		for k = 0; k < 3; k++ {
 			if t[k] < poly.VertCount {
-				v[k] = tile.Verts[poly.Verts[t[k]]*3 : 3]
+				vidx := poly.Verts[t[k]] * 3
+				v[k] = tile.Verts[vidx : vidx+3]
 			} else {
-				v[k] = tile.DetailVerts[(pd.VertBase+uint32(t[k]-poly.VertCount))*3 : 3]
+				vidx := (pd.VertBase + uint32(t[k]-poly.VertCount)) * 3
+				v[k] = tile.DetailVerts[vidx : vidx+3]
 			}
 		}
 		var h float32
@@ -914,8 +903,8 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 		ext := []float32{targetCon.Rad, target.Header.WalkableClimb, targetCon.Rad}
 
 		// Find polygon to connect to.
-		p := targetCon.Pos[3:6]
-		nearestPt := make([]float32, 3)
+		p := targetCon.PosB
+		nearestPt := d3.NewVec3()
 		ref := m.FindNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
 			continue
@@ -923,14 +912,16 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 
 		panic("here9")
 		// findNearestPoly may return too optimistic results, further check to make sure.
-		if dtSqr(nearestPt[0]-p[0])+dtSqr(nearestPt[2]-p[2]) > dtSqr(targetCon.Rad) {
+		if math32.Sqr(nearestPt[0]-p[0])+math32.Sqr(nearestPt[2]-p[2]) > math32.Sqr(targetCon.Rad) {
 			continue
 		}
 
 		panic("here10")
 		// Make sure the location is on current mesh.
-		v := target.Verts[targetPoly.Verts[1]*3 : 3]
-		dtVcopy(v, nearestPt)
+		var v d3.Vec3
+		vidx := targetPoly.Verts[1] * 3
+		v = target.Verts[vidx : vidx+3]
+		v.Assign(nearestPt)
 
 		// Link off-mesh connection to target poly.
 		idx := allocLink(target)
@@ -1040,18 +1031,18 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 						tmin := (neia[k*2+0] - va[2]) / (vb[2] - va[2])
 						tmax := (neia[k*2+1] - va[2]) / (vb[2] - va[2])
 						if tmin > tmax {
-							dtSwap(&tmin, &tmax)
+							tmin, tmax = tmax, tmin
 						}
-						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
-						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
+						link.Bmin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
+						link.Bmax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					} else if dir == 2 || dir == 6 {
 						tmin := (neia[k*2+0] - va[0]) / (vb[0] - va[0])
 						tmax := (neia[k*2+1] - va[0]) / (vb[0] - va[0])
 						if tmin > tmax {
-							dtSwap(&tmin, &tmax)
+							tmin, tmax = tmax, tmin
 						}
-						link.Bmin = uint8(dtClamp(tmin, 0.0, 1.0) * 255.0)
-						link.Bmax = uint8(dtClamp(tmax, 0.0, 1.0) * 255.0)
+						link.Bmin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
+						link.Bmax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					}
 				}
 			}
@@ -1095,7 +1086,7 @@ func (m *DtNavMesh) FindConnectingPolys(va, vb []float32, tile *DtMeshTile, side
 			bpos := getSlabCoord(vc, side)
 
 			// Segments are not close enough.
-			if dtAbs(apos-bpos) > 0.01 {
+			if math32.Abs(apos-bpos) > 0.01 {
 				continue
 			}
 
@@ -1108,8 +1099,8 @@ func (m *DtNavMesh) FindConnectingPolys(va, vb []float32, tile *DtMeshTile, side
 
 			// Add return value.
 			if n < maxcon {
-				conarea[n*2+0] = dtMax(amin[0], bmin[0])
-				conarea[n*2+1] = dtMin(amax[0], bmax[0])
+				conarea[n*2+0] = math32.Max(amin[0], bmin[0])
+				conarea[n*2+1] = math32.Min(amax[0], bmax[0])
 				con[n] = base | DtPolyRef(i)
 				n++
 			}
@@ -1160,8 +1151,8 @@ func overlapSlabs(amin, amax, bmin, bmax []float32, px, py float32) bool {
 	// Check for horizontal overlap.
 	// The segment is shrunken a little so that slabs which touch
 	// at end points are not connected.
-	minx := dtMax(amin[0]+px, bmin[0]+px)
-	maxx := dtMin(amax[0]-px, bmax[0]-px)
+	minx := math32.Max(amin[0]+px, bmin[0]+px)
+	maxx := math32.Min(amax[0]-px, bmax[0]-px)
 	if minx > maxx {
 		return false
 	}
@@ -1184,7 +1175,7 @@ func overlapSlabs(amin, amax, bmin, bmax []float32, px, py float32) bool {
 	}
 
 	// Check for overlap at endpoints.
-	thr := dtSqr(py * 2)
+	thr := math32.Sqr(py * 2)
 	if dmin*dmin <= thr || dmax*dmax <= thr {
 		return true
 	}
@@ -1290,7 +1281,12 @@ func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **Dt
 	return DT_SUCCESS
 }
 
-func (m *DtNavMesh) calcTileLoc(pos [3]float32, tx, ty *int32) {
-	*tx = int32(math.Floor(float64((pos[0] - m.Orig[0]) / m.TileWidth)))
-	*ty = int32(math.Floor(float64((pos[2] - m.Orig[2]) / m.TileHeight)))
+// Calculates the tile grid location for the specified world position.
+//  @param[in]	pos  The world position for the query. [(x, y, z)]
+//  @param[out]	tx		The tile's x-location. (x, y)
+//  @param[out]	ty		The tile's y-location. (x, y)
+func (m *DtNavMesh) CalcTileLoc(pos d3.Vec3) (tx, ty int32) {
+	tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
+	ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))
+	return tx, ty
 }
