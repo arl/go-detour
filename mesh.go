@@ -107,8 +107,8 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	}
 
 	// Make sure the location is free.
-	if m.GetTileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
-		fmt.Println("GetTileAt failed")
+	if m.TileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
+		fmt.Println("TileAt failed")
 		return DT_FAILURE
 	}
 
@@ -295,7 +295,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	return DT_SUCCESS
 }
 
-func (m *DtNavMesh) GetTileAt(x, y, layer int32) *DtMeshTile {
+func (m *DtNavMesh) TileAt(x, y, layer int32) *DtMeshTile {
 	var (
 		h    int32
 		tile *DtMeshTile
@@ -309,7 +309,6 @@ func (m *DtNavMesh) GetTileAt(x, y, layer int32) *DtMeshTile {
 			tile.Header.X == x &&
 			tile.Header.Y == y &&
 			tile.Header.Layer == layer {
-			fmt.Println("return", tile)
 			return tile
 		}
 		tile = tile.Next
@@ -603,7 +602,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 
 // FindNearestPolyInTile finds the nearest polygon within a tile.
 func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nearestPt d3.Vec3) DtPolyRef {
-	bmin := center.Add(extents)
+	bmin := center.Sub(extents)
 	bmax := center.Add(extents)
 
 	// Get nearby polygons from proximity grid.
@@ -637,7 +636,7 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 			d = diff.LenSqr()
 		}
 
-		if d < nearestDistanceSqr {
+		if d <= nearestDistanceSqr {
 			nearestPt.Assign(closestPtPoly)
 			nearestDistanceSqr = d
 			nearest = ref
@@ -650,7 +649,6 @@ func (m *DtNavMesh) FindNearestPolyInTile(tile *DtMeshTile, center, extents, nea
 // QueryPolygonsInTile queries polygons within a tile.
 func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, polys []DtPolyRef, maxPolys int32) int32 {
 	if tile.BvTree != nil {
-		log.Fatalf("queryPolygonsInTile")
 		var (
 			node            *dtBVNode
 			nodeIdx, endIdx int32
@@ -778,17 +776,8 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 		return
 	}
 
-	// CAREFUL with unsafe, double check the ip variable is bounded to
-	// tile.Polys length
-	log.Fatal("use of unsafe in ClosestPointOnPoly")
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
 	ip := uint32(e / unsafe.Sizeof(*poly))
-
-	if ip > uint32(len(tile.Polys)) {
-		log.Fatalln("houston...", ip, ">", len(tile.Polys))
-	} else {
-		log.Fatalln("OK with", ip, "<", len(tile.Polys))
-	}
 
 	pd := &tile.DetailMeshes[ip]
 
@@ -816,8 +805,9 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 				imin = i
 			}
 		}
-		va := d3.NewVec3From(verts[imin*3 : 3])
-		vb := d3.NewVec3From(verts[((imin+1)%nv)*3 : 3])
+		va := d3.NewVec3From(verts[imin*3 : imin*3+3])
+		vidx := ((imin + 1) % nv) * 3
+		vb := d3.NewVec3From(verts[vidx : vidx+3])
 		closest = va.Lerp(vb, edget[imin])
 
 		if posOverPoly != nil {
@@ -832,14 +822,19 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 	// Find height at the location.
 	var j uint8
 	for j = 0; j < pd.TriCount; j++ {
-		t := tile.DetailTris[(pd.TriBase+uint32(j))*4 : 3]
-		v := make([][]float32, 3)
-		var k int
+		vidx := (pd.TriBase + uint32(j)) * 4
+		t := tile.DetailTris[vidx : vidx+3]
+		var (
+			v [3]d3.Vec3
+			k int
+		)
 		for k = 0; k < 3; k++ {
 			if t[k] < poly.VertCount {
-				v[k] = tile.Verts[poly.Verts[t[k]]*3 : 3]
+				vidx := poly.Verts[t[k]] * 3
+				v[k] = tile.Verts[vidx : vidx+3]
 			} else {
-				v[k] = tile.DetailVerts[(pd.VertBase+uint32(t[k]-poly.VertCount))*3 : 3]
+				vidx := (pd.VertBase + uint32(t[k]-poly.VertCount)) * 3
+				v[k] = tile.DetailVerts[vidx : vidx+3]
 			}
 		}
 		var h float32
@@ -1286,7 +1281,12 @@ func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **Dt
 	return DT_SUCCESS
 }
 
-func (m *DtNavMesh) calcTileLoc(pos d3.Vec3, tx, ty *int32) {
-	*tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
-	*ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))
+// Calculates the tile grid location for the specified world position.
+//  @param[in]	pos  The world position for the query. [(x, y, z)]
+//  @param[out]	tx		The tile's x-location. (x, y)
+//  @param[out]	ty		The tile's y-location. (x, y)
+func (m *DtNavMesh) CalcTileLoc(pos d3.Vec3) (tx, ty int32) {
+	tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
+	ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))
+	return tx, ty
 }

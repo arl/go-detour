@@ -36,13 +36,17 @@ func TestFindPath(t *testing.T) {
 	)
 
 	pathTests := []struct {
-		org, dst d3.Vec3
-		want     []DtPolyRef
+		org, dst         d3.Vec3
+		wantPath         []DtPolyRef
+		wantStraightPath []d3.Vec3
 	}{
 		{
 			d3.Vec3{5, 0, 10},
 			d3.Vec3{50, 0, 30},
 			[]DtPolyRef{0x440000, 0x460007, 0x520007, 0x540003, 0x5c0001, 0x5e0000, 0x600000, 0x620000},
+			[]d3.Vec3{
+				d3.NewVec3XYZ(5, 0, 10), d3.NewVec3XYZ(3.900252, 0.189468, 11.998747), d3.NewVec3XYZ(14.700253, 0.189468, 19.198748), d3.NewVec3XYZ(15.900252, 0.189468, 19.198748), d3.NewVec3XYZ(24.3, 0.189468, 28.798748), d3.NewVec3XYZ(31.8, 0.189468, 32.098747), d3.NewVec3XYZ(39.9, 0.189468, 32.098747), d3.NewVec3XYZ(50, 0, 30),
+			},
 		},
 	}
 
@@ -105,8 +109,43 @@ func TestFindPath(t *testing.T) {
 			t.Errorf("query.FindPath failed with 0x%x\n", st)
 		}
 
-		if !reflect.DeepEqual(tt.want, path[:pathCount]) {
-			t.Errorf("found path is not correct, want %#v, got %#v", tt.want, path[:pathCount])
+		if !reflect.DeepEqual(tt.wantPath, path[:pathCount]) {
+			t.Errorf("found path is not correct, want %#v, got %#v", tt.wantPath, path[:pathCount])
+		}
+
+		// FindStraightPath
+		var (
+			straightPathCount int32
+			straightPath      []d3.Vec3
+			straightPathFlags []uint8
+			straightPathRefs  []DtPolyRef
+			maxStraightPath   int32
+		)
+		// slices that receive the straight path
+		maxStraightPath = 100
+		straightPath = make([]d3.Vec3, maxStraightPath)
+		for i := range straightPath {
+			straightPath[i] = d3.NewVec3()
+		}
+		straightPathFlags = make([]uint8, maxStraightPath)
+		straightPathRefs = make([]DtPolyRef, maxStraightPath)
+
+		st = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, &straightPathCount, 100, 0)
+		if DtStatusFailed(st) {
+			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
+		}
+
+		if (straightPathFlags[0] & DT_STRAIGHTPATH_START) == 0 {
+			t.Errorf("straightPath start is not flagged DT_STRAIGHTPATH_START")
+		}
+
+		for i := int32(0); i < pathCount; i++ {
+			if !straightPath[i].Approx(tt.wantStraightPath[i]) {
+				t.Errorf("straightPath[%d] = %v, want %v", i, straightPath[i], tt.wantStraightPath[i])
+			}
+		}
+
+		if !reflect.DeepEqual(tt.wantStraightPath, straightPath[:pathCount]) {
 		}
 	}
 }
