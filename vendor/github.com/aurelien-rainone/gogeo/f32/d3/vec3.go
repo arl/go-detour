@@ -309,7 +309,7 @@ func (v Vec3) Approx(v1 Vec3) bool {
 
 // String returns a string representation of v like "(3,4)".
 func (v Vec3) String() string {
-	return fmt.Sprintf("(%.4g,%.4g,%.4g)", v[0], v[1], v[2])
+	return fmt.Sprintf("(%f,%f,%f)", v[0], v[1], v[2])
 }
 
 func (v *Vec3) Set(s string) error {
