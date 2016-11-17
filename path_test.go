@@ -15,6 +15,20 @@ func checkt(t *testing.T, err error) {
 	}
 }
 
+func findNearestPoly(t *testing.T, q *DtNavMeshQuery, coord, ext d3.Vec3) (ref DtPolyRef, pt d3.Vec3) {
+
+	f := NewDtQueryFilter()
+	pt = d3.NewVec3()
+
+	st, ref, pt := q.FindNearestPoly(coord, ext, f)
+	if DtStatusFailed(st) {
+		t.Errorf("findNearestPoly failed with 0x%x\n", st)
+	} else if ref == 0 {
+		t.Errorf("findNearestPoly, coords %v don't intersect any polygons", coord)
+	}
+	return ref, pt
+}
+
 func loadTestNavMesh(fname string) (*DtNavMesh, error) {
 	var (
 		f   *os.File
@@ -66,7 +80,6 @@ func TestFindPath(t *testing.T) {
 			query          *DtNavMeshQuery // the query instance
 			filter         *DtQueryFilter  // filter to use for various queries
 			extents        d3.Vec3         // poly search distance for poly (3 axis)
-			nearestPt      d3.Vec3
 			st             DtStatus
 			path           []DtPolyRef
 		)
@@ -82,36 +95,23 @@ func TestFindPath(t *testing.T) {
 		filter = NewDtQueryFilter()
 
 		// get org polygon reference
-		st = query.FindNearestPoly(tt.org, extents, filter, &orgRef, nearestPt)
-		if DtStatusFailed(st) {
-			t.Errorf("FindNearestPoly failed with 0x%x\n", st)
-		} else if orgRef == 0 {
-			t.Errorf("org doesn't intersect any polygons")
-		}
-
+		orgRef, org := findNearestPoly(t, query, tt.org, extents)
 		if !mesh.IsValidPolyRef(orgRef) {
-			t.Errorf("%d is not a valid poly ref", orgRef)
+			t.Errorf("orgRef %d is not a valid poly ref", orgRef)
 		}
-		copy(tt.org, nearestPt)
 
 		// get dst polygon reference
-		st = query.FindNearestPoly(tt.dst, extents, filter, &dstRef, nearestPt)
-		if DtStatusFailed(st) {
-			t.Errorf("FindNearestPoly failed with 0x%x\n", st)
-		} else if dstRef == 0 {
-			t.Errorf("dst doesn't intersect any polygons")
-		}
+		dstRef, dst := findNearestPoly(t, query, tt.dst, extents)
 		if !mesh.IsValidPolyRef(dstRef) {
-			t.Errorf("%d is not a valid poly ref", dstRef)
+			t.Errorf("dstRef %d is not a valid poly ref", dstRef)
 		}
-		copy(tt.dst, nearestPt)
 
 		// FindPath
 		var (
 			pathCount int32
 		)
 		path = make([]DtPolyRef, 100)
-		st = query.FindPath(orgRef, dstRef, tt.org, tt.dst, filter, &path, &pathCount, 100)
+		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
 		if DtStatusFailed(st) {
 			t.Errorf("query.FindPath failed with 0x%x\n", st)
 		}
@@ -153,6 +153,68 @@ func TestFindPath(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(tt.wantStraightPath, straightPath[:pathCount]) {
+		}
+	}
+}
+
+func TestFindPathSpecialCases(t *testing.T) {
+	var (
+		mesh *DtNavMesh
+		err  error
+	)
+
+	pathTests := []struct {
+		msg      string
+		org, dst d3.Vec3
+		want     DtStatus
+	}{
+		{
+			"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DtStatus(DT_FAILURE | DT_INVALID_PARAM),
+		},
+	}
+
+	mesh, err = loadTestNavMesh("navmesh.bin")
+	checkt(t, err)
+
+	for _, tt := range pathTests {
+		var (
+			query   *DtNavMeshQuery // the query instance
+			filter  *DtQueryFilter  // filter to use for various queries
+			extents d3.Vec3         // poly search distance for poly (3 axis)
+			st      DtStatus
+			path    []DtPolyRef
+		)
+
+		query, st = NewDtNavMeshQuery(mesh, 1000)
+		if DtStatusFailed(st) {
+			t.Errorf("query creation failed with status 0x%x\n", st)
+		}
+		// define the extents vector for the nearest polygon query
+		extents = d3.NewVec3XYZ(0, 2, 0)
+
+		// create a default query filter
+		filter = NewDtQueryFilter()
+
+		// get org polygon reference
+		orgRef, org := findNearestPoly(t, query, tt.org, extents)
+		if !mesh.IsValidPolyRef(orgRef) {
+			t.Errorf("orgRef %d is not a valid poly ref", orgRef)
+		}
+
+		// get dst polygon reference
+		dstRef, dst := findNearestPoly(t, query, tt.dst, extents)
+		if !mesh.IsValidPolyRef(dstRef) {
+			t.Errorf("dstRef %d is not a valid poly ref", dstRef)
+		}
+
+		// FindPath
+		var pathCount int32
+
+		path = make([]DtPolyRef, 100)
+		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
+
+		if st != tt.want {
+			t.Errorf("%s, want status 0x%x, got 0x%x", tt.msg, tt.want, st)
 		}
 	}
 }
