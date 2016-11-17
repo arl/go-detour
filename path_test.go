@@ -164,12 +164,13 @@ func TestFindPathSpecialCases(t *testing.T) {
 	)
 
 	pathTests := []struct {
-		msg      string
-		org, dst d3.Vec3
-		want     DtStatus
+		msg           string   // test description
+		org, dst      d3.Vec3  // path origin and destination points
+		wantStatus    DtStatus // expected status
+		wantPathCount int32    // expected path count
 	}{
 		{
-			"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DtStatus(DT_FAILURE | DT_INVALID_PARAM),
+			"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DT_SUCCESS, 1,
 		},
 	}
 
@@ -213,8 +214,11 @@ func TestFindPathSpecialCases(t *testing.T) {
 		path = make([]DtPolyRef, 100)
 		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
 
-		if st != tt.want {
-			t.Errorf("%s, want status 0x%x, got 0x%x", tt.msg, tt.want, st)
+		if st != tt.wantStatus {
+			t.Errorf("%s, got status 0x%x, want 0x%x", tt.msg, st, tt.wantStatus)
+		}
+		if pathCount != tt.wantPathCount {
+			t.Errorf("%s, got pathCount 0x%x, want 0x%x", tt.msg, pathCount, tt.wantPathCount)
 		}
 	}
 }

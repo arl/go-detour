@@ -1337,42 +1337,39 @@ func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest 
 	return DT_SUCCESS
 }
 
-/// Finds the polygon nearest to the specified center point.
-///  @param[in]		center		The center of the search box. [(x, y, z)]
-///  @param[in]		extents		The search distance along each axis. [(x, y, z)]
-///  @param[in]		filter		The polygon filter to apply to the query.
-///  @param[out]	nearestRef	The reference id of the nearest polygon.
-///  @param[out]	nearestPt	The nearest point on the polygon. [opt] [(x, y, z)]
-/// @returns The status flags for the query.
-/// @note If the search box does not intersect any polygons the search will
-/// return #DT_SUCCESS, but @p nearestRef will be zero. So if in doubt, check
-/// @p nearestRef before using @p nearestPt.
-///
+// FindNearestPoly finds the polygon nearest to the specified center point.
+//
+//  Arguments:
+//   center   The center of the search box.
+//   extents  A vector which components represent the
+//            search distance along each axis.
+//   filter   The polygon filter to apply to the query.
+//
+//  Return values:
+//   st       The status flags for the query.
+//   ref      The reference id of the nearest polygon.
+//   pt       The nearest point on the polygon. [(x, y, z)]
+//
+// Note: If the search box does not intersect any polygons st will be
+// DT_SUCCESS, but ref will be zero. So if in doubt, check ref before using pt.
 func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
-	filter *DtQueryFilter,
-	nearestRef *DtPolyRef, nearestPt d3.Vec3) DtStatus {
+	filter *DtQueryFilter) (st DtStatus, ref DtPolyRef, pt d3.Vec3) {
 
 	assert.True(q.nav != nil, "Nav should not be nil")
 
-	if nearestRef == nil {
-		return DT_FAILURE | DT_INVALID_PARAM
-	}
-
 	query := newDtFindNearestPolyQuery(q, center)
-
-	status := q.queryPolygons4(center, extents, filter, query)
-	if DtStatusFailed(status) {
-		return status
+	st = q.queryPolygons4(center, extents, filter, query)
+	if DtStatusFailed(st) {
+		return
 	}
 
-	*nearestRef = query.NearestRef()
-	// Only override nearestPt if we actually found a poly so the nearest point
-	// is valid.
-	if len(nearestPt) == 3 && *nearestRef != 0 {
-		pt := query.NearestPoint()
-		nearestPt.Assign(pt)
+	// Only allocate nearestPt if we actually found
+	// a poly so the nearest point is valid.
+	if ref = query.NearestRef(); ref != 0 {
+		pt = d3.NewVec3From(query.NearestPoint())
 	}
-	return DT_SUCCESS
+	st = DT_SUCCESS
+	return
 }
 
 /// @par
