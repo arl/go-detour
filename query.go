@@ -1363,8 +1363,8 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 		return
 	}
 
-	// Only allocate nearestPt if we actually found
-	// a poly so the nearest point is valid.
+	// Only allocate pt if we actually found
+	// a poly so the nearest point pt is valid.
 	if ref = query.NearestRef(); ref != 0 {
 		pt = d3.NewVec3From(query.NearestPoint())
 	}
@@ -1372,15 +1372,20 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 	return
 }
 
-/// @par
-///
-/// If no polygons are found, the function will return #DT_SUCCESS with a
-/// @p polyCount of zero.
-///
-/// If @p polys is too small to hold the entire result set, then the array will
-/// be filled to capacity. The method of choosing which polygons from the
-/// full set are included in the partial result set is undefined.
-///
+// queryPolygons6 finds polygons that overlap the search box.
+//
+//  @param[in]  center     The center of the search box.
+//  @param[in]  extents    The search distance along each axis.
+//  @param[in]  filter     The polygon filter to apply to the query.
+//  @param[out] polys      The reference ids of the polygons that overlap the query box.
+//  @param[out] polyCount  The number of polygons in the search result.
+//  @param[in]  maxPolys   The maximum number of polygons the search result can hold.
+//  @returns The status flags for the query.
+// If no polygons are found, the function will return #DT_SUCCESS with a
+// @p polyCount of zero.
+// If @p polys is too small to hold the entire result set, then the array will
+// be filled to capacity. The method of choosing which polygons from the
+// full set are included in the partial result set is undefined.
 func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
 	filter *DtQueryFilter,
 	polys []DtPolyRef, polyCount *int32, maxPolys int32) DtStatus {
@@ -1401,6 +1406,12 @@ func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
 	}
 	return DT_SUCCESS
 }
+
+/// Finds polygons that overlap the search box.
+///  @param[in]		center		The center of the search box. [(x, y, z)]
+///  @param[in]		extents		The search distance along each axis. [(x, y, z)]
+///  @param[in]		filter		The polygon filter to apply to the query.
+///  @param[in]		query		The query. Polygons found will be batched together and passed to this query.
 
 /// @par
 ///
