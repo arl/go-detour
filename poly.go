@@ -1,57 +1,61 @@
 package detour
 
-/// Defines a polygon within a dtMeshTile object.
+import "github.com/aurelien-rainone/gogeo/f32/d3"
+
+// DtPoly defines a polygon within a DtMeshTile object.
 type DtPoly struct {
-	/// Index to first link in linked list. (Or #DT_NULL_LINK if there is no link.)
+	// FirstLink is the index to first link in linked list.
+	// (Or DT_NULL_LINK if there is no link.)
 	FirstLink uint32
 
-	/// The indices of the polygon's vertices.
-	/// The actual vertices are located in dtMeshTile::verts.
+	// Verts are the indices of the polygon's vertices.
+	// The actual vertices are located in DtMeshTile.Verts.
 	Verts [DT_VERTS_PER_POLYGON]uint16
 
-	/// Packed data representing neighbor polygons references and flags for each edge.
+	// Neis is packed data representing neighbor polygons
+	// references and flags for each edge.
 	Neis [DT_VERTS_PER_POLYGON]uint16
 
-	/// The user defined polygon flags.
+	// Flags is an user-defined polygon flags.
 	Flags uint16
 
-	/// The number of vertices in the polygon.
+	// VertCount is the number of vertices in the polygon.
 	VertCount uint8
 
-	/// The bit packed area id and polygon type.
-	/// @note Use the structure's set and get methods to acess this value.
-	AreaAndtype uint8
+	// bit-packed area id and polygon type.
+	//
+	// Note: use SetArea/SetType/Area/Type functions to access those values.
+	// This value is exported in order to be accessible from reflect during
+	// unmarshalling from binary data.
+	AreaAndType uint8
 }
 
-/// Sets the user defined area id. [Limit: < #DT_MAX_AREAS]
+// SetArea sets the user defined area id. (limit: < DT_MAX_AREAS)
 func (p *DtPoly) SetArea(a uint8) {
-	p.AreaAndtype = (p.AreaAndtype & 0xc0) | (a & 0x3f)
+	p.AreaAndType = (p.AreaAndType & 0xc0) | (a & 0x3f)
 }
 
-/// Sets the polygon type. (See: #dtPolyTypes.)
+// SetType sets the polygon type. (see: DtPolyTypes.)
 func (p *DtPoly) SetType(t uint8) {
-	p.AreaAndtype = (p.AreaAndtype & 0x3f) | (t << 6)
+	p.AreaAndType = (p.AreaAndType & 0x3f) | (t << 6)
 }
 
-/// Gets the user defined area id.
+// Area returns the user defined area id.
 func (p *DtPoly) Area() uint8 {
-	return p.AreaAndtype & 0x3f
+	return p.AreaAndType & 0x3f
 }
 
-/// Gets the polygon type. (See: #dtPolyTypes)
+// Type returns the polygon type. (see: DtPolyTypes)
 func (p *DtPoly) Type() uint8 {
-	return p.AreaAndtype >> 6
+	return p.AreaAndType >> 6
 }
 
-/// Derives the centroid of a convex polygon.
-///  @param[out]	tc		The centroid of the polgyon. [(x, y, z)]
-///  @param[in]		idx		The polygon indices. [(vertIndex) * @p nidx]
-///  @param[in]		nidx	The number of indices in the polygon. [Limit: >= 3]
-///  @param[in]		verts	The polygon vertices. [(x, y, z) * vertCount]
-func DtCalcPolyCenter(tc []float32, idx []uint16, nidx int32, verts []float32) {
-	tc[0] = 0.0
-	tc[1] = 0.0
-	tc[2] = 0.0
+// DtCalcPolyCenter derives and returns the centroid of a convex polygon.
+//  idx     polygon indices. [(vertIndex) * nidx]
+//  nidx    number of indices in the polygon. (limit: >= 3)
+//  verts   polygon vertices. [(x, y, z) * vertCount]
+func DtCalcPolyCenter(idx []uint16, nidx int32, verts []float32) d3.Vec3 {
+	tc := d3.NewVec3()
 	var j int32
 	for j = 0; j < nidx; j++ {
 		start := idx[j] * 3
@@ -60,8 +64,5 @@ func DtCalcPolyCenter(tc []float32, idx []uint16, nidx int32, verts []float32) {
 		tc[1] += v[1]
 		tc[2] += v[2]
 	}
-	s := float32(1.0 / float64(nidx))
-	tc[0] *= s
-	tc[1] *= s
-	tc[2] *= s
+	return tc.Scale(1 / float32(nidx))
 }
