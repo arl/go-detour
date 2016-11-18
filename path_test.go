@@ -15,20 +15,6 @@ func checkt(t *testing.T, err error) {
 	}
 }
 
-func findNearestPoly(t *testing.T, q *DtNavMeshQuery, coord, ext d3.Vec3) (ref DtPolyRef, pt d3.Vec3) {
-
-	f := NewDtQueryFilter()
-	pt = d3.NewVec3()
-
-	st, ref, pt := q.FindNearestPoly(coord, ext, f)
-	if DtStatusFailed(st) {
-		t.Errorf("findNearestPoly failed with 0x%x\n", st)
-	} else if ref == 0 {
-		t.Errorf("findNearestPoly, coords %v don't intersect any polygons", coord)
-	}
-	return ref, pt
-}
-
 func loadTestNavMesh(fname string) (*DtNavMesh, error) {
 	var (
 		f   *os.File
@@ -76,12 +62,11 @@ func TestFindPath(t *testing.T) {
 
 	for _, tt := range pathTests {
 		var (
-			orgRef, dstRef DtPolyRef       // refs for org and dst polys
 			query          *DtNavMeshQuery // the query instance
-			filter         *DtQueryFilter  // filter to use for various queries
-			extents        d3.Vec3         // poly search distance for poly (3 axis)
-			st             DtStatus
-			path           []DtPolyRef
+			orgRef, dstRef DtPolyRef       // find poly query results
+			org, dst       d3.Vec3         // find poly query results
+			st             DtStatus        // status flags
+			path           []DtPolyRef     // returned path
 		)
 
 		query, st = NewDtNavMeshQuery(mesh, 1000)
@@ -89,19 +74,25 @@ func TestFindPath(t *testing.T) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
 		// define the extents vector for the nearest polygon query
-		extents = d3.NewVec3XYZ(0, 2, 0)
+		extents := d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
-		filter = NewDtQueryFilter()
+		filter := NewDtQueryFilter()
 
 		// get org polygon reference
-		orgRef, org := findNearestPoly(t, query, tt.org, extents)
+		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
+		if DtStatusFailed(st) {
+			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
+		}
 		if !mesh.IsValidPolyRef(orgRef) {
 			t.Errorf("orgRef %d is not a valid poly ref", orgRef)
 		}
 
 		// get dst polygon reference
-		dstRef, dst := findNearestPoly(t, query, tt.dst, extents)
+		st, dstRef, dst = query.FindNearestPoly(tt.dst, extents, filter)
+		if DtStatusFailed(st) {
+			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
+		}
 		if !mesh.IsValidPolyRef(dstRef) {
 			t.Errorf("dstRef %d is not a valid poly ref", dstRef)
 		}
@@ -169,9 +160,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		wantStatus    DtStatus // expected status
 		wantPathCount int32    // expected path count
 	}{
-		{
-			"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DT_SUCCESS, 1,
-		},
+		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DT_SUCCESS, 1},
 	}
 
 	mesh, err = loadTestNavMesh("navmesh.bin")
@@ -179,11 +168,11 @@ func TestFindPathSpecialCases(t *testing.T) {
 
 	for _, tt := range pathTests {
 		var (
-			query   *DtNavMeshQuery // the query instance
-			filter  *DtQueryFilter  // filter to use for various queries
-			extents d3.Vec3         // poly search distance for poly (3 axis)
-			st      DtStatus
-			path    []DtPolyRef
+			query          *DtNavMeshQuery // the query instance
+			orgRef, dstRef DtPolyRef       // find poly query results
+			org, dst       d3.Vec3         // find poly query results
+			st             DtStatus        // status flags
+			path           []DtPolyRef     // returned path
 		)
 
 		query, st = NewDtNavMeshQuery(mesh, 1000)
@@ -191,19 +180,25 @@ func TestFindPathSpecialCases(t *testing.T) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
 		// define the extents vector for the nearest polygon query
-		extents = d3.NewVec3XYZ(0, 2, 0)
+		extents := d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
-		filter = NewDtQueryFilter()
+		filter := NewDtQueryFilter()
 
 		// get org polygon reference
-		orgRef, org := findNearestPoly(t, query, tt.org, extents)
+		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
+		if DtStatusFailed(st) {
+			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
+		}
 		if !mesh.IsValidPolyRef(orgRef) {
-			t.Errorf("orgRef %d is not a valid poly ref", orgRef)
+			t.Errorf("invalid ref (0x%x) for nearest poly of %v, status: 0x%x", orgRef, tt.org, st)
 		}
 
 		// get dst polygon reference
-		dstRef, dst := findNearestPoly(t, query, tt.dst, extents)
+		st, dstRef, dst = query.FindNearestPoly(tt.dst, extents, filter)
+		if DtStatusFailed(st) {
+			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
+		}
 		if !mesh.IsValidPolyRef(dstRef) {
 			t.Errorf("dstRef %d is not a valid poly ref", dstRef)
 		}
