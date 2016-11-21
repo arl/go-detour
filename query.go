@@ -19,9 +19,6 @@ const (
 // against a navigation mesh.
 type DtNavMeshQuery struct {
 
-	/// @name Standard Pathfinding Functions
-	// /@{
-
 	/////@}
 	///// @name Sliced Pathfinding Functions
 	///// Common use case:
@@ -337,12 +334,12 @@ type DtNavMeshQuery struct {
 	//// Gets the path leading to the specified end node.
 	//dtStatus getPathToNode(struct dtNode* endNode, DtPolyRef* path, int* pathCount, int maxPath) const;
 
-	nav   *DtNavMesh  ///< Pointer to navmesh data.
-	query dtQueryData ///< Sliced query state.
+	nav   *DtNavMesh  // Pointer to navmesh data.
+	query dtQueryData // Sliced query state.
 
-	tinyNodePool *DtNodePool  ///< Pointer to small node pool.
-	nodePool     *DtNodePool  ///< Pointer to node pool.
-	openList     *DtNodeQueue ///< Pointer to open list queue.
+	tinyNodePool *DtNodePool  // Pointer to small node pool.
+	nodePool     *DtNodePool  // Pointer to node pool.
+	openList     *DtNodeQueue // Pointer to open list queue.
 }
 
 type dtQueryData struct {
@@ -356,19 +353,22 @@ type dtQueryData struct {
 	raycastLimitSqr  float32
 }
 
-/// Initializes the query object.
-///  @param[in]		nav			Pointer to the dtNavMesh object to use for all queries.
-///  @param[in]		maxNodes	Maximum number of search nodes. [Limits: 0 < value <= 65535]
-/// @returns The status flags for the query.
-/// @par
-///
-/// Must be the first function called after construction, before other
-/// functions are used.
-///
-/// This function can be used multiple times.
-func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatus) {
+// NewDtNavMeshQuery initializes the query object.
+//
+//  Arguments:
+//   nav       Pointer to the dtNavMesh object to use for all queries.
+//   maxNodes  Maximum number of search nodes. [Limits: 0 < value <= 65535]
+//  Return values:
+//   The status flags for the initialization of the query object and the query
+//   object.
+//
+// Must be the first function called after construction, before other
+// functions are used.
+//
+// This function can be used multiple times.
+func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuery) {
 	if maxNodes > int32(DT_NULL_IDX) || maxNodes > int32(1<<DT_NODE_PARENT_BITS)-1 {
-		return nil, DT_FAILURE | DT_INVALID_PARAM
+		return DT_FAILURE | DT_INVALID_PARAM, nil
 	}
 
 	q := &DtNavMeshQuery{}
@@ -376,14 +376,11 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatu
 
 	if q.nodePool == nil || q.nodePool.getMaxNodes() < maxNodes {
 		if q.nodePool != nil {
-			//m_nodePool.~dtNodePool();
-			//dtFree(m_nodePool);
 			q.nodePool = nil
 		}
-		//m_nodePool = new (dtAlloc(sizeof(dtNodePool), DT_ALLOC_PERM)) dtNodePool(maxNodes, dtNextPow2(maxNodes/4));
 		q.nodePool = newDtNodePool(maxNodes, int32(math32.NextPow2(uint32(maxNodes/4))))
 		if q.nodePool == nil {
-			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
+			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
 		}
 	} else {
 		q.nodePool.clear()
@@ -392,7 +389,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatu
 	if q.tinyNodePool == nil {
 		q.tinyNodePool = newDtNodePool(64, 32)
 		if q.tinyNodePool == nil {
-			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
+			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
 		}
 	} else {
 		q.tinyNodePool.clear()
@@ -400,19 +397,17 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatu
 
 	if q.openList == nil || q.openList.getCapacity() < maxNodes {
 		if q.openList != nil {
-			//m_openList.~dtNodeQueue();
-			//dtFree(m_openList);
 			q.openList = nil
 		}
 		q.openList = newDtNodeQueue(maxNodes)
 		if q.openList == nil {
-			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
+			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
 		}
 	} else {
 		q.openList.clear()
 	}
 
-	return q, DT_SUCCESS
+	return DT_SUCCESS, q
 }
 
 /// Finds a path from the start polygon to the end polygon.
@@ -687,7 +682,10 @@ func (q *DtNavMeshQuery) FindStraightPath(
 		return DT_FAILURE | DT_INVALID_PARAM, 0
 	}
 
-	var stat DtStatus
+	var (
+		stat  DtStatus
+		count int32
+	)
 
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
@@ -1183,14 +1181,11 @@ func (q *DtNavMeshQuery) getPathToNode(
 	return DT_SUCCESS
 }
 
-/// @par
-///
-/// Uses the detail polygons to find the surface height. (Most accurate.)
-///
-/// @p pos does not have to be within the bounds of the polygon or navigation mesh.
-///
-/// See closestPointOnPolyBoundary() for a limited but faster option.
-///
+// closestPointOnPoly uses the detail polygons to find the surface height.
+// (Most accurate.)
+//
+// pos does not have to be within the bounds of the polygon or navigation mesh.
+// See closestPointOnPolyBoundary() for a limited but faster option.
 func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posOverPoly *bool) DtStatus {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
@@ -1297,15 +1292,14 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 	return DT_SUCCESS
 }
 
-// Much faster than closestPointOnPoly().
+// closestPointOnPolyBoundary uses the detail polygons to find the surface
+// height. (Much faster than closestPointOnPoly())
 //
-// If the provided position lies within the polygon's xz-bounds (above or below),
-// then @p pos and @p closest will be equal.
-//
-// The height of @p closest will be the polygon boundary.  The height detail is not used.
-//
-// @p pos does not have to be within the bounds of the polybon or the navigation mesh.
-//
+// If the provided position lies within the polygon's xz-bounds (above or
+// below), then pos and closest will be equal. The height of closest will be the
+// polygon boundary. The height detail is not used. pos does not have to be
+// within the bounds of the polybon or the navigation
+// mesh.
 func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest d3.Vec3) DtStatus {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
@@ -1389,21 +1383,29 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 
 // queryPolygons6 finds polygons that overlap the search box.
 //
-//  @param[in]  center     The center of the search box.
-//  @param[in]  extents    The search distance along each axis.
-//  @param[in]  filter     The polygon filter to apply to the query.
-//  @param[out] polys      The reference ids of the polygons that overlap the query box.
-//  @param[out] polyCount  The number of polygons in the search result.
-//  @param[in]  maxPolys   The maximum number of polygons the search result can hold.
-//  @returns The status flags for the query.
-// If no polygons are found, the function will return #DT_SUCCESS with a
-// @p polyCount of zero.
-// If @p polys is too small to hold the entire result set, then the array will
-// be filled to capacity. The method of choosing which polygons from the
-// full set are included in the partial result set is undefined.
-func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
+//  Arguments:
+//  [in]  center     The center of the search box.
+//  [in]  extents    The search distance along each axis.
+//  [in]  filter     The polygon filter to apply to the query.
+//  [out] polys      The reference ids of the polygons that overlap the query box.
+//  [out] polyCount  The number of polygons in the search result.
+//  [in]  maxPolys   The maximum number of polygons the search result can hold.
+//
+//  Return values:
+//   The status flags for the query.
+//
+// If no polygons are found, the function will return DT_SUCCESS with a
+// polyCount of zero.
+// If polys is too small to hold the entire result set, then the array will be
+// filled to capacity. The method of choosing which polygons from the full set
+// are included in the partial result set is undefined.
+func (q *DtNavMeshQuery) queryPolygons6(
+	center, extents []float32,
 	filter *DtQueryFilter,
-	polys []DtPolyRef, polyCount *int32, maxPolys int32) DtStatus {
+	polys []DtPolyRef,
+	polyCount *int32,
+	maxPolys int32) DtStatus {
+
 	if polys == nil || polyCount == nil || maxPolys < 0 {
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
@@ -1422,21 +1424,24 @@ func (q *DtNavMeshQuery) queryPolygons6(center, extents []float32,
 	return DT_SUCCESS
 }
 
-/// Finds polygons that overlap the search box.
-///  @param[in]		center		The center of the search box. [(x, y, z)]
-///  @param[in]		extents		The search distance along each axis. [(x, y, z)]
-///  @param[in]		filter		The polygon filter to apply to the query.
-///  @param[in]		query		The query. Polygons found will be batched together and passed to this query.
+// queryPolygons4 finds polygons that overlap the search box.
+//
+//  Arguments:
+//   center   The center of the search box. [(x, y, z)]
+//   extents  The search distance along each axis. [(x, y, z)]
+//   filter   The polygon filter to apply to the query.
+//   query    The query. Polygons found will be batched together and passed to
+//            this query.
+//
+// The query will be invoked with batches of polygons. Polygons passed to the
+// query have bounding boxes that overlap with the center and extents passed to
+// this function. The DtPolyQuery.process function is invoked multiple times
+// until all overlapping polygons have been processed.
+func (q *DtNavMeshQuery) queryPolygons4(
+	center, extents d3.Vec3,
+	filter *DtQueryFilter,
+	query DtPolyQuery) DtStatus {
 
-/// @par
-///
-/// The query will be invoked with batches of polygons. Polygons passed
-/// to the query have bounding boxes that overlap with the center and extents
-/// passed to this function. The dtPolyQuery::process function is invoked multiple
-/// times until all overlapping polygons have been processed.
-///
-func (q *DtNavMeshQuery) queryPolygons4(center, extents d3.Vec3,
-	filter *DtQueryFilter, query DtPolyQuery) DtStatus {
 	assert.True(q.nav != nil, "navmesh should not be nill")
 
 	if len(center) != 3 || len(extents) != 3 || filter == nil || query == nil {
@@ -1464,8 +1469,13 @@ func (q *DtNavMeshQuery) queryPolygons4(center, extents d3.Vec3,
 	return DT_SUCCESS
 }
 
-func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []float32,
-	filter *DtQueryFilter, query DtPolyQuery) {
+// queryPolygonsInTile queries polygons within a tile.
+func (q *DtNavMeshQuery) queryPolygonsInTile(
+	tile *DtMeshTile,
+	qmin, qmax []float32,
+	filter *DtQueryFilter,
+	query DtPolyQuery) {
+
 	assert.True(q.nav != nil, "navmesh should not be nill")
 	batchSize := int32(32)
 
@@ -1482,8 +1492,6 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 			qfac            float32
 		)
 
-		//node = &tile.BvTree[0]
-		//end = &tile.BvTree[tile.Header.BvNodeCount]
 		nodeIdx = 0
 		endIdx = tile.Header.BvNodeCount
 
@@ -1493,7 +1501,8 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 
 		// Calculate quantized box
 		var bmin, bmax [3]uint16
-		// dtClamp query box to world box.
+
+		// Clamp query box to world box.
 		minx := f32.Clamp(qmin[0], tbmin[0], tbmax[0]) - tbmin[0]
 		miny := f32.Clamp(qmin[1], tbmin[1], tbmax[1]) - tbmin[1]
 		minz := f32.Clamp(qmin[2], tbmin[2], tbmax[2]) - tbmin[2]
@@ -1585,14 +1594,12 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 	}
 }
 
-// Gets the node pool.
-// @returns The node pool.
+// NodePool returns the node pool.
 func (q *DtNavMeshQuery) NodePool() *DtNodePool {
 	return q.nodePool
 }
 
-// Gets the navigation mesh the query object is using.
-// @return The navigation mesh the query object is using.
+// AttachedNavMesh returns the navigation mesh the query object is using.
 func (q *DtNavMeshQuery) AttachedNavMesh() *DtNavMesh {
 	return q.nav
 }

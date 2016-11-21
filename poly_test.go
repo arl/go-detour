@@ -74,7 +74,7 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 			ref DtPolyRef
 		)
 
-		q, st = NewDtNavMeshQuery(mesh, 100)
+		st, q = NewDtNavMeshQuery(mesh, 100)
 		f := NewDtQueryFilter()
 
 		st, ref, _ = q.FindNearestPoly(tt.pt, tt.ext, f)

@@ -69,7 +69,7 @@ func TestFindPath(t *testing.T) {
 			path           []DtPolyRef     // returned path
 		)
 
-		query, st = NewDtNavMeshQuery(mesh, 1000)
+		st, query = NewDtNavMeshQuery(mesh, 1000)
 		if DtStatusFailed(st) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
@@ -171,7 +171,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 			path           []DtPolyRef     // returned path
 		)
 
-		query, st = NewDtNavMeshQuery(mesh, 1000)
+		st, query = NewDtNavMeshQuery(mesh, 1000)
 		if DtStatusFailed(st) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
