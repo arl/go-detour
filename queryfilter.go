@@ -38,7 +38,7 @@ import "github.com/aurelien-rainone/gogeo/f32/d3"
 /// @see dtNavMeshQuery
 type DtQueryFilter struct {
 	///< Cost per area type. (Used by default implementation.)
-	areaCost [DT_MAX_AREAS]float32
+	areaCost [dtMaxAreas]float32
 	///< Flags for polygons that can be visited. (Used by default implementation.)
 	includeFlags uint16
 	///< Flags for polygons that should not be visted. (Used by default implementation.)
@@ -50,7 +50,7 @@ func NewDtQueryFilter() *DtQueryFilter {
 		includeFlags: 0xffff,
 		excludeFlags: 0,
 	}
-	for i := int32(0); i < DT_MAX_AREAS; i++ {
+	for i := int32(0); i < dtMaxAreas; i++ {
 		qf.areaCost[i] = 1.0
 	}
 	return &qf

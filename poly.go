@@ -10,11 +10,11 @@ type DtPoly struct {
 
 	// Verts are the indices of the polygon's vertices.
 	// The actual vertices are located in DtMeshTile.Verts.
-	Verts [DT_VERTS_PER_POLYGON]uint16
+	Verts [dtVertsPerPolygon]uint16
 
 	// Neis is packed data representing neighbor polygons
 	// references and flags for each edge.
-	Neis [DT_VERTS_PER_POLYGON]uint16
+	Neis [dtVertsPerPolygon]uint16
 
 	// Flags is an user-defined polygon flags.
 	Flags uint16

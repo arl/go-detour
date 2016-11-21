@@ -781,9 +781,9 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 	pd := &tile.DetailMeshes[ip]
 
 	// Clamp point to be inside the polygon.
-	verts := make([]float32, DT_VERTS_PER_POLYGON*3)
-	edged := make([]float32, DT_VERTS_PER_POLYGON)
-	edget := make([]float32, DT_VERTS_PER_POLYGON)
+	verts := make([]float32, dtVertsPerPolygon*3)
+	edged := make([]float32, dtVertsPerPolygon)
+	edget := make([]float32, dtVertsPerPolygon)
 	nv := poly.VertCount
 	var i uint8
 	for i = 0; i < nv; i++ {
@@ -937,7 +937,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 		}
 
 		// Link target poly to off-mesh connection.
-		if (uint32(targetCon.Flags) & DT_OFFMESH_CON_BIDIR) != 0 {
+		if (uint32(targetCon.Flags) & dtOffMeshConBidir) != 0 {
 			tidx := allocLink(tile)
 			if tidx != DT_NULL_LINK {
 				landPolyIdx := uint16(m.decodePolyIdPoly(ref))

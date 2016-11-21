@@ -644,6 +644,24 @@ func (q *DtNavMeshQuery) FindPath(
 	return status
 }
 
+// Vertex flags returned by DtNavMeshQuery.FindStraightPath.
+const (
+	// The vertex is the start position in the path.
+	DtStraightPathStart uint8 = 0x01
+	// The vertex is the end position in the path.
+	DtStraightPathEnd uint8 = 0x02
+	// The vertex is the start of an off-mesh connection.
+	DtStraightPathOffMeshConnection uint8 = 0x04
+)
+
+// Options for DtNavMeshQuery.FindStraightPath.
+const (
+	// Add a vertex at every polygon edge crossing where area changes.
+	DtStraightPathAreaCrossings uint8 = 0x01
+	// Add a vertex at every polygon edge crossing.
+	DtStraightPathAllCrossings uint8 = 0x02
+)
+
 // FindStraightPath finds the straight path from the start to the end position
 // within the polygon corridor
 //
@@ -706,7 +724,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 	}
 
 	// Add start point.
-	stat = q.appendVertex(closestStartPos, DT_STRAIGHTPATH_START, path[0],
+	stat = q.appendVertex(closestStartPos, DtStraightPathStart, path[0],
 		straightPath, straightPathFlags, straightPathRefs,
 		&count, maxStraightPath)
 	if stat != DT_IN_PROGRESS {
@@ -746,7 +764,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					}
 
 					// Apeend portals along the current straight path segment.
-					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+					if (options & int32(DtStraightPathAreaCrossings|DtStraightPathAllCrossings)) != 0 {
 						// Ignore status return value as we're just about to return anyway.
 						q.appendPortals(apexIndex, i, closestEndPos, path,
 							straightPath, straightPathFlags, straightPathRefs,
@@ -792,7 +810,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					rightIndex = i
 				} else {
 					// Append portals along the current straight path segment.
-					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+					if (options & int32(DtStraightPathAreaCrossings|DtStraightPathAllCrossings)) != 0 {
 						stat = q.appendPortals(apexIndex, leftIndex, portalLeft, path,
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, maxStraightPath, options)
@@ -806,9 +824,9 @@ func (q *DtNavMeshQuery) FindStraightPath(
 
 					var flags uint8
 					if leftPolyRef == 0 {
-						flags = DT_STRAIGHTPATH_END
+						flags = DtStraightPathEnd
 					} else if leftPolyType == DT_POLYTYPE_OFFMESH_CONNECTION {
-						flags = DT_STRAIGHTPATH_OFFMESH_CONNECTION
+						flags = DtStraightPathOffMeshConnection
 					}
 					ref := leftPolyRef
 
@@ -845,7 +863,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					leftIndex = i
 				} else {
 					// Append portals along the current straight path segment.
-					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+					if (options & int32(DtStraightPathAreaCrossings|DtStraightPathAllCrossings)) != 0 {
 						stat = q.appendPortals(apexIndex, rightIndex, portalRight, path,
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, maxStraightPath, options)
@@ -859,9 +877,9 @@ func (q *DtNavMeshQuery) FindStraightPath(
 
 					var flags uint8
 					if rightPolyRef == 0 {
-						flags = DT_STRAIGHTPATH_END
+						flags = DtStraightPathEnd
 					} else if rightPolyType == DT_POLYTYPE_OFFMESH_CONNECTION {
-						flags = DT_STRAIGHTPATH_OFFMESH_CONNECTION
+						flags = DtStraightPathOffMeshConnection
 					}
 					ref := rightPolyRef
 
@@ -887,7 +905,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 		}
 
 		// Append portals along the current straight path segment.
-		if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
+		if (options & int32(DtStraightPathAreaCrossings|DtStraightPathAllCrossings)) != 0 {
 			stat = q.appendPortals(apexIndex, pathSize-1, closestEndPos, path,
 				straightPath, straightPathFlags, straightPathRefs,
 				&count, maxStraightPath, options)
@@ -898,7 +916,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 	}
 
 	// Ignore status return value as we're just about to return anyway.
-	q.appendVertex(closestEndPos, DT_STRAIGHTPATH_END, 0,
+	q.appendVertex(closestEndPos, DtStraightPathEnd, 0,
 		straightPath, straightPathFlags, straightPathRefs,
 		&count, maxStraightPath)
 
@@ -951,7 +969,7 @@ func (q *DtNavMeshQuery) appendPortals(
 			break
 		}
 
-		if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS)) != 0 {
+		if (options & int32(DtStraightPathAreaCrossings)) != 0 {
 			// Skip intersection if only area crossings are requested.
 			if fromPoly.Area() == toPoly.Area() {
 				continue
@@ -1010,7 +1028,7 @@ func (q *DtNavMeshQuery) appendVertex(
 		}
 
 		// If reached end of path, return.
-		if flags == DT_STRAIGHTPATH_END {
+		if flags == DtStraightPathEnd {
 			return DT_SUCCESS
 		}
 	}
@@ -1235,9 +1253,9 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 	pd := &tile.DetailMeshes[ip]
 
 	// Clamp point to be inside the polygon.
-	verts := make([]float32, DT_VERTS_PER_POLYGON*3)
-	edged := make([]float32, DT_VERTS_PER_POLYGON)
-	edget := make([]float32, DT_VERTS_PER_POLYGON)
+	verts := make([]float32, dtVertsPerPolygon*3)
+	edged := make([]float32, dtVertsPerPolygon)
+	edget := make([]float32, dtVertsPerPolygon)
 	nv := poly.VertCount
 	var i uint8
 	for i = 0; i < nv; i++ {
@@ -1320,9 +1338,9 @@ func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest 
 
 	// Collect vertices.
 	var (
-		verts [DT_VERTS_PER_POLYGON * 3]float32
-		edged [DT_VERTS_PER_POLYGON]float32
-		edget [DT_VERTS_PER_POLYGON]float32
+		verts [dtVertsPerPolygon * 3]float32
+		edged [dtVertsPerPolygon]float32
+		edget [dtVertsPerPolygon]float32
 		nv    int32
 	)
 	for i := uint8(0); i < poly.VertCount; i++ {

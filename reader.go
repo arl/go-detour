@@ -30,11 +30,11 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 		return nil, err
 	}
 
-	if hdr.Magic != NAVMESHSET_MAGIC {
+	if hdr.Magic != navMeshSetMagic {
 		return nil, fmt.Errorf("wrong magic number: %x", hdr.Magic)
 	}
 
-	if hdr.Version != NAVMESHSET_VERSION {
+	if hdr.Version != navMeshSetVersion {
 		return nil, fmt.Errorf("wrong version: %d", hdr.Version)
 	}
 

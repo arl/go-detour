@@ -132,7 +132,7 @@ func TestFindPath(t *testing.T) {
 			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
 		}
 
-		if (straightPathFlags[0] & DT_STRAIGHTPATH_START) == 0 {
+		if (straightPathFlags[0] & DtStraightPathStart) == 0 {
 			t.Errorf("straightPath start is not flagged DT_STRAIGHTPATH_START")
 		}
 
