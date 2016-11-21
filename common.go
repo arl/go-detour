@@ -5,59 +5,16 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-func dtNextPow2(v uint32) uint32 {
-	v--
-	v |= v >> 1
-	v |= v >> 2
-	v |= v >> 4
-	v |= v >> 8
-	v |= v >> 16
-	v++
-	return v
-}
+// Computational geometry helper functions.
 
-// dtiMin returns the minimum of two int32 values.
-func dtiMin(a, b int32) int32 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func dtIlog2(v uint32) uint32 {
-	boolToUInt32 := func(b bool) uint32 {
-		if b {
-			return 1
-		}
-		return 0
-	}
-
-	var r, shift uint32
-	r = boolToUInt32(v > 0xffff) << 4
-	v >>= r
-	shift = boolToUInt32(v > 0xff) << 3
-	v >>= shift
-	r |= shift
-	shift = boolToUInt32(v > 0xf) << 2
-	v >>= shift
-	r |= shift
-	shift = boolToUInt32(v > 0x3) << 1
-	v >>= shift
-	r |= shift
-	r |= (v >> 1)
-	return r
-}
-
-/// @}
-/// @name Computational geometry helper functions.
-/// @{
-
-/// Derives the signed xz-plane area of the triangle ABC, or the relationship of line AB to point C.
-///  @param[in]		a		Vertex A. [(x, y, z)]
-///  @param[in]		b		Vertex B. [(x, y, z)]
-///  @param[in]		c		Vertex C. [(x, y, z)]
-/// @return The signed xz-plane area of the triangle.
-func dtTriArea2D(a, b, c d3.Vec3) float32 {
+// TriArea2D derives the signed xz-plane area of the triangle ABC, or the
+// relationship of line AB to point C.
+//
+//  a   Vertex A. [(x, y, z)]
+//  b   Vertex B. [(x, y, z)]
+//  c   Vertex C. [(x, y, z)]
+// return The signed xz-plane area of the triangle.
+func TriArea2D(a, b, c d3.Vec3) float32 {
 	abx := b[0] - a[0]
 	abz := b[2] - a[2]
 	acx := c[0] - a[0]
@@ -65,52 +22,51 @@ func dtTriArea2D(a, b, c d3.Vec3) float32 {
 	return acx*abz - abx*acz
 }
 
-func vperpXZ(a, b d3.Vec3) float32 {
-	return a[0]*b[2] - a[2]*b[0]
-}
-
-func DtIntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
+// IntersectSegSeg2D returns wether two segments intersect, and their
+// intersection point.
+func IntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
 	u := aq.Sub(ap)
 	v := bq.Sub(bp)
 	w := ap.Sub(bp)
 
-	d := vperpXZ(u, v)
+	d := u.Perp2D(v)
 	if math32.Abs(d) < 1e-6 {
-		return hit, s, t
+		return false, s, t
 	}
-	return true, vperpXZ(v, w) / d, vperpXZ(u, w) / d
+	return true, v.Perp2D(w) / d, u.Perp2D(w) / d
+}
+
+// OverlapQuantBounds determines if two axis-aligned bounding boxes overlap.
+//
+//  amin   Minimum bounds of box A. [(x, y, z)]
+//  amax   Maximum bounds of box A. [(x, y, z)]
+//  bmin   Minimum bounds of box B. [(x, y, z)]
+//  bmax   Maximum bounds of box B. [(x, y, z)]
+//  return True if the two AABB's overlap.
+// see dtOverlapBounds
+func OverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
+	if amin[0] > bmax[0] || amax[0] < bmin[0] {
+		return false
+	}
+
+	if amin[1] > bmax[1] || amax[1] < bmin[1] {
+		return false
+	}
+
+	if amin[2] > bmax[2] || amax[2] < bmin[2] {
+		return false
+	}
+	return true
 }
 
 // Determines if two axis-aligned bounding boxes overlap.
-//  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
-//  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
-//  @param[in]		bmin	Minimum bounds of box B. [(x, y, z)]
-//  @param[in]		bmax	Maximum bounds of box B. [(x, y, z)]
-// @return True if the two AABB's overlap.
-// @see dtOverlapBounds
-func dtOverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
-	if amin[0] > bmax[0] || amax[0] < bmin[0] {
-		return false
-	}
-
-	if amin[1] > bmax[1] || amax[1] < bmin[1] {
-		return false
-	}
-
-	if amin[2] > bmax[2] || amax[2] < bmin[2] {
-		return false
-	}
-	return true
-}
-
-/// Determines if two axis-aligned bounding boxes overlap.
-///  @param[in]		amin	Minimum bounds of box A. [(x, y, z)]
-///  @param[in]		amax	Maximum bounds of box A. [(x, y, z)]
-///  @param[in]		bmin	Minimum bounds of box B. [(x, y, z)]
-///  @param[in]		bmax	Maximum bounds of box B. [(x, y, z)]
-/// @return True if the two AABB's overlap.
-/// @see dtOverlapQuantBounds
-func dtOverlapBounds(amin, amax, bmin, bmax []float32) bool {
+//  amin   Minimum bounds of box A. [(x, y, z)]
+//  amax   Maximum bounds of box A. [(x, y, z)]
+//  bmin   Minimum bounds of box B. [(x, y, z)]
+//  bmax   Maximum bounds of box B. [(x, y, z)]
+// return True if the two AABB's overlap.
+// see dtOverlapQuantBounds
+func OverlapBounds(amin, amax, bmin, bmax []float32) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
 		return false
 	}
@@ -123,7 +79,7 @@ func dtOverlapBounds(amin, amax, bmin, bmax []float32) bool {
 	return true
 }
 
-func dtDistancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32) bool {
+func DistancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32) bool {
 	// TODO: Replace pnpoly with triArea2D tests?
 	c := false
 	for i, j := 0, (nverts - 1); i < int(nverts); i++ {
@@ -133,13 +89,13 @@ func dtDistancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float3
 			(pt[0] < (vj[0]-vi[0])*(pt[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
 			c = !c
 		}
-		ed[j] = dtDistancePtSegSqr2D(pt, vj, vi, &et[j])
+		ed[j] = DistancePtSegSqr2D(pt, vj, vi, &et[j])
 		j = int32(i)
 	}
 	return c
 }
 
-func dtDistancePtSegSqr2D(pt, p, q []float32, t *float32) float32 {
+func DistancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
 	pqx := q[0] - p[0]
 	pqz := q[2] - p[2]
 	dx := pt[0] - p[0]
@@ -159,7 +115,7 @@ func dtDistancePtSegSqr2D(pt, p, q []float32, t *float32) float32 {
 	return dx*dx + dz*dz
 }
 
-func dtClosestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
+func closestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
 	v0 := c.Sub(a)
 	v1 := b.Sub(a)
 	v2 := p.Sub(a)
@@ -188,6 +144,6 @@ func dtClosestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
 	return false
 }
 
-func dtOppositeTile(side int32) int32 {
+func oppositeTile(side int32) int32 {
 	return (side + 4) & 0x7
 }
