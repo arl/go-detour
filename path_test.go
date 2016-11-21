@@ -113,7 +113,6 @@ func TestFindPath(t *testing.T) {
 
 		// FindStraightPath
 		var (
-			straightPathCount int32
 			straightPath      []d3.Vec3
 			straightPathFlags []uint8
 			straightPathRefs  []DtPolyRef
@@ -128,7 +127,7 @@ func TestFindPath(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]DtPolyRef, maxStraightPath)
 
-		st = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, &straightPathCount, 100, 0)
+		st, _ = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
 		if DtStatusFailed(st) {
 			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
 		}
@@ -141,9 +140,6 @@ func TestFindPath(t *testing.T) {
 			if !straightPath[i].Approx(tt.wantStraightPath[i]) {
 				t.Errorf("straightPath[%d] = %v, want %v", i, straightPath[i], tt.wantStraightPath[i])
 			}
-		}
-
-		if !reflect.DeepEqual(tt.wantStraightPath, straightPath[:pathCount]) {
 		}
 	}
 }

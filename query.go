@@ -15,30 +15,12 @@ const (
 	H_SCALE float32 = 0.999 // Search heuristic scale.
 )
 
-/// Provides the ability to perform pathfinding related queries against
-/// a navigation mesh.
-/// @ingroup detour
+// DtNavMesgQuery provides the ability to perform pathfinding related queries
+// against a navigation mesh.
 type DtNavMeshQuery struct {
 
 	/// @name Standard Pathfinding Functions
 	// /@{
-
-	///// Finds the straight path from the start to the end position within the polygon corridor.
-	/////  @param[in]		startPos			Path start position. [(x, y, z)]
-	/////  @param[in]		endPos				Path end position. [(x, y, z)]
-	/////  @param[in]		path				An array of polygon references that represent the path corridor.
-	/////  @param[in]		pathSize			The number of polygons in the @p path array.
-	/////  @param[out]	straightPath		Points describing the straight path. [(x, y, z) * @p straightPathCount].
-	/////  @param[out]	straightPathFlags	Flags describing each point. (See: #dtStraightPathFlags) [opt]
-	/////  @param[out]	straightPathRefs	The reference id of the polygon that is being entered at each point. [opt]
-	/////  @param[out]	straightPathCount	The number of points in the straight path.
-	/////  @param[in]		maxStraightPath		The maximum number of points the straight path arrays can hold.  [Limit: > 0]
-	/////  @param[in]		options				Query options. (see: #dtStraightPathOptions)
-	///// @returns The status flags for the query.
-	//dtStatus findStraightPath(const float* startPos, const float* endPos,
-	//const DtPolyRef* path, const int pathSize,
-	//float* straightPath, unsigned char* straightPathFlags, DtPolyRef* straightPathRefs,
-	//int* straightPathCount, const int maxStraightPath, const int options = 0) const;
 
 	/////@}
 	///// @name Sliced Pathfinding Functions
@@ -662,37 +644,47 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	return status
 }
 
-// Finds the straight path from the start to the end position within the polygon corridor.
-// The straightXXX slices must already be allocated and contain at least
-// maxStraightPath elements.
-//  @param[in]		startPos			Path start position. [(x, y, z)]
-//  @param[in]		endPos				Path end position. [(x, y, z)]
-//  @param[in]		path				An array of polygon references that represent the path corridor.
-//  @param[in]		pathSize			The number of polygons in the @p path array.
-//  @param[out]	straightPath		Points describing the straight path. [(x, y, z) * @p straightPathCount].
-//  @param[out]	straightPathFlags	Flags describing each point. (See: #dtStraightPathFlags) [opt]
-//  @param[out]	straightPathRefs	The reference id of the polygon that is being entered at each point. [opt]
-//  @param[out]	straightPathCount	The number of points in the straight path.
-//  @param[in]		maxStraightPath		The maximum number of points the straight path arrays can hold.  [Limit: > 0]
-//  @param[in]		options				Query options. (see: #dtStraightPathOptions)
-// @returns The status flags for the query.
-func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
+// FindStraightPath finds the straight path from the start to the end position
+// within the polygon corridor
+//
+//        startPos            Path start position. [(x, y, z)]
+//        endPos              Path end position. [(x, y, z)]
+//        path                An array of polygon references that represent the
+//                            path corridor.
+//        pathSize            The number of polygons in the path array.
+//  [out] straightPath        Points describing the straight path
+//                            [Length: == straightPathCount].
+//  [out] straightPathFlags   Flags describing each point.
+//                            (See: dtStraightPathFlags)
+//  [out] straightPathRefs    The reference id of the polygon that is being
+//                            entered at each point.
+//        maxStraightPath     The maximum number of points the straight path
+//                            arrays can hold.  [Limit: > 0]
+//        options             Query options. (see: dtStraightPathOptions)
+//
+// The straightPath, straightPathFlags and straightPathRefs slices must already
+// be allocated and contain at least maxStraightPath elements.
+// Returns The status flags for the query and the number of point in the
+// straight path.
+func (q *DtNavMeshQuery) FindStraightPath(
+	startPos, endPos d3.Vec3,
 	path []DtPolyRef, pathSize int32,
-	straightPath []d3.Vec3, straightPathFlags []uint8, straightPathRefs []DtPolyRef,
-	straightPathCount *int32, maxStraightPath int32, options int32) DtStatus {
+	straightPath []d3.Vec3,
+	straightPathFlags []uint8,
+	straightPathRefs []DtPolyRef,
+	maxStraightPath int32,
+	options int32) (DtStatus, int32) {
 
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
-	*straightPathCount = 0
-
 	if maxStraightPath == 0 {
 		fmt.Println("maxStraightPath == 0")
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DT_FAILURE | DT_INVALID_PARAM, 0
 	}
 
 	if len(path) == 0 {
 		fmt.Println("len(path) == 0")
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DT_FAILURE | DT_INVALID_PARAM, 0
 	}
 
 	var stat DtStatus
@@ -700,20 +692,20 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
 	if DtStatusFailed(q.closestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DT_FAILURE | DT_INVALID_PARAM, 0
 	}
 
 	closestEndPos := d3.NewVec3()
 	if DtStatusFailed(q.closestPointOnPolyBoundary(path[pathSize-1], endPos, closestEndPos)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DT_FAILURE | DT_INVALID_PARAM, 0
 	}
 
 	// Add start point.
 	stat = q.appendVertex(closestStartPos, DT_STRAIGHTPATH_START, path[0],
 		straightPath, straightPathFlags, straightPathRefs,
-		straightPathCount, maxStraightPath)
+		&count, maxStraightPath)
 	if stat != DT_IN_PROGRESS {
-		return stat
+		return stat, count
 	}
 
 	if pathSize > 1 {
@@ -743,10 +735,9 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 				if DtStatusFailed(q.getPortalPoints6(path[i], path[i+1], left, right, &fromType, &toType)) {
 					// Failed to get portal points, in practice this means that path[i+1] is invalid polygon.
 					// Clamp the end point to path[i], and return the path so far.
-
 					if DtStatusFailed(q.closestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
 						// This should only happen when the first polygon is invalid.
-						return DT_FAILURE | DT_INVALID_PARAM
+						return DT_FAILURE | DT_INVALID_PARAM, 0
 					}
 
 					// Apeend portals along the current straight path segment.
@@ -754,19 +745,19 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 						// Ignore status return value as we're just about to return anyway.
 						q.appendPortals(apexIndex, i, closestEndPos, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							straightPathCount, maxStraightPath, options)
+							&count, maxStraightPath, options)
 					}
 
 					// Ignore status return value as we're just about to return anyway.
 					q.appendVertex(closestEndPos, 0, path[i],
 						straightPath, straightPathFlags, straightPathRefs,
-						straightPathCount, maxStraightPath)
+						&count, maxStraightPath)
 
 					stat = DT_SUCCESS | DT_PARTIAL_RESULT
-					if *straightPathCount >= maxStraightPath {
+					if count >= maxStraightPath {
 						stat |= DT_BUFFER_TOO_SMALL
 					}
-					return stat
+					return stat, count
 				}
 
 				// If starting really close the portal, advance.
@@ -799,9 +790,9 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
 						stat = q.appendPortals(apexIndex, leftIndex, portalLeft, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							straightPathCount, maxStraightPath, options)
+							&count, maxStraightPath, options)
 						if stat != DT_IN_PROGRESS {
-							return stat
+							return stat, count
 						}
 					}
 
@@ -819,9 +810,9 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 					// Append or update vertex
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
-						straightPathCount, maxStraightPath)
+						&count, maxStraightPath)
 					if stat != DT_IN_PROGRESS {
-						return stat
+						return stat, count
 					}
 
 					portalLeft.Assign(portalApex)
@@ -852,9 +843,9 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 					if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
 						stat = q.appendPortals(apexIndex, rightIndex, portalRight, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							straightPathCount, maxStraightPath, options)
+							&count, maxStraightPath, options)
 						if stat != DT_IN_PROGRESS {
-							return stat
+							return stat, count
 						}
 					}
 
@@ -872,9 +863,9 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 					// Append or update vertex
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
-						straightPathCount, maxStraightPath)
+						&count, maxStraightPath)
 					if stat != DT_IN_PROGRESS {
-						return stat
+						return stat, count
 					}
 
 					portalLeft.Assign(portalApex)
@@ -894,9 +885,9 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 		if (options & int32(DT_STRAIGHTPATH_AREA_CROSSINGS|DT_STRAIGHTPATH_ALL_CROSSINGS)) != 0 {
 			stat = q.appendPortals(apexIndex, pathSize-1, closestEndPos, path,
 				straightPath, straightPathFlags, straightPathRefs,
-				straightPathCount, maxStraightPath, options)
+				&count, maxStraightPath, options)
 			if stat != DT_IN_PROGRESS {
-				return stat
+				return stat, count
 			}
 		}
 	}
@@ -904,19 +895,26 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 	// Ignore status return value as we're just about to return anyway.
 	q.appendVertex(closestEndPos, DT_STRAIGHTPATH_END, 0,
 		straightPath, straightPathFlags, straightPathRefs,
-		straightPathCount, maxStraightPath)
+		&count, maxStraightPath)
 
 	stat = DT_SUCCESS
-	if *straightPathCount >= maxStraightPath {
+	if count >= maxStraightPath {
 		stat |= DT_BUFFER_TOO_SMALL
 	}
-	return stat
+	return stat, count
 }
 
-// Appends intermediate portal points to a straight path.
-func (q *DtNavMeshQuery) appendPortals(startIdx, endIdx int32, endPos d3.Vec3, path []DtPolyRef,
-	straightPath []d3.Vec3, straightPathFlags []uint8, straightPathRefs []DtPolyRef,
-	straightPathCount *int32, maxStraightPath, options int32) DtStatus {
+// appendPortals appends intermediate portal points to a straight path.
+func (q *DtNavMeshQuery) appendPortals(
+	startIdx, endIdx int32,
+	endPos d3.Vec3,
+	path []DtPolyRef,
+	straightPath []d3.Vec3,
+	straightPathFlags []uint8,
+	straightPathRefs []DtPolyRef,
+	straightPathCount *int32,
+	maxStraightPath,
+	options int32) DtStatus {
 
 	startPos := straightPath[*straightPathCount-1]
 	// Append or update last vertex
@@ -971,10 +969,16 @@ func (q *DtNavMeshQuery) appendPortals(startIdx, endIdx int32, endPos d3.Vec3, p
 	return DT_IN_PROGRESS
 }
 
-// Appends vertex to a straight path
-func (q *DtNavMeshQuery) appendVertex(pos d3.Vec3, flags uint8, ref DtPolyRef,
-	straightPath []d3.Vec3, straightPathFlags []uint8, straightPathRefs []DtPolyRef,
-	straightPathCount *int32, maxStraightPath int32) DtStatus {
+// appendVertex appends a vertex to a straight path.
+func (q *DtNavMeshQuery) appendVertex(
+	pos d3.Vec3,
+	flags uint8,
+	ref DtPolyRef,
+	straightPath []d3.Vec3,
+	straightPathFlags []uint8,
+	straightPathRefs []DtPolyRef,
+	straightPathCount *int32,
+	maxStraightPath int32) DtStatus {
 
 	if (*straightPathCount) > 0 && pos.Approx(straightPath[*straightPathCount-1]) {
 		// The vertices are equal, update flags and poly.
@@ -1008,10 +1012,11 @@ func (q *DtNavMeshQuery) appendVertex(pos d3.Vec3, flags uint8, ref DtPolyRef,
 	return DT_IN_PROGRESS
 }
 
-// Returns edge mid point between two polygons.
-func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
-	fromPoly *DtPoly, fromTile *DtMeshTile,
-	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile, mid []float32) DtStatus {
+// getEdgeMidPoint returns the edge mid point between two polygons.
+func (q *DtNavMeshQuery) getEdgeMidPoint(
+	from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
+	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile,
+	mid []float32) DtStatus {
 
 	left := make([]float32, 3)
 	right := make([]float32, 3)
@@ -1025,7 +1030,12 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(from DtPolyRef,
 	return DT_SUCCESS
 }
 
-func (q *DtNavMeshQuery) getPortalPoints6(from, to DtPolyRef, left, right d3.Vec3, fromType, toType *uint8) DtStatus {
+// getPortalPoints6 returns portal points between two polygons.
+func (q *DtNavMeshQuery) getPortalPoints6(
+	from, to DtPolyRef,
+	left, right d3.Vec3,
+	fromType, toType *uint8) DtStatus {
+
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
 	var (
@@ -1049,8 +1059,9 @@ func (q *DtNavMeshQuery) getPortalPoints6(from, to DtPolyRef, left, right d3.Vec
 	return q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)
 }
 
-// Returns portal points between two polygons.
-func (q *DtNavMeshQuery) getPortalPoints8(from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
+// getPortalPoints8 returns portal points between two polygons.
+func (q *DtNavMeshQuery) getPortalPoints8(
+	from DtPolyRef, fromPoly *DtPoly, fromTile *DtMeshTile,
 	to DtPolyRef, toPoly *DtPoly, toTile *DtMeshTile,
 	left, right d3.Vec3) DtStatus {
 
@@ -1122,8 +1133,12 @@ func (q *DtNavMeshQuery) getPortalPoints8(from DtPolyRef, fromPoly *DtPoly, from
 	return DT_SUCCESS
 }
 
-// Gets the path leading to the specified end node.
-func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
+// getPathToNode gets the path leading to the specified end node.
+func (q *DtNavMeshQuery) getPathToNode(
+	endNode *DtNode,
+	path *[]DtPolyRef,
+	pathCount *int32,
+	maxPath int32) DtStatus {
 
 	var (
 		curNode *DtNode
