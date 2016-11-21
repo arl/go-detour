@@ -59,12 +59,15 @@ func OverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 	return true
 }
 
-// Determines if two axis-aligned bounding boxes overlap.
-//  amin   Minimum bounds of box A. [(x, y, z)]
-//  amax   Maximum bounds of box A. [(x, y, z)]
-//  bmin   Minimum bounds of box B. [(x, y, z)]
-//  bmax   Maximum bounds of box B. [(x, y, z)]
-// return True if the two AABB's overlap.
+// OverlapBounds determines if two axis-aligned bounding boxes overlap.
+//
+//  Arguments:
+//   amin     Minimum bounds of box A. [(x, y, z)]
+//   amax     Maximum bounds of box A. [(x, y, z)]
+//   bmin     Minimum bounds of box B. [(x, y, z)]
+//   bmax     Maximum bounds of box B. [(x, y, z)]
+//
+// Return True if the two AABB's overlap.
 // see dtOverlapQuantBounds
 func OverlapBounds(amin, amax, bmin, bmax []float32) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {

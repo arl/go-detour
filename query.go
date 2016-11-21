@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	HScale float32 = 0.999 // Search heuristic scale.
+	// HScale is the search heuristic scale.
+	HScale float32 = 0.999
 )
 
 // DtNavMeshQuery provides the ability to perform pathfinding related queries
@@ -358,13 +359,12 @@ type dtQueryData struct {
 //  Arguments:
 //   nav       Pointer to the dtNavMesh object to use for all queries.
 //   maxNodes  Maximum number of search nodes. [Limits: 0 < value <= 65535]
-//  Return values:
-//   The status flags for the initialization of the query object and the query
-//   object.
+//
+// Return the status flags for the initialization of the query object and the
+// query object.
 //
 // Must be the first function called after construction, before other
 // functions are used.
-//
 // This function can be used multiple times.
 func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuery) {
 	if maxNodes > int32(DT_NULL_IDX) || maxNodes > int32(1<<DT_NODE_PARENT_BITS)-1 {
@@ -410,30 +410,35 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 	return DT_SUCCESS, q
 }
 
-/// Finds a path from the start polygon to the end polygon.
-///  @param[in]		startRef	The reference id of the start polygon.
-///  @param[in]		endRef		The reference id of the end polygon.
-///  @param[in]		startPos	A position within the start polygon. [(x, y, z)]
-///  @param[in]		endPos		A position within the end polygon. [(x, y, z)]
-///  @param[in]		filter		The polygon filter to apply to the query.
-///  @param[out]	path		An ordered list of polygon references representing the path. (Start to end.)
-///  							[(polyRef) * @p pathCount]
-///  @param[out]	pathCount	The number of polygons returned in the @p path array.
-///  @param[in]		maxPath		The maximum number of polygons the @p path array can hold. [Limit: >= 1]
-///
-/// If the end polygon cannot be reached through the navigation graph,
-/// the last polygon in the path will be the nearest the end polygon.
-///
-/// If the path array is to small to hold the full result, it will be filled as
-/// far as possible from the start polygon toward the end polygon.
-///
-/// The start and end positions are used to calculate traversal costs.
-/// (The y-values impact the result.)
-///
-func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
+// FindPath finds a path from the start polygon to the end polygon.
+//
+//  Arguments:
+//   [in]startRef    The reference id of the start polygon.
+//   [in]endRef      The reference id of the end polygon.
+//   [in]startPos    A position within the start polygon. [(x, y, z)]
+//   [in]endPos      A position within the end polygon. [(x, y, z)]
+//   [in]filter      The polygon filter to apply to the query.
+//   [out]path       An ordered list of polygon references representing the
+//                   path. (Start to end.) [(polyRef) * pathCount]
+//   [out]pathCount  The number of polygons returned in the path array.
+//   [in]maxPath     The maximum number of polygons the path array can hold.
+//                   [Limit: >= 1]
+//
+// If the end polygon cannot be reached through the navigation graph, the last
+// polygon in the path will be the nearest the end polygon.
+//
+// If the path array is to small to hold the full result, it will be filled as
+// far as possible from the start polygon toward the end polygon.
+//
+// The start and end positions are used to calculate traversal costs.
+// (The y-values impact the result.)
+func (q *DtNavMeshQuery) FindPath(
+	startRef, endRef DtPolyRef,
 	startPos, endPos d3.Vec3,
 	filter *DtQueryFilter,
-	path *[]DtPolyRef, pathCount *int32, maxPath int32) DtStatus {
+	path *[]DtPolyRef,
+	pathCount *int32,
+	maxPath int32) DtStatus {
 
 	if len(*path) < int(maxPath) {
 		// immediately check the provided slice
@@ -642,25 +647,27 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 // FindStraightPath finds the straight path from the start to the end position
 // within the polygon corridor
 //
-//        startPos            Path start position. [(x, y, z)]
-//        endPos              Path end position. [(x, y, z)]
-//        path                An array of polygon references that represent the
-//                            path corridor.
-//        pathSize            The number of polygons in the path array.
-//  [out] straightPath        Points describing the straight path
-//                            [Length: == straightPathCount].
-//  [out] straightPathFlags   Flags describing each point.
-//                            (See: dtStraightPathFlags)
-//  [out] straightPathRefs    The reference id of the polygon that is being
-//                            entered at each point.
-//        maxStraightPath     The maximum number of points the straight path
-//                            arrays can hold.  [Limit: > 0]
-//        options             Query options. (see: dtStraightPathOptions)
+//  Arguments:
+//   [in]startPos            Path start position. [(x, y, z)]
+//   [in]endPos              Path end position. [(x, y, z)]
+//   [in]path                An array of polygon references that represent the
+//                           path corridor.
+//   [in]pathSize            The number of polygons in the path array.
+//   [out] straightPath      Points describing the straight path
+//                           [Length: == straightPathCount].
+//   [out] straightPathFlags Flags describing each point.
+//                           (See: dtStraightPathFlags)
+//   [out] straightPathRefs  The reference id of the polygon that is being
+//                           entered at each point.
+//   [in]  maxStraightPath   The maximum number of points the straight path
+//                           arrays can hold.  [Limit: > 0]
+//   [in]  options           Query options. (see: dtStraightPathOptions)
+//
+// Returns The status flags for the query and the number of point in the
+// straight path.
 //
 // The straightPath, straightPathFlags and straightPathRefs slices must already
 // be allocated and contain at least maxStraightPath elements.
-// Returns The status flags for the query and the number of point in the
-// straight path.
 func (q *DtNavMeshQuery) FindStraightPath(
 	startPos, endPos d3.Vec3,
 	path []DtPolyRef, pathSize int32,
@@ -1455,12 +1462,12 @@ func (q *DtNavMeshQuery) queryPolygons4(
 	minx, miny := q.nav.CalcTileLoc(bmin)
 	maxx, maxy := q.nav.CalcTileLoc(bmax)
 
-	MAX_NEIS := int32(32)
-	neis := make([]*DtMeshTile, MAX_NEIS)
+	const maxNeis int32 = 32
+	neis := make([]*DtMeshTile, maxNeis)
 
 	for y := miny; y <= maxy; y++ {
 		for x := minx; x <= maxx; x++ {
-			nneis := q.nav.TilesAt(x, y, neis, MAX_NEIS)
+			nneis := q.nav.TilesAt(x, y, neis, maxNeis)
 			for j := int32(0); j < nneis; j++ {
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
