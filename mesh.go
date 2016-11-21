@@ -13,7 +13,7 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-/// A navigation mesh based on tiles of convex polygons.
+// DtNavMesh is a navigation mesh based on tiles of convex polygons.
 type DtNavMesh struct {
 	Params                DtNavMeshParams // Current initialization params. TODO: do not store this info twice.
 	Orig                  d3.Vec3         // Origin of the tile (0,0)
@@ -70,28 +70,32 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 }
 
 // addTile adds a tile to the navigation mesh.
-//  @param[in]		data		Data for the new tile mesh. (See: #dtCreateNavMeshData)
-//  @param[in]		dataSize	Data size of the new tile mesh.
-//  @param[in]		flags		Tile flags. (See: #dtTileFlags)
-//  @param[in]		lastRef		The desired reference for the tile. (When reloading a tile.) [opt] [Default: 0]
-//  @param[out]	result		The tile reference. (If the tile was succesfully added.) [opt]
-// @return The status flags for the operation.
+//
+//  Arguments:
+//   data      Data for the new tile mesh. (See: dtCreateNavMeshData)
+//   dataSize  Data size of the new tile mesh.
+//   flags     Tile flags. (See: #dtTileFlags)
+//   lastRef   The desired reference for the tile. (When reloading a tile.)
+//             optional, defaults to 0
+//
+// Return The status flags for the operation and the tile reference. (If the
+// tile was succesfully added.)
 //
 // The add operation will fail if the data is in the wrong format, the allocated tile
 // space is full, or there is a tile already at the specified reference.
 //
-// The lastRef parameter is used to restore a tile with the same tile
-// reference it had previously used.  In this case the #DtPolyRef's for the
-// tile will be restored to the same values they were before the tile was
+// The lastRef parameter is used to restore a tile with the same tile reference
+// it had previously used. In this case the dtPolyRef's for the tile will be
+// restored to the same values they were before the tile was
 // removed.
 //
 // The nav mesh assumes exclusive access to the data passed and will make
-// changes to the dynamic portion of the data. For that reason the data
-// should not be reused in other nav meshes until the tile has been successfully
+// changes to the dynamic portion of the data. For that reason the data should
+// not be reused in other nav meshes until the tile has been successfully
 // removed from this nav mesh.
 //
-// @see dtCreateNavMeshData, #removeTileBvTree
-func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, result *dtTileRef) DtStatus {
+// see dtCreateNavMeshData, removeTileBvTree
+func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef) (DtStatus, dtTileRef) {
 	var hdr DtMeshHeader
 
 	// prepare a reader on the received data
@@ -99,17 +103,17 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	binary.Read(r, binary.LittleEndian, &hdr)
 
 	// Make sure the data is in right format.
-	if hdr.Magic != DT_NAVMESH_MAGIC {
-		return DT_FAILURE | DT_WRONG_MAGIC
+	if hdr.Magic != navMeshMagic {
+		return DT_FAILURE | DT_WRONG_MAGIC, 0
 	}
-	if hdr.Version != DT_NAVMESH_VERSION {
-		return DT_FAILURE | DT_WRONG_VERSION
+	if hdr.Version != navMeshVersion {
+		return DT_FAILURE | DT_WRONG_VERSION, 0
 	}
 
 	// Make sure the location is free.
 	if m.TileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
 		fmt.Println("TileAt failed")
-		return DT_FAILURE
+		return DT_FAILURE, 0
 	}
 
 	// Allocate a tile.
@@ -122,10 +126,10 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		}
 	} else {
 		// Try to relocate the tile to specific index with same salt.
-		tileIndex := int32(m.decodePolyIdTile(DtPolyRef(lastRef)))
+		tileIndex := int32(m.decodePolyIDTile(DtPolyRef(lastRef)))
 		if tileIndex >= m.MaxTiles {
 			log.Fatalln("tileIndex >= m.m_maxTiles", tileIndex, m.MaxTiles)
-			return DT_FAILURE | DT_OUT_OF_MEMORY
+			return DT_FAILURE | DT_OUT_OF_MEMORY, 0
 		}
 		// Try to find the specific tile id from the free list.
 		target := &m.Tiles[tileIndex]
@@ -138,7 +142,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		// Could not find the correct location.
 		if tile != target {
 			log.Fatalln("couldn't find the correct tile location")
-			return DT_FAILURE | DT_OUT_OF_MEMORY
+			return DT_FAILURE | DT_OUT_OF_MEMORY, 0
 		}
 		// Remove from freelist
 		if prev == nil {
@@ -148,13 +152,13 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		}
 
 		// Restore salt.
-		tile.Salt = m.decodePolyIdSalt(DtPolyRef(lastRef))
+		tile.Salt = m.decodePolyIDSalt(DtPolyRef(lastRef))
 	}
 
 	// Make sure we could allocate a tile.
 	if tile == nil {
 		log.Fatalln("couldn't allocate tile")
-		return DT_FAILURE | DT_OUT_OF_MEMORY
+		return DT_FAILURE | DT_OUT_OF_MEMORY, 0
 	}
 
 	// Insert tile into the position lut.
@@ -174,12 +178,12 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		log.Fatalln("couldn't read tile.Polys:", err)
 	}
 
-	tile.Links = make([]DtLink, hdr.MaxLinkCount)
+	tile.Links = make([]dtLink, hdr.MaxLinkCount)
 	if err = r.readSlice(&tile.Links, binary.LittleEndian); err != nil {
 		log.Fatalln("couldn't read tile.Links:", err)
 	}
 
-	tile.DetailMeshes = make([]DtPolyDetail, hdr.DetailMeshCount)
+	tile.DetailMeshes = make([]dtPolyDetail, hdr.DetailMeshCount)
 	if err = r.readSlice(&tile.DetailMeshes, binary.LittleEndian); err != nil {
 		log.Fatalln("couldn't read tile.DetailMeshes:", err)
 	}
@@ -238,7 +242,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 	// Build links freelist
 	tile.LinksFreeList = 0
-	tile.Links[hdr.MaxLinkCount-1].Next = DT_NULL_LINK
+	tile.Links[hdr.MaxLinkCount-1].Next = dtNullLink
 	var i int32
 	for ; i < hdr.MaxLinkCount-1; i++ {
 		tile.Links[i].Next = uint32(i + 1)
@@ -258,12 +262,12 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	m.connectExtOffMeshLinks(tile, tile, -1)
 
 	// Create connections with neighbour tiles.
-	MAX_NEIS := int32(32)
-	neis := make([]*DtMeshTile, MAX_NEIS)
+	maxNeis := int32(32)
+	neis := make([]*DtMeshTile, maxNeis)
 	var nneis int32
 
 	// Connect with layers in current tile.
-	nneis = m.TilesAt(hdr.X, hdr.Y, neis, MAX_NEIS)
+	nneis = m.TilesAt(hdr.X, hdr.Y, neis, maxNeis)
 	var j int32
 	for j = 0; j < nneis; j++ {
 		if neis[j] == tile {
@@ -278,7 +282,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 
 	// Connect with neighbour tiles.
 	for i = 0; i < 8; i++ {
-		nneis = m.NeighbourTilesAt(hdr.X, hdr.Y, i, neis, MAX_NEIS)
+		nneis = m.NeighbourTilesAt(hdr.X, hdr.Y, i, neis, maxNeis)
 		for j = 0; j < nneis; j++ {
 			m.connectExtLinks(tile, neis[j], i)
 			m.connectExtLinks(neis[j], tile, oppositeTile(i))
@@ -287,13 +291,16 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 		}
 	}
 
-	if result != nil {
-		*result = m.TileRef(tile)
-	}
-
-	return DT_SUCCESS
+	return DT_SUCCESS, m.TileRef(tile)
 }
 
+// TileAt returns the tile at the specified grid location.
+//
+//  Arguments:
+//   x        The tile's x-location. (x, y, layer)
+//   y        The tile's y-location. (x, y, layer)
+//   layer    The tile's layer. (x, y, layer)
+// Return the tile, or null if it does not exist.
 func (m *DtNavMesh) TileAt(x, y, layer int32) *DtMeshTile {
 	var (
 		h    int32
@@ -328,9 +335,9 @@ func (m *DtNavMesh) connectIntLinks(tile *DtMeshTile) {
 
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		poly := &tile.Polys[i]
-		poly.FirstLink = DT_NULL_LINK
+		poly.FirstLink = dtNullLink
 
-		if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+		if poly.Type() == dtPolyTypeOffMeshConnection {
 			continue
 		}
 
@@ -338,12 +345,12 @@ func (m *DtNavMesh) connectIntLinks(tile *DtMeshTile) {
 		// in the linked list from lowest index to highest.
 		for j := int32(poly.VertCount - 1); j >= 0; j-- {
 			// Skip hard and non-internal edges.
-			if poly.Neis[j] == 0 || ((poly.Neis[j] & DT_EXT_LINK) != 0) {
+			if poly.Neis[j] == 0 || ((poly.Neis[j] & dtExtLink) != 0) {
 				continue
 			}
 
 			idx := allocLink(tile)
-			if idx != DT_NULL_LINK {
+			if idx != dtNullLink {
 				link := &tile.Links[idx]
 				link.Ref = base | DtPolyRef(poly.Neis[j]-1)
 				link.Edge = uint8(j)
@@ -380,7 +387,7 @@ func (m *DtNavMesh) getPolyRefBase(tile *DtMeshTile) DtPolyRef {
 	assert.True(ip < uint32(len(m.Tiles)),
 		"we should have ip < len(m.Tiles), instead ip = %d and len(m.Tiles) = %d", ip, len(m.Tiles))
 
-	return m.encodePolyId(tile.Salt, ip, 0)
+	return m.encodePolyID(tile.Salt, ip, 0)
 }
 
 func computeTileHash(x, y, mask int32) int32 {
@@ -391,8 +398,8 @@ func computeTileHash(x, y, mask int32) int32 {
 }
 
 func allocLink(tile *DtMeshTile) uint32 {
-	if tile.LinksFreeList == DT_NULL_LINK {
-		return DT_NULL_LINK
+	if tile.LinksFreeList == dtNullLink {
+		return dtNullLink
 	}
 	link := tile.LinksFreeList
 	tile.LinksFreeList = tile.Links[link].Next
@@ -404,24 +411,25 @@ func freeLink(tile *DtMeshTile, link uint32) {
 	tile.LinksFreeList = link
 }
 
-// @name Encoding and Decoding
-// These functions are generally meant for internal use only.
-
-// encodePolyId derives a standard polygon reference.
-//  salt[in] The tile's salt value.
-//  it  [in] The index of the tile.
-//  ip  [in] The index of the polygon within the tile.
-func (m *DtNavMesh) encodePolyId(salt, it, ip uint32) DtPolyRef {
-	return (DtPolyRef(salt) << (m.polyBits + m.tileBits)) | (DtPolyRef(it) << m.polyBits) | DtPolyRef(ip)
+// encodePolyID derives a standard polygon reference.
+//
+//  Arguments:
+//   salt     The tile's salt value.
+//   it       The index of the tile.
+//   ip       The index of the polygon within the tile.
+func (m *DtNavMesh) encodePolyID(salt, it, ip uint32) DtPolyRef {
+	return (DtPolyRef(salt) << (m.polyBits + m.tileBits)) |
+		(DtPolyRef(it) << m.polyBits) | DtPolyRef(ip)
 }
 
+// DtPolyRef is a polygon reference.
 type DtPolyRef uint32
 
 // DtLink defines a link between polygons.
 //
 // Note: This structure is rarely if ever used by the end user.
-// @see DtMeshTile
-type DtLink struct {
+// see DtMeshTile
+type dtLink struct {
 	Ref  DtPolyRef // Neighbour reference. (The neighbor that is linked to.)
 	Next uint32    // Index of the next link.
 	Edge uint8     // Index of the polygon edge that owns this link.
@@ -431,9 +439,9 @@ type DtLink struct {
 }
 
 // Defines the location of detail sub-mesh data within a dtMeshTile.
-type DtPolyDetail struct {
-	VertBase  uint32 // The offset of the vertices in the DtMeshTile:DetailVerts slice.
-	TriBase   uint32 // The offset of the triangles in the DtMeshTile:DetailTris slice.
+type dtPolyDetail struct {
+	VertBase  uint32 // The offset of the vertices in the DtMeshTile.DetailVerts slice.
+	TriBase   uint32 // The offset of the triangles in the DtMeshTile.DetailTris slice.
 	VertCount uint8  // The number of vertices in the sub-mesh.
 	TriCount  uint8  // The number of triangles in the sub-mesh.
 }
@@ -449,6 +457,7 @@ type dtBVNode struct {
 
 // DtOffMeshConnection defines an navigation mesh off-mesh connection within a
 // DtMeshTile object.
+//
 // An off-mesh connection is a user defined traversable connection made up to
 // two vertices.
 type DtOffMeshConnection struct {
@@ -478,16 +487,16 @@ type DtOffMeshConnection struct {
 
 const (
 	// A magic number used to detect compatibility of navigation tile data.
-	DT_NAVMESH_MAGIC int32 = 'D'<<24 | 'N'<<16 | 'A'<<8 | 'V'
+	navMeshMagic int32 = 'D'<<24 | 'N'<<16 | 'A'<<8 | 'V'
 
 	// A version number used to detect compatibility of navigation tile data.
-	DT_NAVMESH_VERSION = 7
+	navMeshVersion = 7
 
 	// A magic number used to detect the compatibility of navigation tile states.
-	DT_NAVMESH_STATE_MAGIC = 'D'<<24 | 'N'<<16 | 'M'<<8 | 'S'
+	navMeshStateMagic = 'D'<<24 | 'N'<<16 | 'M'<<8 | 'S'
 
 	// A version number used to detect compatibility of navigation tile states.
-	DT_NAVMESH_STATE_VERSION = 1
+	navMeshStateVersion = 1
 )
 
 // Flags representing the type of a navigation mesh polygon.
@@ -495,33 +504,33 @@ type dtPolyTypes uint32
 
 const (
 	// The polygon is a standard convex polygon that is part of the surface of the mesh.
-	DT_POLYTYPE_GROUND dtPolyTypes = 0
+	dtPolyTypeGround dtPolyTypes = 0
 	// The polygon is an off-mesh connection consisting of two vertices.
-	DT_POLYTYPE_OFFMESH_CONNECTION = 1
+	dtPolyTypeOffMeshConnection = 1
 )
 
 const (
 	// A flag that indicates that an entity links to an external entity.
 	// (E.g. A polygon edge is a portal that links to another polygon.)
-	DT_EXT_LINK uint16 = 0x8000
+	dtExtLink uint16 = 0x8000
 
 	// A value that indicates the entity does not link to anything.
-	DT_NULL_LINK uint32 = 0xffffffff
+	dtNullLink uint32 = 0xffffffff
 )
 
 // decodePolyIdTile extracts the tile's index from the specified polygon
 // reference.
-//  ref[in] The polygon reference.
-//  see encodePolyId
-func (m *DtNavMesh) decodePolyIdTile(ref DtPolyRef) uint32 {
+//
+//  see encodePolyID
+func (m *DtNavMesh) decodePolyIDTile(ref DtPolyRef) uint32 {
 	tileMask := DtPolyRef((DtPolyRef(1) << m.tileBits) - 1)
 	return uint32((ref >> m.polyBits) & tileMask)
 }
 
 // Extracts a tile's salt value from the specified polygon reference.
-//  ref[in] The polygon reference.
-//  see encodePolyId
-func (m *DtNavMesh) decodePolyIdSalt(ref DtPolyRef) uint32 {
+//
+//  see encodePolyID
+func (m *DtNavMesh) decodePolyIDSalt(ref DtPolyRef) uint32 {
 	saltMask := (DtPolyRef(1) << m.saltBits) - 1
 	return uint32((ref >> (m.polyBits + m.tileBits)) & saltMask)
 }
@@ -569,7 +578,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 
 		// Link off-mesh connection to target poly.
 		idx := allocLink(tile)
-		if idx != DT_NULL_LINK {
+		if idx != dtNullLink {
 			link := &tile.Links[idx]
 			link.Ref = ref
 			link.Edge = uint8(0)
@@ -583,7 +592,7 @@ func (m *DtNavMesh) baseOffMeshLinks(tile *DtMeshTile) {
 
 		// Start end-point is always connect back to off-mesh connection.
 		tidx := allocLink(tile)
-		if tidx != DT_NULL_LINK {
+		if tidx != dtNullLink {
 			landPolyIdx := uint16(m.decodePolyIdPoly(ref))
 			landPoly := &tile.Polys[landPolyIdx]
 			link := &tile.Links[tidx]
@@ -712,7 +721,7 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, po
 		for i = 0; i < tile.Header.PolyCount; i++ {
 			p := &tile.Polys[i]
 			// Do not return off-mesh connection polygons.
-			if p.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+			if p.Type() == dtPolyTypeOffMeshConnection {
 				continue
 			}
 			// Calc polygon bounds.
@@ -738,17 +747,19 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, po
 
 // DecodePolyIdPoly extracts the polygon's index (within its tile) from the specified polygon reference.
 //  ref[in] The polygon reference.
-//  See encodePolyId
+//  See encodePolyID
 func (m *DtNavMesh) decodePolyIdPoly(ref DtPolyRef) uint32 {
 	polyMask := DtPolyRef((1 << m.polyBits) - 1)
 	return uint32(ref & polyMask)
 }
 
 // ClosestPointOnPoly finds the closest point on the specified polygon.
-// ref         [in]	The reference id of the polygon.
-// pos         [in]	The position to check. [(x, y, z)]
-// closest     [out]	The closest point on the polygon. [(x, y, z)]
-// posOverPoly [out]	True of the position is over the polygon.
+//
+//  Arguments:
+//   ref[in]           The reference id of the polygon.
+//   pos[in]           The position to check. [(x, y, z)]
+//   closest[out]      The closest point on the polygon. [(x, y, z)]
+//   posOverPoly[out]  True of the position is over the polygon.
 func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posOverPoly *bool) {
 	var (
 		tile *DtMeshTile
@@ -758,7 +769,7 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 	m.TileAndPolyByRefUnsafe(ref, &tile, &poly)
 
 	// Off-mesh connections don't have detail polygons.
-	if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+	if poly.Type() == dtPolyTypeOffMeshConnection {
 		var (
 			v0, v1    d3.Vec3
 			d0, d1, u float32
@@ -844,9 +855,9 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 	}
 }
 
-/// @warning Only use this function if it is known that the provided polygon
-/// reference is valid. This function is faster than #getTileAndPolyByRef, but
-/// it does not validate the reference.
+// Warning: only use this function if it is known that the provided polygon
+// reference is valid. This function is faster than TileAndPolyByRef, but it
+// does not validate the reference.
 func (m *DtNavMesh) TileAndPolyByRefUnsafe(ref DtPolyRef, tile **DtMeshTile, poly **DtPoly) {
 	var salt, it, ip uint32
 	m.decodePolyId(ref, &salt, &it, &ip)
@@ -855,11 +866,13 @@ func (m *DtNavMesh) TileAndPolyByRefUnsafe(ref DtPolyRef, tile **DtMeshTile, pol
 }
 
 // Decodes a standard polygon reference.
-//  ref  [in]   The polygon reference to decode.
-//  salt [out]  The tile's salt value.
-//  it	  [out]  The index of the tile.
-//  ip	  [out]  The index of the polygon within the tile.
-//  see encodePolyId
+//
+//  Arguments:
+//   ref[in]    The polygon reference to decode.
+//   salt[out]  The tile's salt value.
+//   it[out]    The index of the tile.
+//   ip[out]    The index of the polygon within the tile.
+// see encodePolyID
 func (m *DtNavMesh) decodePolyId(ref DtPolyRef, salt, it, ip *uint32) {
 	saltMask := (DtPolyRef(1) << m.saltBits) - 1
 	tileMask := (DtPolyRef(1) << m.tileBits) - 1
@@ -894,7 +907,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 		panic("here7")
 		targetPoly := &target.Polys[targetCon.Poly]
 		// Skip off-mesh connections which start location could not be connected at all.
-		if targetPoly.FirstLink == DT_NULL_LINK {
+		if targetPoly.FirstLink == dtNullLink {
 			continue
 		}
 
@@ -924,7 +937,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 
 		// Link off-mesh connection to target poly.
 		idx := allocLink(target)
-		if idx != DT_NULL_LINK {
+		if idx != dtNullLink {
 			link := &target.Links[idx]
 			link.Ref = ref
 			link.Edge = uint8(1)
@@ -939,7 +952,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 		// Link target poly to off-mesh connection.
 		if (uint32(targetCon.Flags) & dtOffMeshConBidir) != 0 {
 			tidx := allocLink(tile)
-			if tidx != DT_NULL_LINK {
+			if tidx != dtNullLink {
 				landPolyIdx := uint16(m.decodePolyIdPoly(ref))
 				landPoly := &tile.Polys[landPolyIdx]
 				link := &tile.Links[tidx]
@@ -995,7 +1008,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 		var j int32
 		for j = 0; j < int32(nv); j++ {
 			// Skip non-portal edges.
-			if (poly.Neis[j] & DT_EXT_LINK) == 0 {
+			if (poly.Neis[j] & dtExtLink) == 0 {
 				continue
 			}
 
@@ -1016,7 +1029,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 			var k int32
 			for k = 0; k < nnei; k++ {
 				idx := allocLink(tile)
-				if idx != DT_NULL_LINK {
+				if idx != dtNullLink {
 					link := tile.Links[idx]
 					link.Ref = nei[k]
 					link.Edge = uint8(j)
@@ -1062,7 +1075,7 @@ func (m *DtNavMesh) FindConnectingPolys(va, vb []float32, tile *DtMeshTile, side
 	// Remove links pointing to 'side' and compact the links array.
 	bmin := make([]float32, 2)
 	bmax := make([]float32, 2)
-	m_ := DT_EXT_LINK | uint16(side)
+	l := dtExtLink | uint16(side)
 	var n int32
 
 	base := m.getPolyRefBase(tile)
@@ -1074,7 +1087,7 @@ func (m *DtNavMesh) FindConnectingPolys(va, vb []float32, tile *DtMeshTile, side
 		var j uint8
 		for j = 0; j < nv; j++ {
 			// Skip edges which do not point to the right side.
-			if poly.Neis[j] != m_ {
+			if poly.Neis[j] != l {
 				continue
 			}
 
@@ -1232,10 +1245,8 @@ func (m *DtNavMesh) TileRef(tile *DtMeshTile) dtTileRef {
 		return 0
 	}
 
-	//const unsigned int it = (unsigned int)(tile - m_tiles);
-	log.Fatal("use of unsafe in GetTileRef")
 	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles)))
-	return dtTileRef(m.encodePolyId(tile.Salt, it, 0))
+	return dtTileRef(m.encodePolyID(tile.Salt, it, 0))
 }
 
 func (m *DtNavMesh) IsValidPolyRef(ref DtPolyRef) bool {
@@ -1256,10 +1267,13 @@ func (m *DtNavMesh) IsValidPolyRef(ref DtPolyRef) bool {
 	return true
 }
 
-// Returns the tile and polygon for the specified polygon reference.
-//  @param[in]         ref             A known valid reference for a polygon.
-//  @param[out]        tile    The tile containing the polygon.
-//  @param[out]        poly    The polygon.
+// TileAndPolyByRef returns the tile and polygon for the specified polygon
+// reference.
+//
+//  Arguments:
+//   [in]ref      A known valid reference for a polygon.
+//   [out]tile    The tile containing the polygon.
+//   [out]poly    The polygon.
 func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **DtPoly) DtStatus {
 	if ref == 0 {
 		return DT_FAILURE
@@ -1280,10 +1294,13 @@ func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **Dt
 	return DT_SUCCESS
 }
 
-// Calculates the tile grid location for the specified world position.
-//  @param[in]	pos  The world position for the query. [(x, y, z)]
-//  @param[out]	tx		The tile's x-location. (x, y)
-//  @param[out]	ty		The tile's y-location. (x, y)
+// CalcTileLoc calculates the tile grid location for the specified world
+// position.
+//
+//  Arguments:
+//   [in]pos   The world position for the query. [(x, y, z)]
+//   [out]tx   The tile's x-location. (x, y)
+//   [out]ty   The tile's y-location. (x, y)
 func (m *DtNavMesh) CalcTileLoc(pos d3.Vec3) (tx, ty int32) {
 	tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
 	ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))

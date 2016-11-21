@@ -525,7 +525,7 @@ func (q *DtNavMeshQuery) FindPath(
 		}
 
 		var i uint32
-		for i = bestPoly.FirstLink; i != DT_NULL_LINK; i = bestTile.Links[i].Next {
+		for i = bestPoly.FirstLink; i != dtNullLink; i = bestTile.Links[i].Next {
 			neighbourRef := bestTile.Links[i].Ref
 
 			// Skip invalid ids and do not expand back to where we came from.
@@ -794,7 +794,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 				// End of the path.
 				left.Assign(closestEndPos)
 				right.Assign(closestEndPos)
-				toType = uint8(DT_POLYTYPE_GROUND)
+				toType = uint8(dtPolyTypeGround)
 			}
 
 			// Right vertex.
@@ -825,7 +825,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					var flags uint8
 					if leftPolyRef == 0 {
 						flags = DtStraightPathEnd
-					} else if leftPolyType == DT_POLYTYPE_OFFMESH_CONNECTION {
+					} else if leftPolyType == dtPolyTypeOffMeshConnection {
 						flags = DtStraightPathOffMeshConnection
 					}
 					ref := leftPolyRef
@@ -878,7 +878,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					var flags uint8
 					if rightPolyRef == 0 {
 						flags = DtStraightPathEnd
-					} else if rightPolyType == DT_POLYTYPE_OFFMESH_CONNECTION {
+					} else if rightPolyType == dtPolyTypeOffMeshConnection {
 						flags = DtStraightPathOffMeshConnection
 					}
 					ref := rightPolyRef
@@ -1089,8 +1089,8 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 	left, right d3.Vec3) DtStatus {
 
 	// Find the link that points to the 'to' polygon.
-	var link *DtLink
-	for i := fromPoly.FirstLink; i != DT_NULL_LINK; i = fromTile.Links[i].Next {
+	var link *dtLink
+	for i := fromPoly.FirstLink; i != dtNullLink; i = fromTile.Links[i].Next {
 		if fromTile.Links[i].Ref == to {
 			link = &fromTile.Links[i]
 			break
@@ -1101,9 +1101,9 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 	}
 
 	// Handle off-mesh connections.
-	if fromPoly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+	if fromPoly.Type() == dtPolyTypeOffMeshConnection {
 		// Find link that points to first vertex.
-		for i := fromPoly.FirstLink; i != DT_NULL_LINK; i = fromTile.Links[i].Next {
+		for i := fromPoly.FirstLink; i != dtNullLink; i = fromTile.Links[i].Next {
 			if fromTile.Links[i].Ref == to {
 				// TODO: AR, repass here and test
 				v := fromTile.Links[i].Edge
@@ -1116,8 +1116,8 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 		return DT_FAILURE | DT_INVALID_PARAM
 	}
 
-	if toPoly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
-		for i := toPoly.FirstLink; i != DT_NULL_LINK; i = toTile.Links[i].Next {
+	if toPoly.Type() == dtPolyTypeOffMeshConnection {
+		for i := toPoly.FirstLink; i != dtNullLink; i = toTile.Links[i].Next {
 			if toTile.Links[i].Ref == from {
 				// TODO: AR, repass here and test
 				v := toTile.Links[i].Edge
@@ -1226,7 +1226,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 	}
 
 	// Off-mesh connections don't have detail polygons.
-	if poly.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+	if poly.Type() == dtPolyTypeOffMeshConnection {
 		var (
 			v0, v1    d3.Vec3
 			d0, d1, u float32
@@ -1580,7 +1580,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(
 		for i := int32(0); i < tile.Header.PolyCount; i++ {
 			p := &tile.Polys[i]
 			// Do not return off-mesh connection polygons.
-			if p.Type() == DT_POLYTYPE_OFFMESH_CONNECTION {
+			if p.Type() == dtPolyTypeOffMeshConnection {
 				continue
 			}
 			// Must pass filter

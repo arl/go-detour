@@ -54,8 +54,8 @@ type DtMeshTile struct {
 	Header        *DtMeshHeader  // The tile header.
 	Polys         []DtPoly       // The tile polygons. [Size: dtMeshHeader::polyCount]
 	Verts         []float32      // The tile vertices. [Size: dtMeshHeader::vertCount]
-	Links         []DtLink       // The tile links. [Size: dtMeshHeader::maxLinkCount]
-	DetailMeshes  []DtPolyDetail // The tile's detail sub-meshes. [Size: dtMeshHeader::detailMeshCount]
+	Links         []dtLink       // The tile links. [Size: dtMeshHeader::maxLinkCount]
+	DetailMeshes  []dtPolyDetail // The tile's detail sub-meshes. [Size: dtMeshHeader::detailMeshCount]
 	DetailVerts   []float32      // The detail mesh's unique vertices. [(x, y, z) * dtMeshHeader::detailVertCount]
 	// The detail mesh's triangles. [(vertA, vertB, vertC) * dtMeshHeader::detailTriCount]
 	DetailTris []uint8
