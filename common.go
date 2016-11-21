@@ -82,7 +82,7 @@ func OverlapBounds(amin, amax, bmin, bmax []float32) bool {
 	return true
 }
 
-func DistancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32) bool {
+func distancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32) bool {
 	// TODO: Replace pnpoly with triArea2D tests?
 	c := false
 	for i, j := 0, (nverts - 1); i < int(nverts); i++ {
@@ -92,13 +92,13 @@ func DistancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32)
 			(pt[0] < (vj[0]-vi[0])*(pt[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
 			c = !c
 		}
-		ed[j] = DistancePtSegSqr2D(pt, vj, vi, &et[j])
+		ed[j] = distancePtSegSqr2D(pt, vj, vi, &et[j])
 		j = int32(i)
 	}
 	return c
 }
 
-func DistancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
+func distancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
 	pqx := q[0] - p[0]
 	pqz := q[2] - p[2]
 	dx := pt[0] - p[0]

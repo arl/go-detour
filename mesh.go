@@ -794,7 +794,7 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 	}
 
 	closest.Assign(pos)
-	if !DistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
+	if !distancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
 		var imin uint8

@@ -768,7 +768,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 				// If starting really close the portal, advance.
 				if i == 0 {
 					var t float32
-					if DistancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
+					if distancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
 						continue
 					}
 				}
@@ -1248,7 +1248,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 	}
 
 	closest.Assign(pos)
-	if !DistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
+	if !distancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
 		var imin uint8
@@ -1330,7 +1330,7 @@ func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest 
 		nv++
 	}
 
-	inside := DistancePtPolyEdgesSqr(pos, verts[:], nv, edged[:], edget[:])
+	inside := distancePtPolyEdgesSqr(pos, verts[:], nv, edged[:], edget[:])
 	if inside {
 		// Point is inside the polygon, return the point.
 		closest.Assign(pos)
