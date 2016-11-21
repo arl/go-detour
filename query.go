@@ -399,7 +399,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (*DtNavMeshQuery, DtStatu
 			q.nodePool = nil
 		}
 		//m_nodePool = new (dtAlloc(sizeof(dtNodePool), DT_ALLOC_PERM)) dtNodePool(maxNodes, dtNextPow2(maxNodes/4));
-		q.nodePool = newDtNodePool(maxNodes, int32(dtNextPow2(uint32(maxNodes/4))))
+		q.nodePool = newDtNodePool(maxNodes, int32(math32.NextPow2(uint32(maxNodes/4))))
 		if q.nodePool == nil {
 			return nil, DT_FAILURE | DT_OUT_OF_MEMORY
 		}
@@ -772,7 +772,7 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 				// If starting really close the portal, advance.
 				if i == 0 {
 					var t float32
-					if dtDistancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
+					if DistancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
 						continue
 					}
 				}
@@ -784,8 +784,8 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 			}
 
 			// Right vertex.
-			if dtTriArea2D(portalApex, portalRight, right) <= 0.0 {
-				if portalApex.Approx(portalRight) || dtTriArea2D(portalApex, portalLeft, right) > 0.0 {
+			if TriArea2D(portalApex, portalRight, right) <= 0.0 {
+				if portalApex.Approx(portalRight) || TriArea2D(portalApex, portalLeft, right) > 0.0 {
 					portalRight.Assign(right)
 					if i+1 < pathSize {
 						rightPolyRef = path[i+1]
@@ -837,8 +837,8 @@ func (q *DtNavMeshQuery) FindStraightPath(startPos, endPos d3.Vec3,
 			}
 
 			// Left vertex.
-			if dtTriArea2D(portalApex, portalLeft, left) >= 0.0 {
-				if portalApex.Approx(portalLeft) || dtTriArea2D(portalApex, portalRight, left) < 0.0 {
+			if TriArea2D(portalApex, portalLeft, left) >= 0.0 {
+				if portalApex.Approx(portalLeft) || TriArea2D(portalApex, portalRight, left) < 0.0 {
 					portalLeft.Assign(left)
 					if i+1 < pathSize {
 						leftPolyRef = path[i+1]
@@ -956,7 +956,7 @@ func (q *DtNavMeshQuery) appendPortals(startIdx, endIdx int32, endPos d3.Vec3, p
 		}
 
 		// Append intersection
-		if hit, _, t := DtIntersectSegSeg2D(startPos, endPos, left, right); hit {
+		if hit, _, t := IntersectSegSeg2D(startPos, endPos, left, right); hit {
 			pt := d3.NewVec3()
 			d3.Vec3Lerp(pt, left, right, t)
 
@@ -1159,7 +1159,7 @@ func (q *DtNavMeshQuery) getPathToNode(endNode *DtNode, path *[]DtPolyRef, pathC
 
 	assert.True(curNode == nil, "curNode should be nil")
 
-	*pathCount = dtiMin(length, maxPath)
+	*pathCount = math32.MinInt32(length, maxPath)
 
 	if length > maxPath {
 		return DT_SUCCESS | DT_BUFFER_TOO_SMALL
@@ -1231,7 +1231,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 	}
 
 	closest.Assign(pos)
-	if !dtDistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
+	if !DistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
 		var imin uint8
@@ -1274,7 +1274,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 			}
 		}
 		var h float32
-		if dtClosestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
+		if closestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
 			closest[1] = h
 			break
 		}
@@ -1314,7 +1314,7 @@ func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest 
 		nv++
 	}
 
-	inside := dtDistancePtPolyEdgesSqr(pos, verts[:], nv, edged[:], edget[:])
+	inside := DistancePtPolyEdgesSqr(pos, verts[:], nv, edged[:], edget[:])
 	if inside {
 		// Point is inside the polygon, return the point.
 		closest.Assign(pos)
@@ -1498,7 +1498,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 		// TODO: probably need to use an index or unsafe.Pointer here
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
-			overlap := dtOverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
+			overlap := OverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
@@ -1550,7 +1550,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(tile *DtMeshTile, qmin, qmax []floa
 				d3.Vec3Min(bmin, v)
 				d3.Vec3Max(bmax, v)
 			}
-			if dtOverlapBounds(qmin, qmax, bmin[:], bmax[:]) {
+			if OverlapBounds(qmin, qmax, bmin[:], bmax[:]) {
 				polyRefs[n] = ref
 				polys[n] = p
 

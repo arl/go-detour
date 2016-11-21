@@ -37,7 +37,7 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 
 	// Init tiles
 	m.MaxTiles = int32(params.MaxTiles)
-	m.TileLUTSize = int32(dtNextPow2(uint32(params.MaxTiles / 4)))
+	m.TileLUTSize = int32(math32.NextPow2(uint32(params.MaxTiles / 4)))
 	if !(m.TileLUTSize == 0) {
 		m.TileLUTSize = 1
 	}
@@ -53,8 +53,8 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	}
 
 	// Init ID generator values.
-	m.tileBits = dtIlog2(dtNextPow2(uint32(params.MaxTiles)))
-	m.polyBits = dtIlog2(dtNextPow2(uint32(params.MaxPolys)))
+	m.tileBits = math32.Ilog2(math32.NextPow2(uint32(params.MaxTiles)))
+	m.polyBits = math32.Ilog2(math32.NextPow2(uint32(params.MaxPolys)))
 	// Only allow 31 salt bits, since the salt mask is calculated using 32bit uint and it will overflow.
 	if 31 < 32-m.tileBits-m.polyBits {
 		m.saltBits = 31
@@ -280,11 +280,10 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef dtTileRef, resu
 	for i = 0; i < 8; i++ {
 		nneis = m.NeighbourTilesAt(hdr.X, hdr.Y, i, neis, MAX_NEIS)
 		for j = 0; j < nneis; j++ {
-			//log.Println("connecting with neighbour tiles", neis[j])
 			m.connectExtLinks(tile, neis[j], i)
-			m.connectExtLinks(neis[j], tile, dtOppositeTile(i))
+			m.connectExtLinks(neis[j], tile, oppositeTile(i))
 			m.connectExtOffMeshLinks(tile, neis[j], i)
-			m.connectExtOffMeshLinks(neis[j], tile, dtOppositeTile(i))
+			m.connectExtOffMeshLinks(neis[j], tile, oppositeTile(i))
 		}
 	}
 
@@ -684,7 +683,7 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, po
 		var n int32
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
-			overlap := dtOverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
+			overlap := OverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
@@ -726,7 +725,7 @@ func (m *DtNavMesh) QueryPolygonsInTile(tile *DtMeshTile, qmin, qmax d3.Vec3, po
 				d3.Vec3Min(bmin, v)
 				d3.Vec3Max(bmax, v)
 			}
-			if dtOverlapBounds(qmin, qmax, bmin, bmax) {
+			if OverlapBounds(qmin, qmax, bmin, bmax) {
 				if n < maxPolys {
 					n++
 					polys[n] = base | DtPolyRef(i)
@@ -795,7 +794,7 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 	}
 
 	closest.Assign(pos)
-	if !dtDistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
+	if !DistancePtPolyEdgesSqr(pos, verts, int32(nv), edged, edget) {
 		// Point is outside the polygon, dtClamp to nearest edge.
 		dmin := edged[0]
 		var imin uint8
@@ -838,7 +837,7 @@ func (m *DtNavMesh) ClosestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3, posO
 			}
 		}
 		var h float32
-		if dtClosestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
+		if closestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
 			closest[1] = h
 			break
 		}
@@ -882,7 +881,7 @@ func (m *DtNavMesh) connectExtOffMeshLinks(tile, target *DtMeshTile, side int32)
 	if side == -1 {
 		oppositeSide = 0xff
 	} else {
-		oppositeSide = uint8(dtOppositeTile(side))
+		oppositeSide = uint8(oppositeTile(side))
 	}
 
 	var i int32
@@ -1013,7 +1012,7 @@ func (m *DtNavMesh) connectExtLinks(tile, target *DtMeshTile, side int32) {
 			vb := tile.Verts[idx : idx+3]
 			nei := make([]DtPolyRef, 4)
 			neia := make([]float32, 4*2)
-			nnei := m.FindConnectingPolys(va, vb, target, dtOppositeTile(dir), nei, neia, 4)
+			nnei := m.FindConnectingPolys(va, vb, target, oppositeTile(dir), nei, neia, 4)
 			var k int32
 			for k = 0; k < nnei; k++ {
 				idx := allocLink(tile)

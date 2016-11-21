@@ -6,6 +6,7 @@ import (
 
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
 )
 
 func dtHashRef(a DtPolyRef) uint32 {
@@ -76,7 +77,7 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 		maxNodes: maxNodes,
 		hashSize: hashSize,
 	}
-	assert.True(dtNextPow2(uint32(np.hashSize)) == uint32(np.hashSize), "m_hashSize should be a power of 2")
+	assert.True(math32.NextPow2(uint32(np.hashSize)) == uint32(np.hashSize), "m_hashSize should be a power of 2")
 
 	// pidx is special as 0 means "none" and 1 is the first node. For that reason
 	// we have 1 fewer nodes available than the number of values it can contain.
