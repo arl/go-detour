@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	H_SCALE float32 = 0.999 // Search heuristic scale.
+	HScale float32 = 0.999 // Search heuristic scale.
 )
 
-// DtNavMesgQuery provides the ability to perform pathfinding related queries
+// DtNavMeshQuery provides the ability to perform pathfinding related queries
 // against a navigation mesh.
 type DtNavMeshQuery struct {
 
@@ -468,7 +468,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 	startNode.Pos.Assign(startPos)
 	startNode.PIdx = 0
 	startNode.Cost = 0
-	startNode.Total = startPos.Dist(endPos) * H_SCALE
+	startNode.Total = startPos.Dist(endPos) * HScale
 	startNode.ID = startRef
 	startNode.Flags = DT_NODE_OPEN
 	q.openList.push(startNode)
@@ -588,7 +588,7 @@ func (q *DtNavMeshQuery) FindPath(startRef, endRef DtPolyRef,
 					bestRef, bestTile, bestPoly,
 					neighbourRef, neighbourTile, neighbourPoly)
 				cost = bestNode.Cost + curCost
-				heuristic = neighbourNode.Pos.Dist(endPos) * H_SCALE
+				heuristic = neighbourNode.Pos.Dist(endPos) * HScale
 			}
 
 			total := cost + heuristic

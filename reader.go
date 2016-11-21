@@ -7,7 +7,14 @@ import (
 	"reflect"
 )
 
-type Reader struct{}
+type dtTileRef uint32
+
+type navMeshTileHeader struct {
+	TileRef  dtTileRef
+	DataSize int32
+}
+
+type reader struct{}
 
 // Decode reads a PNG image from r and returns it as an image.Image.
 // The type of Image returned depends on the PNG contents.
@@ -41,7 +48,7 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 	var i int32
 	for i = 0; i < hdr.NumTiles; i++ {
 
-		var tileHdr NavMeshTileHeader
+		var tileHdr navMeshTileHeader
 		err = binary.Read(r, binary.LittleEndian, &tileHdr)
 		if err != nil {
 			return nil, err
