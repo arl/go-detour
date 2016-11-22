@@ -7,14 +7,14 @@ import (
 	"github.com/aurelien-rainone/assertgo"
 )
 
-type DtNodeQueue struct {
+type dtNodeQueue struct {
 	heap     []*DtNode
 	capacity int32
 	size     int32
 }
 
-func newDtNodeQueue(n int32) *DtNodeQueue {
-	q := &DtNodeQueue{}
+func newDtNodeQueue(n int32) *dtNodeQueue {
+	q := &dtNodeQueue{}
 
 	q.capacity = n
 	assert.True(q.capacity > 0, "dtNodeQueue capacity must be > 0")
@@ -25,7 +25,7 @@ func newDtNodeQueue(n int32) *DtNodeQueue {
 	return q
 }
 
-func (q *DtNodeQueue) bubbleUp(i int32, node *DtNode) {
+func (q *dtNodeQueue) bubbleUp(i int32, node *DtNode) {
 	parent := (i - 1) / 2
 	// note: (index > 0) means there is a parent
 	for (i > 0) && (q.heap[parent].Total > node.Total) {
@@ -36,7 +36,7 @@ func (q *DtNodeQueue) bubbleUp(i int32, node *DtNode) {
 	q.heap[i] = node
 }
 
-func (q *DtNodeQueue) trickleDown(i int32, node *DtNode) {
+func (q *dtNodeQueue) trickleDown(i int32, node *DtNode) {
 	child := (i * 2) + 1
 	for child < q.size {
 		if ((child + 1) < q.size) &&
@@ -50,27 +50,27 @@ func (q *DtNodeQueue) trickleDown(i int32, node *DtNode) {
 	q.bubbleUp(i, node)
 }
 
-func (q *DtNodeQueue) clear() {
+func (q *dtNodeQueue) clear() {
 	q.size = 0
 }
 
-func (q *DtNodeQueue) top() *DtNode {
+func (q *dtNodeQueue) top() *DtNode {
 	return q.heap[0]
 }
 
-func (q *DtNodeQueue) pop() *DtNode {
+func (q *dtNodeQueue) pop() *DtNode {
 	result := q.heap[0]
 	q.size--
 	q.trickleDown(0, q.heap[q.size])
 	return result
 }
 
-func (q *DtNodeQueue) push(node *DtNode) {
+func (q *dtNodeQueue) push(node *DtNode) {
 	q.size++
 	q.bubbleUp(q.size-1, node)
 }
 
-func (q *DtNodeQueue) modify(node *DtNode) {
+func (q *dtNodeQueue) modify(node *DtNode) {
 	for i := int32(0); i < q.size; i++ {
 		if q.heap[i] == node {
 			q.bubbleUp(i, node)
@@ -79,16 +79,12 @@ func (q *DtNodeQueue) modify(node *DtNode) {
 	}
 }
 
-func (q *DtNodeQueue) empty() bool {
+func (q *dtNodeQueue) empty() bool {
 	return q.size == 0
 }
 
-func (q *DtNodeQueue) getMemUsed() int32 {
-	log.Fatal("use of unsafe in getMemUsed")
+func (q *dtNodeQueue) memUsed() int32 {
+	log.Fatal("use of unsafe in memUsed")
 	return int32(unsafe.Sizeof(*q)) +
 		int32(unsafe.Sizeof(DtNode{}))*(q.capacity+1)
-}
-
-func (q *DtNodeQueue) getCapacity() int32 {
-	return q.capacity
 }

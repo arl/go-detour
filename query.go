@@ -340,7 +340,7 @@ type DtNavMeshQuery struct {
 
 	tinyNodePool *DtNodePool  // Pointer to small node pool.
 	nodePool     *DtNodePool  // Pointer to node pool.
-	openList     *DtNodeQueue // Pointer to open list queue.
+	openList     *dtNodeQueue // Pointer to open list queue.
 }
 
 type dtQueryData struct {
@@ -395,7 +395,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 		q.tinyNodePool.Clear()
 	}
 
-	if q.openList == nil || q.openList.getCapacity() < maxNodes {
+	if q.openList == nil || q.openList.capacity < maxNodes {
 		if q.openList != nil {
 			q.openList = nil
 		}
