@@ -1,14 +1,15 @@
 package detour
 
 import (
+	"log"
+
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
 )
 
-/// Provides custom polygon query behavior.
-/// Used by dtNavMeshQuery::queryPolygons.
-/// @ingroup detour
-type DtPolyQuery interface {
+// Provides custom polygon query behavior.
+// Used by dtNavMeshQuery.queryPolygons.
+type dtPolyQuery interface {
 
 	// Called for each batch of unique polygons touched by the search area in
 	// dtNavMeshQuery::queryPolygons. This can be called multiple times for a
@@ -32,14 +33,6 @@ func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center d3.Vec3) *dtFindNea
 		nearestRef:         0,
 		nearestPoint:       d3.NewVec3(),
 	}
-}
-
-func (q *dtFindNearestPolyQuery) NearestRef() DtPolyRef {
-	return q.nearestRef
-}
-
-func (q *dtFindNearestPolyQuery) NearestPoint() d3.Vec3 {
-	return q.nearestPoint
 }
 
 func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []DtPolyRef, count int32) {
@@ -103,6 +96,7 @@ func (q *dtCollectPolysQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []
 		toCopy = numLeft
 	}
 
+	log.Fatal("to be checked")
 	//memcpy(m_polys + m_numCollected, refs, (size_t)toCopy * sizeof(DtPolyRef));
 	//TODO: check that...
 	copy(q.polys[q.numCollected:], refs[0:toCopy])

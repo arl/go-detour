@@ -1399,8 +1399,8 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 
 	// Only allocate pt if we actually found
 	// a poly so the nearest point pt is valid.
-	if ref = query.NearestRef(); ref != 0 {
-		pt = d3.NewVec3From(query.NearestPoint())
+	if ref = query.nearestRef; ref != 0 {
+		pt = d3.NewVec3From(query.nearestPoint)
 	}
 	st = DT_SUCCESS
 	return
@@ -1409,12 +1409,12 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 // queryPolygons6 finds polygons that overlap the search box.
 //
 //  Arguments:
-//  [in]  center     The center of the search box.
-//  [in]  extents    The search distance along each axis.
-//  [in]  filter     The polygon filter to apply to the query.
-//  [out] polys      The reference ids of the polygons that overlap the query box.
-//  [out] polyCount  The number of polygons in the search result.
-//  [in]  maxPolys   The maximum number of polygons the search result can hold.
+//   [in] center     The center of the search box.
+//   [in] extents    The search distance along each axis.
+//   [in] filter     The polygon filter to apply to the query.
+//   [out]polys      The reference ids of the polygons that overlap the query box.
+//   [out]polyCount  The number of polygons in the search result.
+//   [in] maxPolys   The maximum number of polygons the search result can hold.
 //
 //  Return values:
 //   The status flags for the query.
@@ -1465,7 +1465,7 @@ func (q *DtNavMeshQuery) queryPolygons6(
 func (q *DtNavMeshQuery) queryPolygons4(
 	center, extents d3.Vec3,
 	filter *DtQueryFilter,
-	query DtPolyQuery) DtStatus {
+	query dtPolyQuery) DtStatus {
 
 	assert.True(q.nav != nil, "navmesh should not be nill")
 
@@ -1499,7 +1499,7 @@ func (q *DtNavMeshQuery) queryPolygonsInTile(
 	tile *DtMeshTile,
 	qmin, qmax []float32,
 	filter *DtQueryFilter,
-	query DtPolyQuery) {
+	query dtPolyQuery) {
 
 	assert.True(q.nav != nil, "navmesh should not be nill")
 	batchSize := int32(32)
