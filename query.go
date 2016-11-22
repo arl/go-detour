@@ -367,14 +367,14 @@ type dtQueryData struct {
 // functions are used.
 // This function can be used multiple times.
 func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuery) {
-	if maxNodes > int32(DT_NULL_IDX) || maxNodes > int32(1<<DT_NODE_PARENT_BITS)-1 {
+	if maxNodes > int32(dtNullIdx) || maxNodes > int32(1<<dtNodeParentBits)-1 {
 		return DT_FAILURE | DT_INVALID_PARAM, nil
 	}
 
 	q := &DtNavMeshQuery{}
 	q.nav = nav
 
-	if q.nodePool == nil || q.nodePool.getMaxNodes() < maxNodes {
+	if q.nodePool == nil || q.nodePool.MaxNodes() < maxNodes {
 		if q.nodePool != nil {
 			q.nodePool = nil
 		}
@@ -383,7 +383,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
 		}
 	} else {
-		q.nodePool.clear()
+		q.nodePool.Clear()
 	}
 
 	if q.tinyNodePool == nil {
@@ -392,7 +392,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
 		}
 	} else {
-		q.tinyNodePool.clear()
+		q.tinyNodePool.Clear()
 	}
 
 	if q.openList == nil || q.openList.getCapacity() < maxNodes {
@@ -462,20 +462,20 @@ func (q *DtNavMeshQuery) FindPath(
 		return DT_SUCCESS
 	}
 
-	q.nodePool.clear()
+	q.nodePool.Clear()
 	q.openList.clear()
 
 	var (
 		startNode, lastBestNode *DtNode
 		lastBestNodeCost        float32
 	)
-	startNode = q.nodePool.getNode2(startRef)
+	startNode = q.nodePool.Node(startRef, 0)
 	startNode.Pos.Assign(startPos)
 	startNode.PIdx = 0
 	startNode.Cost = 0
 	startNode.Total = startPos.Dist(endPos) * HScale
 	startNode.ID = startRef
-	startNode.Flags = DT_NODE_OPEN
+	startNode.Flags = dtNodeOpen
 	q.openList.push(startNode)
 
 	lastBestNode = startNode
@@ -489,8 +489,8 @@ func (q *DtNavMeshQuery) FindPath(
 
 		// Remove node from open list and put it in closed list.
 		bestNode = q.openList.pop()
-		bestNode.Flags &= ^DT_NODE_OPEN
-		bestNode.Flags |= DT_NODE_CLOSED
+		bestNode.Flags &= ^dtNodeOpen
+		bestNode.Flags |= dtNodeClosed
 
 		// Reached the goal, stop searching.
 		if bestNode.ID == endRef {
@@ -518,7 +518,7 @@ func (q *DtNavMeshQuery) FindPath(
 			parentPoly *DtPoly
 		)
 		if bestNode.PIdx != 0 {
-			parentRef = q.nodePool.getNodeAtIdx(int32(bestNode.PIdx)).ID
+			parentRef = q.nodePool.NodeAtIdx(int32(bestNode.PIdx)).ID
 		}
 		if parentRef != 0 {
 			q.nav.TileAndPolyByRefUnsafe(parentRef, &parentTile, &parentPoly)
@@ -599,27 +599,27 @@ func (q *DtNavMeshQuery) FindPath(
 			total := cost + heuristic
 
 			// The node is already in open list and the new result is worse, skip.
-			if (neighbourNode.Flags&DT_NODE_OPEN) != 0 && total >= neighbourNode.Total {
+			if (neighbourNode.Flags&dtNodeOpen) != 0 && total >= neighbourNode.Total {
 				continue
 			}
 			// The node is already visited and process, and the new result is worse, skip.
-			if (neighbourNode.Flags&DT_NODE_CLOSED) != 0 && total >= neighbourNode.Total {
+			if (neighbourNode.Flags&dtNodeClosed) != 0 && total >= neighbourNode.Total {
 				continue
 			}
 
 			// Add or update the node.
-			neighbourNode.PIdx = q.nodePool.getNodeIdx(bestNode)
+			neighbourNode.PIdx = q.nodePool.NodeIdx(bestNode)
 			neighbourNode.ID = neighbourRef
-			neighbourNode.Flags = (neighbourNode.Flags & dtNodeFlags(^dtNodeFlags(DT_NODE_CLOSED)))
+			neighbourNode.Flags = (neighbourNode.Flags & DtNodeFlags(^DtNodeFlags(dtNodeClosed)))
 			neighbourNode.Cost = cost
 			neighbourNode.Total = total
 
-			if (neighbourNode.Flags & DT_NODE_OPEN) != 0 {
+			if (neighbourNode.Flags & dtNodeOpen) != 0 {
 				// Already in open, update node location.
 				q.openList.modify(neighbourNode)
 			} else {
 				// Put the node in open list.
-				neighbourNode.Flags |= DT_NODE_OPEN
+				neighbourNode.Flags |= dtNodeOpen
 				q.openList.push(neighbourNode)
 			}
 
@@ -1172,7 +1172,7 @@ func (q *DtNavMeshQuery) getPathToNode(
 
 	for {
 		length++
-		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
+		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 		if curNode == nil {
 			break
 		}
@@ -1183,7 +1183,7 @@ func (q *DtNavMeshQuery) getPathToNode(
 	var writeCount int32
 	for writeCount = length; writeCount > maxPath; writeCount-- {
 		assert.True(curNode != nil, "curNode should not be nil")
-		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
+		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 	}
 
 	// Write path
@@ -1192,7 +1192,7 @@ func (q *DtNavMeshQuery) getPathToNode(
 		assert.True(int(i) < len(*path), "i:%d should be < len(*path):%d", i, len(*path))
 
 		(*path)[i] = curNode.ID
-		curNode = q.nodePool.getNodeAtIdx(int32(curNode.PIdx))
+		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 	}
 
 	assert.True(curNode == nil, "curNode should be nil")

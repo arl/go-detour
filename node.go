@@ -19,39 +19,42 @@ func dtHashRef(a DtPolyRef) uint32 {
 	return uint32(a)
 }
 
-type dtNodeFlags uint8
+// DtNodeFlags represent flags associated to a node.
+type DtNodeFlags uint8
 
 const (
-	DT_NODE_OPEN            dtNodeFlags = 0x01
-	DT_NODE_CLOSED                      = 0x02
-	DT_NODE_PARENT_DETACHED             = 0x04 // parent of the node is not adjacent. Found using raycast.
+	dtNodeOpen DtNodeFlags = 1 << iota
+	dtNodeClosed
+	dtNodeParentDetached // parent of the node is not adjacent. Found using raycast.
 )
 
+// DtNodeIndex is the index of a node inside the pool.
 type DtNodeIndex uint16
 
 const (
-	DT_NULL_IDX DtNodeIndex = ^DtNodeIndex(0)
+	dtNullIdx DtNodeIndex = ^DtNodeIndex(0)
 )
 
 const (
-	DT_NODE_PARENT_BITS uint32 = 24
-	DT_NODE_STATE_BITS  uint32 = 2
+	dtNodeParentBits uint32 = 24
+	dtNodeStateBits  uint32 = 2
 )
 
+// DtNode represents a node in a weighted graph.
 type DtNode struct {
 	Pos   d3.Vec3 // Position of the node.
 	Cost  float32 // Cost from previous node to current node.
 	Total float32 // Cost up to the node.
-	//unsigned int pidx : DT_NODE_PARENT_BITS;	///< Index to parent node.
-	//unsigned int state : DT_NODE_STATE_BITS;	///< extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
-	//unsigned int flags : 3;						///< Node flags. A combination of dtNodeFlags.
+	//unsigned int pidx : DT_NODE_PARENT_BITS;	// Index to parent node.
+	//unsigned int state : DT_NODE_STATE_BITS;	// extra state information. A polyRef can have multiple nodes with different extra info. see DT_MAX_STATES_PER_NODE
+	//unsigned int flags : 3;						// Node flags. A combination of dtNodeFlags.
 
 	// fucking C bitfields!!! as we allocate the dtNode ourselves, we can always use:
 	PIdx  uint32
 	State uint8
 	//Flags uint8
-	Flags dtNodeFlags
-	ID    DtPolyRef ///< Polygon ref the node corresponds to.
+	Flags DtNodeFlags
+	ID    DtPolyRef // Polygon ref the node corresponds to.
 }
 
 func newDtNode() DtNode {
@@ -61,9 +64,11 @@ func newDtNode() DtNode {
 }
 
 const (
-	DT_MAX_STATES_PER_NODE int32 = 1 << DT_NODE_STATE_BITS // number of extra states per node. See dtNode::state
+	dtMaxStatesPerNode int32 = 1 << dtNodeStateBits // number of extra states per node. See dtNode::state
 )
 
+// DtNodePool is a pool of nodes, it allocated them and allows
+// them to be reused.
 type DtNodePool struct {
 	nodes       []DtNode
 	first, next []DtNodeIndex
@@ -77,11 +82,14 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 		maxNodes: maxNodes,
 		hashSize: hashSize,
 	}
-	assert.True(math32.NextPow2(uint32(np.hashSize)) == uint32(np.hashSize), "m_hashSize should be a power of 2")
+	assert.True(math32.NextPow2(uint32(np.hashSize)) == uint32(np.hashSize),
+		"m_hashSize should be a power of 2")
 
-	// pidx is special as 0 means "none" and 1 is the first node. For that reason
-	// we have 1 fewer nodes available than the number of values it can contain.
-	assert.True(np.maxNodes > 0 && np.maxNodes <= int32(DT_NULL_IDX) && np.maxNodes <= (1<<DT_NODE_PARENT_BITS)-1, "DtNodePool, max nodes check failed")
+	// pidx is special as 0 means "none" and 1 is the first node.
+	// For that reason we have 1 fewer nodes available than the
+	// number of values it can contain.
+	assert.True(np.maxNodes > 0 && np.maxNodes <= int32(dtNullIdx) &&
+		np.maxNodes <= (1<<dtNodeParentBits)-1, "DtNodePool, max nodes check failed")
 
 	np.nodes = make([]DtNode, np.maxNodes)
 	for i := range np.nodes {
@@ -95,32 +103,34 @@ func newDtNodePool(maxNodes, hashSize int32) *DtNodePool {
 	assert.True(len(np.first) > 0, "First should not be empty")
 
 	for idx := range np.first {
-		//np.First[idx] = 0xff
-		np.first[idx] = DT_NULL_IDX
+		np.first[idx] = dtNullIdx
 	}
 	for idx := range np.next {
-		np.next[idx] = DT_NULL_IDX
+		np.next[idx] = dtNullIdx
 	}
 	return np
 }
 
-func (np *DtNodePool) clear() {
+// Clear clears the node pool.
+func (np *DtNodePool) Clear() {
 	assert.True(int(np.hashSize) == len(np.first), "np.HashSize == len(np.First)")
 	for idx := range np.first {
-		np.first[idx] = DT_NULL_IDX
+		np.first[idx] = dtNullIdx
 	}
 	np.nodeCount = 0
 }
 
-// Get a dtNode by ref and extra state information. If there is none then - allocate
-// There can be more than one node for the same polyRef but with different extra state information
+// Node returns a dtNode by ref and extra state information. If
+// there is none then allocate. There can be more than one node
+// for the same polyRef but with different extra state
+// information
 func (np *DtNodePool) Node(id DtPolyRef, state uint8) *DtNode {
 	bucket := dtHashRef(id) & uint32(np.hashSize-1)
 
 	var i DtNodeIndex
 	i = np.first[bucket]
 	var node *DtNode
-	for i != DT_NULL_IDX {
+	for i != dtNullIdx {
 		if np.nodes[i].ID == id && np.nodes[i].State == state {
 			return &np.nodes[i]
 		}
@@ -149,14 +159,12 @@ func (np *DtNodePool) Node(id DtPolyRef, state uint8) *DtNode {
 	return node
 }
 
-func (np *DtNodePool) getNode2(id DtPolyRef) *DtNode {
-	return np.Node(id, 0)
-}
-
-func (np *DtNodePool) findNode(id DtPolyRef, state uint8) *DtNode {
+// FindNode finds the node that corresponds to the given polygon
+// reference and having the given state
+func (np *DtNodePool) FindNode(id DtPolyRef, state uint8) *DtNode {
 	bucket := dtHashRef(id) & uint32(np.hashSize-1)
 	i := np.first[bucket]
-	for i != DT_NULL_IDX {
+	for i != dtNullIdx {
 		if np.nodes[i].ID == id && np.nodes[i].State == state {
 			return &np.nodes[i]
 		}
@@ -165,16 +173,23 @@ func (np *DtNodePool) findNode(id DtPolyRef, state uint8) *DtNode {
 	return nil
 }
 
-func (np *DtNodePool) findNodes(id DtPolyRef, nodes *[]*DtNode, maxNodes int32) uint32 {
+// FindNodes fills the provided nodes slices with nodes that
+// correspond to the given polygon reference.
+//
+// Note: No more than maxNodes will be returned (nodes should
+// have at least maxNodes elements)
+func (np *DtNodePool) FindNodes(id DtPolyRef, nodes []*DtNode, maxNodes int32) uint32 {
+	assert.True(len(nodes) >= int(maxNodes), "nodes should contain at least maxNodes elements")
+
 	var n uint32
 	bucket := dtHashRef(id) & uint32(np.hashSize-1)
 	i := np.first[bucket]
-	for i != DT_NULL_IDX {
+	for i != dtNullIdx {
 		if np.nodes[i].ID == id {
 			if n >= uint32(maxNodes) {
 				return n
 			}
-			(*nodes)[n] = &np.nodes[i]
+			nodes[n] = &np.nodes[i]
 			n++
 		}
 		i = np.next[i]
@@ -182,7 +197,8 @@ func (np *DtNodePool) findNodes(id DtPolyRef, nodes *[]*DtNode, maxNodes int32) 
 	return n
 }
 
-func (np *DtNodePool) getNodeIdx(node *DtNode) uint32 {
+// NodeIdx returns the index of the given node.
+func (np *DtNodePool) NodeIdx(node *DtNode) uint32 {
 	if node == nil {
 		return 0
 	}
@@ -195,14 +211,17 @@ func (np *DtNodePool) getNodeIdx(node *DtNode) uint32 {
 	return ip + 1
 }
 
-func (np *DtNodePool) getNodeAtIdx(idx int32) *DtNode {
+// NodeAtIdx returns the node at given index.
+func (np *DtNodePool) NodeAtIdx(idx int32) *DtNode {
 	if idx == 0 {
 		return nil
 	}
 	return &np.nodes[idx-1]
 }
 
-func (np *DtNodePool) getMemUsed() int32 {
+// MemUsed returns the number of bytes currently in use in this
+// node pool.
+func (np *DtNodePool) MemUsed() int32 {
 	log.Fatal("use of unsafe in getMemUsed")
 	return int32(unsafe.Sizeof(*np)) +
 		int32(unsafe.Sizeof(DtNode{}))*np.maxNodes +
@@ -210,22 +229,28 @@ func (np *DtNodePool) getMemUsed() int32 {
 		int32(unsafe.Sizeof(DtNodeIndex(0)))*np.hashSize
 }
 
-func (np *DtNodePool) getMaxNodes() int32 {
+// MaxNodes returns the maximum number of nodes the pool can
+// contain.
+func (np *DtNodePool) MaxNodes() int32 {
 	return np.maxNodes
 }
 
-func (np *DtNodePool) getHashSize() int32 {
+// HashSize returns the hash size.
+func (np *DtNodePool) HashSize() int32 {
 	return np.hashSize
 }
 
-func (np *DtNodePool) getFirst(bucket int32) DtNodeIndex {
+// First returns the index of the first node.
+func (np *DtNodePool) First(bucket int32) DtNodeIndex {
 	return np.first[bucket]
 }
 
-func (np *DtNodePool) getNext(i int32) DtNodeIndex {
+// Next returns the next node index after the given one.
+func (np *DtNodePool) Next(i int32) DtNodeIndex {
 	return np.next[i]
 }
 
-func (np *DtNodePool) getNodeCount() int32 {
+// NodeCount returns the current node count in the pool.
+func (np *DtNodePool) NodeCount() int32 {
 	return np.nodeCount
 }
