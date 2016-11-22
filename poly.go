@@ -2,19 +2,19 @@ package detour
 
 import "github.com/aurelien-rainone/gogeo/f32/d3"
 
-// DtPoly defines a polygon within a DtMeshTile object.
-type DtPoly struct {
+// Poly defines a polygon within a MeshTile object.
+type Poly struct {
 	// FirstLink is the index to first link in linked list.
-	// (Or DT_NULL_LINK if there is no link.)
+	// (Or nullLink if there is no link.)
 	FirstLink uint32
 
 	// Verts are the indices of the polygon's vertices.
-	// The actual vertices are located in DtMeshTile.Verts.
-	Verts [dtVertsPerPolygon]uint16
+	// The actual vertices are located in MeshTile.Verts.
+	Verts [vertsPerPolygon]uint16
 
 	// Neis is packed data representing neighbor polygons
 	// references and flags for each edge.
-	Neis [dtVertsPerPolygon]uint16
+	Neis [vertsPerPolygon]uint16
 
 	// Flags is an user-defined polygon flags.
 	Flags uint16
@@ -30,31 +30,31 @@ type DtPoly struct {
 	AreaAndType uint8
 }
 
-// SetArea sets the user defined area id. (limit: < DT_MAX_AREAS)
-func (p *DtPoly) SetArea(a uint8) {
+// SetArea sets the user defined area id. (limit: < maxAreas)
+func (p *Poly) SetArea(a uint8) {
 	p.AreaAndType = (p.AreaAndType & 0xc0) | (a & 0x3f)
 }
 
-// SetType sets the polygon type. (see: DtPolyTypes.)
-func (p *DtPoly) SetType(t uint8) {
+// SetType sets the polygon type. (see: polyTypes.)
+func (p *Poly) SetType(t uint8) {
 	p.AreaAndType = (p.AreaAndType & 0x3f) | (t << 6)
 }
 
 // Area returns the user defined area id.
-func (p *DtPoly) Area() uint8 {
+func (p *Poly) Area() uint8 {
 	return p.AreaAndType & 0x3f
 }
 
-// Type returns the polygon type. (see: DtPolyTypes)
-func (p *DtPoly) Type() uint8 {
+// Type returns the polygon type. (see: polyTypes)
+func (p *Poly) Type() uint8 {
 	return p.AreaAndType >> 6
 }
 
-// DtCalcPolyCenter derives and returns the centroid of a convex polygon.
+// CalcPolyCenter derives and returns the centroid of a convex polygon.
 //  idx     polygon indices. [(vertIndex) * nidx]
 //  nidx    number of indices in the polygon. (limit: >= 3)
 //  verts   polygon vertices. [(x, y, z) * vertCount]
-func DtCalcPolyCenter(idx []uint16, nidx int32, verts []float32) d3.Vec3 {
+func CalcPolyCenter(idx []uint16, nidx int32, verts []float32) d3.Vec3 {
 	tc := d3.NewVec3()
 	var j int32
 	for j = 0; j < nidx; j++ {

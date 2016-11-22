@@ -8,12 +8,12 @@ import (
 
 func TestCalcPolyCenter(t *testing.T) {
 	var (
-		mesh *DtNavMesh
+		mesh *NavMesh
 		err  error
 	)
 
 	polyTests := []struct {
-		ref  DtPolyRef
+		ref  PolyRef
 		want d3.Vec3
 	}{
 		{0x440000, d3.Vec3{3.6002522, 0.189468, 10.873747}},
@@ -26,11 +26,11 @@ func TestCalcPolyCenter(t *testing.T) {
 	for _, tt := range polyTests {
 
 		var (
-			tile *DtMeshTile
-			poly *DtPoly
+			tile *MeshTile
+			poly *Poly
 		)
 		mesh.TileAndPolyByRef(tt.ref, &tile, &poly)
-		got := DtCalcPolyCenter(poly.Verts[:], int32(poly.VertCount), tile.Verts)
+		got := CalcPolyCenter(poly.Verts[:], int32(poly.VertCount), tile.Verts)
 		if !got.Approx(tt.want) {
 			t.Errorf("want centroid of poly 0x%x = %v, got %v", tt.ref, tt.want, got)
 		}
@@ -39,7 +39,7 @@ func TestCalcPolyCenter(t *testing.T) {
 
 func TestFindNearestPolySpecialCases(t *testing.T) {
 	var (
-		mesh *DtNavMesh
+		mesh *NavMesh
 		err  error
 	)
 
@@ -47,20 +47,20 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 		msg     string    // test description
 		pt      d3.Vec3   // point
 		ext     d3.Vec3   // search extents
-		wantSt  DtStatus  // expected status
-		wantRef DtPolyRef // expected ref (if query succeeded)
+		wantSt  Status  // expected status
+		wantRef PolyRef // expected ref (if query succeeded)
 	}{
 		{
 			"search box does not intersect any poly",
-			d3.Vec3{-5, 0, 10}, d3.Vec3{1, 1, 1}, DtSuccess, 0,
+			d3.Vec3{-5, 0, 10}, d3.Vec3{1, 1, 1}, Success, 0,
 		},
 		{
 			"unallocated center vector",
-			d3.Vec3{}, d3.Vec3{1, 1, 1}, DtFailure | DtInvalidParam, 0,
+			d3.Vec3{}, d3.Vec3{1, 1, 1}, Failure | InvalidParam, 0,
 		},
 		{
 			"unallocated extents vector",
-			d3.Vec3{0, 0, 0}, d3.Vec3{}, DtFailure | DtInvalidParam, 0,
+			d3.Vec3{0, 0, 0}, d3.Vec3{}, Failure | InvalidParam, 0,
 		},
 	}
 
@@ -69,20 +69,20 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 
 	for _, tt := range pathTests {
 		var (
-			q   *DtNavMeshQuery
-			st  DtStatus
-			ref DtPolyRef
+			q   *NavMeshQuery
+			st  Status
+			ref PolyRef
 		)
 
-		st, q = NewDtNavMeshQuery(mesh, 100)
-		f := NewDtQueryFilter()
+		st, q = NewNavMeshQuery(mesh, 100)
+		f := NewQueryFilter()
 
 		st, ref, _ = q.FindNearestPoly(tt.pt, tt.ext, f)
 		if st != tt.wantSt {
 			t.Errorf("%s, want status 0x%x, got 0x%x", tt.msg, tt.wantSt, st)
 		}
 
-		if DtStatusSucceed(st) && ref != tt.wantRef {
+		if StatusSucceed(st) && ref != tt.wantRef {
 			t.Errorf("%s, want ref 0x%x, got 0x%x", tt.msg, tt.wantRef, ref)
 		}
 	}

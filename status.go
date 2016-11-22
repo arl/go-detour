@@ -2,68 +2,68 @@ package detour
 
 import "fmt"
 
-// DtStatus represents status flags.
-type DtStatus uint32
+// Status represents status flags.
+type Status uint32
 
 // High level status.
 const (
-	DtFailure    DtStatus = 1 << 31 // Operation failed.
-	DtSuccess             = 1 << 30 // Operation succeed.
-	DtInProgress          = 1 << 29 // Operation still in progress.
+	Failure    Status = 1 << 31 // Operation failed.
+	Success           = 1 << 30 // Operation succeed.
+	InProgress        = 1 << 29 // Operation still in progress.
 
 	// Detail information for status.
-	DtStatusDetailMask = 0x0ffffff
-	DtWrongMagic       = 1 << 0 // Input data is not recognized.
-	DtWrongVersion     = 1 << 1 // Input data is in wrong version.
-	DtOutOfMemory      = 1 << 2 // Operation ran out of memory.
-	DtInvalidParam     = 1 << 3 // An input parameter was invalid.
-	DtBufferTooSmall   = 1 << 4 // Result buffer for the query was too small to store all results.
-	DtOutOfNodes       = 1 << 5 // Query ran out of nodes during search.
-	DtPartialResult    = 1 << 6 // Query did not reach the end location, returning best guess.
+	StatusDetailMask = 0x0ffffff
+	WrongMagic       = 1 << 0 // Input data is not recognized.
+	WrongVersion     = 1 << 1 // Input data is in wrong version.
+	OutOfMemory      = 1 << 2 // Operation ran out of memory.
+	InvalidParam     = 1 << 3 // An input parameter was invalid.
+	BufferTooSmall   = 1 << 4 // Result buffer for the query was too small to store all results.
+	OutOfNodes       = 1 << 5 // Query ran out of nodes during search.
+	PartialResult    = 1 << 6 // Query did not reach the end location, returning best guess.
 )
 
 // Implementation of the error interface
-func (s DtStatus) Error() string {
-	if s == DtFailure {
-		switch s & DtStatusDetailMask {
-		case DtWrongMagic:
+func (s Status) Error() string {
+	if s == Failure {
+		switch s & StatusDetailMask {
+		case WrongMagic:
 			return "wrong magic number"
-		case DtWrongVersion:
+		case WrongVersion:
 			return "wrong version number"
-		case DtOutOfMemory:
+		case OutOfMemory:
 			return "out of memory"
-		case DtInvalidParam:
+		case InvalidParam:
 			return "invalid parameter"
-		case DtOutOfNodes:
+		case OutOfNodes:
 			return "out of nodes"
-		case DtPartialResult:
+		case PartialResult:
 			return "partial result"
 		default:
 			return fmt.Sprintf("unspecified error 0x%x", s)
 		}
 	}
-	if s == DtInProgress {
+	if s == InProgress {
 		return "in progress"
 	}
 	return "success"
 }
 
-// DtStatusSucceed returns true if status is success.
-func DtStatusSucceed(status DtStatus) bool {
-	return (status & DtSuccess) != 0
+// StatusSucceed returns true if status is success.
+func StatusSucceed(status Status) bool {
+	return (status & Success) != 0
 }
 
-// DtStatusFailed returns true if status is failure.
-func DtStatusFailed(status DtStatus) bool {
-	return (status & DtFailure) != 0
+// StatusFailed returns true if status is failure.
+func StatusFailed(status Status) bool {
+	return (status & Failure) != 0
 }
 
-// DtStatusInProgress returns true if status is in progress.
-func DtStatusInProgress(status DtStatus) bool {
-	return (status & DtInProgress) != 0
+// StatusInProgress returns true if status is in progress.
+func StatusInProgress(status Status) bool {
+	return (status & InProgress) != 0
 }
 
-// DtStatusDetail returns true if specific detail is set.
-func DtStatusDetail(status DtStatus, detail uint32) bool {
+// StatusDetail returns true if specific detail is set.
+func StatusDetail(status Status, detail uint32) bool {
 	return (uint32(status) & detail) != 0
 }

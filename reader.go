@@ -7,17 +7,17 @@ import (
 	"reflect"
 )
 
-// DtTileRef is a reference to a tile of the navigation mesh.
-type DtTileRef uint32
+// TileRef is a reference to a tile of the navigation mesh.
+type TileRef uint32
 
 type navMeshTileHeader struct {
-	TileRef  DtTileRef
+	TileRef  TileRef
 	DataSize int32
 }
 
 // Decode reads a PNG image from r and returns it as an image.Image.
 // The type of Image returned depends on the PNG contents.
-func Decode(r io.Reader) (*DtNavMesh, error) {
+func Decode(r io.Reader) (*NavMesh, error) {
 	// Read header.
 	var (
 		hdr navMeshSetHeader
@@ -37,9 +37,9 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 		return nil, fmt.Errorf("wrong version: %d", hdr.Version)
 	}
 
-	var mesh DtNavMesh
+	var mesh NavMesh
 	status := mesh.init(&hdr.Params)
-	if DtStatusFailed(status) {
+	if StatusFailed(status) {
 		return nil, fmt.Errorf("status failed 0x%x", status)
 	}
 
@@ -66,7 +66,7 @@ func Decode(r io.Reader) (*DtNavMesh, error) {
 			return nil, err
 		}
 		status, _ := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef)
-		if status&DtFailure != 0 {
+		if status&Failure != 0 {
 			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
 		}
 	}

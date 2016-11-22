@@ -43,7 +43,7 @@ func IntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
 //  bmin   Minimum bounds of box B. [(x, y, z)]
 //  bmax   Maximum bounds of box B. [(x, y, z)]
 //  return True if the two AABB's overlap.
-// see dtOverlapBounds
+// see overlapBounds
 func OverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
 		return false
@@ -68,7 +68,7 @@ func OverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 //   bmax     Maximum bounds of box B. [(x, y, z)]
 //
 // Return True if the two AABB's overlap.
-// see dtOverlapQuantBounds
+// see overlapQuantBounds
 func OverlapBounds(amin, amax, bmin, bmax []float32) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
 		return false

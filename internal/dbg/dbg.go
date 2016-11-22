@@ -21,7 +21,7 @@ func main() {
 	var (
 		f    *os.File
 		err  error
-		mesh *detour.DtNavMesh
+		mesh *detour.NavMesh
 	)
 
 	f, err = os.Open("testdata/navmesh.bin")
@@ -48,30 +48,30 @@ func main() {
 	log.Println("findPath success, path:", path)
 }
 
-func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, error) {
+func findPath(mesh *detour.NavMesh, org, dst d3.Vec3) ([]detour.PolyRef, error) {
 	var (
-		orgRef, dstRef detour.DtPolyRef       // references of org/dst polygon refs
-		query          *detour.DtNavMeshQuery // the query instance
-		filter         *detour.DtQueryFilter  // filter to use for various queries
+		orgRef, dstRef detour.PolyRef       // references of org/dst polygon refs
+		query          *detour.NavMeshQuery // the query instance
+		filter         *detour.QueryFilter  // filter to use for various queries
 		extents        d3.Vec3                // search distance for polygon search (3 axis)
 		nearestPt      d3.Vec3
-		st             detour.DtStatus
-		path           []detour.DtPolyRef
+		st             detour.Status
+		path           []detour.PolyRef
 	)
 
-	st, query = detour.NewDtNavMeshQuery(mesh, 1000)
-	if detour.DtStatusFailed(st) {
+	st, query = detour.NewNavMeshQuery(mesh, 1000)
+	if detour.StatusFailed(st) {
 		return path, fmt.Errorf("query creation failed with status %v\n", st)
 	}
 	// define the extents vector for the nearest polygon query
 	extents = d3.NewVec3XYZ(0, 2, 0)
 
 	// create a default query filter
-	filter = detour.NewDtQueryFilter()
+	filter = detour.NewQueryFilter()
 
 	// get org polygon reference
 	st, orgRef, nearestPt = query.FindNearestPoly(org, extents, filter)
-	if detour.DtStatusFailed(st) {
+	if detour.StatusFailed(st) {
 		return path, fmt.Errorf("FindNearestPoly failed with %v\n", st)
 	} else if orgRef == 0 {
 		return path, fmt.Errorf("org doesn't intersect any polygons")
@@ -82,7 +82,7 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 
 	// get dst polygon reference
 	st, dstRef, nearestPt = query.FindNearestPoly(dst, extents, filter)
-	if detour.DtStatusFailed(st) {
+	if detour.StatusFailed(st) {
 		return path, fmt.Errorf("FindNearestPoly failed with %v\n", st)
 	} else if dstRef == 0 {
 		return path, fmt.Errorf("dst doesn't intersect any polygons")
@@ -95,9 +95,9 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 	var (
 		pathCount int32
 	)
-	path = make([]detour.DtPolyRef, 100)
+	path = make([]detour.PolyRef, 100)
 	st = query.FindPath(orgRef, dstRef, org[:], dst[:], filter, &path, &pathCount, 100)
-	if detour.DtStatusFailed(st) {
+	if detour.StatusFailed(st) {
 		return path, fmt.Errorf("query.FindPath failed with %v\n", st)
 	}
 	return path[:pathCount], nil
@@ -121,7 +121,7 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 	//poly := ptile.Polys[polyIdx]
 
 	//centroid := make([]float32, 3)
-	//detour.DtCalcPolyCenter(centroid, poly.Verts[:], int32(poly.VertCount), ptile.Verts)
+	//detour.CalcPolyCenter(centroid, poly.Verts[:], int32(poly.VertCount), ptile.Verts)
 	//fmt.Println("poly center: ", centroid)
 
 	////for _, v := range poly.Verts[0:poly.VertCount] {
