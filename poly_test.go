@@ -52,15 +52,15 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 	}{
 		{
 			"search box does not intersect any poly",
-			d3.Vec3{-5, 0, 10}, d3.Vec3{1, 1, 1}, DT_SUCCESS, 0,
+			d3.Vec3{-5, 0, 10}, d3.Vec3{1, 1, 1}, DtSuccess, 0,
 		},
 		{
 			"unallocated center vector",
-			d3.Vec3{}, d3.Vec3{1, 1, 1}, DT_FAILURE | DT_INVALID_PARAM, 0,
+			d3.Vec3{}, d3.Vec3{1, 1, 1}, DtFailure | DtInvalidParam, 0,
 		},
 		{
 			"unallocated extents vector",
-			d3.Vec3{0, 0, 0}, d3.Vec3{}, DT_FAILURE | DT_INVALID_PARAM, 0,
+			d3.Vec3{0, 0, 0}, d3.Vec3{}, DtFailure | DtInvalidParam, 0,
 		},
 	}
 

@@ -368,7 +368,7 @@ type dtQueryData struct {
 // This function can be used multiple times.
 func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuery) {
 	if maxNodes > int32(dtNullIdx) || maxNodes > int32(1<<dtNodeParentBits)-1 {
-		return DT_FAILURE | DT_INVALID_PARAM, nil
+		return DtFailure | DtInvalidParam, nil
 	}
 
 	q := &DtNavMeshQuery{}
@@ -380,7 +380,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 		}
 		q.nodePool = newDtNodePool(maxNodes, int32(math32.NextPow2(uint32(maxNodes/4))))
 		if q.nodePool == nil {
-			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
+			return DtFailure | DtOutOfMemory, nil
 		}
 	} else {
 		q.nodePool.Clear()
@@ -389,7 +389,7 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 	if q.tinyNodePool == nil {
 		q.tinyNodePool = newDtNodePool(64, 32)
 		if q.tinyNodePool == nil {
-			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
+			return DtFailure | DtOutOfMemory, nil
 		}
 	} else {
 		q.tinyNodePool.Clear()
@@ -401,13 +401,13 @@ func NewDtNavMeshQuery(nav *DtNavMesh, maxNodes int32) (DtStatus, *DtNavMeshQuer
 		}
 		q.openList = newDtNodeQueue(maxNodes)
 		if q.openList == nil {
-			return DT_FAILURE | DT_OUT_OF_MEMORY, nil
+			return DtFailure | DtOutOfMemory, nil
 		}
 	} else {
 		q.openList.clear()
 	}
 
-	return DT_SUCCESS, q
+	return DtSuccess, q
 }
 
 // FindPath finds a path from the start polygon to the end polygon.
@@ -443,7 +443,7 @@ func (q *DtNavMeshQuery) FindPath(
 	if len(*path) < int(maxPath) {
 		// immediately check the provided slice
 		// is big enough to store maxPath nodes
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	if pathCount != nil {
@@ -453,13 +453,13 @@ func (q *DtNavMeshQuery) FindPath(
 	// Validate input
 	if !q.nav.IsValidPolyRef(startRef) || !q.nav.IsValidPolyRef(endRef) ||
 		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	if startRef == endRef {
 		(*path)[0] = startRef
 		*pathCount = 1
-		return DT_SUCCESS
+		return DtSuccess
 	}
 
 	q.nodePool.Clear()
@@ -634,11 +634,11 @@ func (q *DtNavMeshQuery) FindPath(
 	status := q.getPathToNode(lastBestNode, path, pathCount, maxPath)
 
 	if lastBestNode.ID != endRef {
-		status |= DT_PARTIAL_RESULT
+		status |= DtPartialResult
 	}
 
 	if outOfNodes {
-		status |= DT_OUT_OF_NODES
+		status |= DtOutOfNodes
 	}
 
 	return status
@@ -699,12 +699,12 @@ func (q *DtNavMeshQuery) FindStraightPath(
 
 	if maxStraightPath == 0 {
 		fmt.Println("maxStraightPath == 0")
-		return DT_FAILURE | DT_INVALID_PARAM, 0
+		return DtFailure | DtInvalidParam, 0
 	}
 
 	if len(path) == 0 {
 		fmt.Println("len(path) == 0")
-		return DT_FAILURE | DT_INVALID_PARAM, 0
+		return DtFailure | DtInvalidParam, 0
 	}
 
 	var (
@@ -715,19 +715,19 @@ func (q *DtNavMeshQuery) FindStraightPath(
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
 	if DtStatusFailed(q.closestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
-		return DT_FAILURE | DT_INVALID_PARAM, 0
+		return DtFailure | DtInvalidParam, 0
 	}
 
 	closestEndPos := d3.NewVec3()
 	if DtStatusFailed(q.closestPointOnPolyBoundary(path[pathSize-1], endPos, closestEndPos)) {
-		return DT_FAILURE | DT_INVALID_PARAM, 0
+		return DtFailure | DtInvalidParam, 0
 	}
 
 	// Add start point.
 	stat = q.appendVertex(closestStartPos, DtStraightPathStart, path[0],
 		straightPath, straightPathFlags, straightPathRefs,
 		&count, maxStraightPath)
-	if stat != DT_IN_PROGRESS {
+	if stat != DtInProgress {
 		return stat, count
 	}
 
@@ -760,7 +760,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					// Clamp the end point to path[i], and return the path so far.
 					if DtStatusFailed(q.closestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
 						// This should only happen when the first polygon is invalid.
-						return DT_FAILURE | DT_INVALID_PARAM, 0
+						return DtFailure | DtInvalidParam, 0
 					}
 
 					// Apeend portals along the current straight path segment.
@@ -776,9 +776,9 @@ func (q *DtNavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count, maxStraightPath)
 
-					stat = DT_SUCCESS | DT_PARTIAL_RESULT
+					stat = DtSuccess | DtPartialResult
 					if count >= maxStraightPath {
-						stat |= DT_BUFFER_TOO_SMALL
+						stat |= DtBufferTooSmall
 					}
 					return stat, count
 				}
@@ -814,7 +814,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 						stat = q.appendPortals(apexIndex, leftIndex, portalLeft, path,
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, maxStraightPath, options)
-						if stat != DT_IN_PROGRESS {
+						if stat != DtInProgress {
 							return stat, count
 						}
 					}
@@ -834,7 +834,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
 						&count, maxStraightPath)
-					if stat != DT_IN_PROGRESS {
+					if stat != DtInProgress {
 						return stat, count
 					}
 
@@ -867,7 +867,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 						stat = q.appendPortals(apexIndex, rightIndex, portalRight, path,
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, maxStraightPath, options)
-						if stat != DT_IN_PROGRESS {
+						if stat != DtInProgress {
 							return stat, count
 						}
 					}
@@ -887,7 +887,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
 						&count, maxStraightPath)
-					if stat != DT_IN_PROGRESS {
+					if stat != DtInProgress {
 						return stat, count
 					}
 
@@ -909,7 +909,7 @@ func (q *DtNavMeshQuery) FindStraightPath(
 			stat = q.appendPortals(apexIndex, pathSize-1, closestEndPos, path,
 				straightPath, straightPathFlags, straightPathRefs,
 				&count, maxStraightPath, options)
-			if stat != DT_IN_PROGRESS {
+			if stat != DtInProgress {
 				return stat, count
 			}
 		}
@@ -920,9 +920,9 @@ func (q *DtNavMeshQuery) FindStraightPath(
 		straightPath, straightPathFlags, straightPathRefs,
 		&count, maxStraightPath)
 
-	stat = DT_SUCCESS
+	stat = DtSuccess
 	if count >= maxStraightPath {
-		stat |= DT_BUFFER_TOO_SMALL
+		stat |= DtBufferTooSmall
 	}
 	return stat, count
 }
@@ -950,7 +950,7 @@ func (q *DtNavMeshQuery) appendPortals(
 			fromPoly *DtPoly
 		)
 		if DtStatusFailed(q.nav.TileAndPolyByRef(from, &fromTile, &fromPoly)) {
-			return DT_FAILURE | DT_INVALID_PARAM
+			return DtFailure | DtInvalidParam
 		}
 
 		to := path[i+1]
@@ -960,7 +960,7 @@ func (q *DtNavMeshQuery) appendPortals(
 		)
 		if DtStatusFailed(q.nav.TileAndPolyByRef(to, &toTile, &toPoly)) {
 
-			return DT_FAILURE | DT_INVALID_PARAM
+			return DtFailure | DtInvalidParam
 		}
 
 		left := d3.NewVec3()
@@ -984,12 +984,12 @@ func (q *DtNavMeshQuery) appendPortals(
 			stat = q.appendVertex(pt, 0, path[i+1],
 				straightPath, straightPathFlags, straightPathRefs,
 				straightPathCount, maxStraightPath)
-			if stat != DT_IN_PROGRESS {
+			if stat != DtInProgress {
 				return stat
 			}
 		}
 	}
-	return DT_IN_PROGRESS
+	return DtInProgress
 }
 
 // appendVertex appends a vertex to a straight path.
@@ -1024,15 +1024,15 @@ func (q *DtNavMeshQuery) appendVertex(
 
 		// If there is no space to append more vertices, return.
 		if (*straightPathCount) >= maxStraightPath {
-			return DT_SUCCESS | DT_BUFFER_TOO_SMALL
+			return DtSuccess | DtBufferTooSmall
 		}
 
 		// If reached end of path, return.
 		if flags == DtStraightPathEnd {
-			return DT_SUCCESS
+			return DtSuccess
 		}
 	}
-	return DT_IN_PROGRESS
+	return DtInProgress
 }
 
 // getEdgeMidPoint returns the edge mid point between two polygons.
@@ -1045,12 +1045,12 @@ func (q *DtNavMeshQuery) getEdgeMidPoint(
 	right := make([]float32, 3)
 
 	if DtStatusFailed(q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	mid[0] = (left[0] + right[0]) * 0.5
 	mid[1] = (left[1] + right[1]) * 0.5
 	mid[2] = (left[2] + right[2]) * 0.5
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // getPortalPoints6 returns portal points between two polygons.
@@ -1066,7 +1066,7 @@ func (q *DtNavMeshQuery) getPortalPoints6(
 		fromPoly *DtPoly
 	)
 	if DtStatusFailed(q.nav.TileAndPolyByRef(from, &fromTile, &fromPoly)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	*fromType = fromPoly.Type()
 
@@ -1075,7 +1075,7 @@ func (q *DtNavMeshQuery) getPortalPoints6(
 		toPoly *DtPoly
 	)
 	if DtStatusFailed(q.nav.TileAndPolyByRef(to, &toTile, &toPoly)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	*toType = toPoly.Type()
 
@@ -1097,7 +1097,7 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 		}
 	}
 	if link == nil {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	// Handle off-mesh connections.
@@ -1110,10 +1110,10 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 				vidx := fromPoly.Verts[v] * 3
 				copy(left, fromTile.Verts[vidx:vidx+3])
 				copy(right, fromTile.Verts[vidx:vidx+3])
-				return DT_SUCCESS
+				return DtSuccess
 			}
 		}
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	if toPoly.Type() == dtPolyTypeOffMeshConnection {
@@ -1124,10 +1124,10 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 				vidx := fromPoly.Verts[v] * 3
 				copy(left, toTile.Verts[vidx:vidx+3])
 				copy(right, toTile.Verts[vidx:vidx+3])
-				return DT_SUCCESS
+				return DtSuccess
 			}
 		}
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	// Find portal vertices.
@@ -1153,7 +1153,7 @@ func (q *DtNavMeshQuery) getPortalPoints8(
 		}
 	}
 
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // getPathToNode gets the path leading to the specified end node.
@@ -1200,10 +1200,10 @@ func (q *DtNavMeshQuery) getPathToNode(
 	*pathCount = math32.MinInt32(length, maxPath)
 
 	if length > maxPath {
-		return DT_SUCCESS | DT_BUFFER_TOO_SMALL
+		return DtSuccess | DtBufferTooSmall
 	}
 
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // closestPointOnPoly uses the detail polygons to find the surface height.
@@ -1219,10 +1219,10 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 	)
 
 	if DtStatusFailed(q.nav.TileAndPolyByRef(ref, &tile, &poly)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	if tile == nil {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	// Off-mesh connections don't have detail polygons.
@@ -1242,7 +1242,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 		if posOverPoly != nil {
 			*posOverPoly = false
 		}
-		return DT_SUCCESS
+		return DtSuccess
 	}
 
 	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
@@ -1314,7 +1314,7 @@ func (q *DtNavMeshQuery) closestPointOnPoly(ref DtPolyRef, pos, closest d3.Vec3,
 			break
 		}
 	}
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // closestPointOnPolyBoundary uses the detail polygons to find the surface
@@ -1333,7 +1333,7 @@ func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest 
 		poly *DtPoly
 	)
 	if DtStatusFailed(q.nav.TileAndPolyByRef(ref, &tile, &poly)) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	// Collect vertices.
@@ -1368,7 +1368,7 @@ func (q *DtNavMeshQuery) closestPointOnPolyBoundary(ref DtPolyRef, pos, closest 
 		d3.Vec3Lerp(closest, va, vb, edget[imin])
 	}
 
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // FindNearestPoly finds the polygon nearest to the specified center point.
@@ -1402,7 +1402,7 @@ func (q *DtNavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 	if ref = query.nearestRef; ref != 0 {
 		pt = d3.NewVec3From(query.nearestPoint)
 	}
-	st = DT_SUCCESS
+	st = DtSuccess
 	return
 }
 
@@ -1432,7 +1432,7 @@ func (q *DtNavMeshQuery) queryPolygons6(
 	maxPolys int32) DtStatus {
 
 	if polys == nil || polyCount == nil || maxPolys < 0 {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	collector := newDtCollectPolysQuery(polys, maxPolys)
@@ -1444,9 +1444,9 @@ func (q *DtNavMeshQuery) queryPolygons6(
 
 	*polyCount = collector.numCollected
 	if collector.overflow {
-		return DT_SUCCESS | DT_BUFFER_TOO_SMALL
+		return DtSuccess | DtBufferTooSmall
 	}
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // queryPolygons4 finds polygons that overlap the search box.
@@ -1470,7 +1470,7 @@ func (q *DtNavMeshQuery) queryPolygons4(
 	assert.True(q.nav != nil, "navmesh should not be nill")
 
 	if len(center) != 3 || len(extents) != 3 || filter == nil || query == nil {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 
 	bmin := center.Sub(extents)
@@ -1491,7 +1491,7 @@ func (q *DtNavMeshQuery) queryPolygons4(
 			}
 		}
 	}
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // queryPolygonsInTile queries polygons within a tile.

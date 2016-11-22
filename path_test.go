@@ -156,7 +156,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		wantStatus    DtStatus // expected status
 		wantPathCount int32    // expected path count
 	}{
-		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DT_SUCCESS, 1},
+		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DtSuccess, 1},
 	}
 
 	mesh, err = loadTestNavMesh("navmesh.bin")

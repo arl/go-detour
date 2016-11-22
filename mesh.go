@@ -63,10 +63,10 @@ func (m *DtNavMesh) init(params *DtNavMeshParams) DtStatus {
 	}
 
 	if m.saltBits < 10 {
-		return DtStatus(DT_FAILURE | DT_INVALID_PARAM)
+		return DtStatus(DtFailure | DtInvalidParam)
 	}
 
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // addTile adds a tile to the navigation mesh.
@@ -104,16 +104,16 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef DtTileRef) (DtS
 
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {
-		return DT_FAILURE | DT_WRONG_MAGIC, 0
+		return DtFailure | DtWrongMagic, 0
 	}
 	if hdr.Version != navMeshVersion {
-		return DT_FAILURE | DT_WRONG_VERSION, 0
+		return DtFailure | DtWrongVersion, 0
 	}
 
 	// Make sure the location is free.
 	if m.TileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
 		fmt.Println("TileAt failed")
-		return DT_FAILURE, 0
+		return DtFailure, 0
 	}
 
 	// Allocate a tile.
@@ -129,7 +129,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef DtTileRef) (DtS
 		tileIndex := int32(m.decodePolyIDTile(DtPolyRef(lastRef)))
 		if tileIndex >= m.MaxTiles {
 			log.Fatalln("tileIndex >= m.m_maxTiles", tileIndex, m.MaxTiles)
-			return DT_FAILURE | DT_OUT_OF_MEMORY, 0
+			return DtFailure | DtOutOfMemory, 0
 		}
 		// Try to find the specific tile id from the free list.
 		target := &m.Tiles[tileIndex]
@@ -142,7 +142,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef DtTileRef) (DtS
 		// Could not find the correct location.
 		if tile != target {
 			log.Fatalln("couldn't find the correct tile location")
-			return DT_FAILURE | DT_OUT_OF_MEMORY, 0
+			return DtFailure | DtOutOfMemory, 0
 		}
 		// Remove from freelist
 		if prev == nil {
@@ -158,7 +158,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef DtTileRef) (DtS
 	// Make sure we could allocate a tile.
 	if tile == nil {
 		log.Fatalln("couldn't allocate tile")
-		return DT_FAILURE | DT_OUT_OF_MEMORY, 0
+		return DtFailure | DtOutOfMemory, 0
 	}
 
 	// Insert tile into the position lut.
@@ -291,7 +291,7 @@ func (m *DtNavMesh) addTile(data []byte, dataSize int32, lastRef DtTileRef) (DtS
 		}
 	}
 
-	return DT_SUCCESS, m.TileRef(tile)
+	return DtSuccess, m.TileRef(tile)
 }
 
 // TileAt returns the tile at the specified grid location.
@@ -1318,22 +1318,22 @@ func (m *DtNavMesh) IsValidPolyRef(ref DtPolyRef) bool {
 //   [out]poly    The polygon.
 func (m *DtNavMesh) TileAndPolyByRef(ref DtPolyRef, tile **DtMeshTile, poly **DtPoly) DtStatus {
 	if ref == 0 {
-		return DT_FAILURE
+		return DtFailure
 	}
 	var salt, it, ip uint32
 	m.DecodePolyID(ref, &salt, &it, &ip)
 	if it >= uint32(m.MaxTiles) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	if m.Tiles[it].Salt != salt || m.Tiles[it].Header == nil {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	if ip >= uint32(m.Tiles[it].Header.PolyCount) {
-		return DT_FAILURE | DT_INVALID_PARAM
+		return DtFailure | DtInvalidParam
 	}
 	*tile = &m.Tiles[it]
 	*poly = &m.Tiles[it].Polys[ip]
-	return DT_SUCCESS
+	return DtSuccess
 }
 
 // CalcTileLoc calculates the tile grid location for the specified world
