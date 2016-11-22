@@ -7,10 +7,10 @@ import (
 	"reflect"
 )
 
-type dtTileRef uint32
+type DtTileRef uint32
 
 type navMeshTileHeader struct {
-	TileRef  dtTileRef
+	TileRef  DtTileRef
 	DataSize int32
 }
 
