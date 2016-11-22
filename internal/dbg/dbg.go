@@ -41,10 +41,6 @@ func main() {
 	org := d3.NewVec3XYZ(3, 0, 1)
 	dst := d3.NewVec3XYZ(50, 0, 30)
 
-	// findPath ok with:
-	//org := [3]float32{5, 0, 10}
-	//dst := [3]float32{50, 0, 30}
-
 	path, err := findPath(mesh, org, dst)
 	if err != nil {
 		log.Fatalln("findPath failed", err)
@@ -65,7 +61,7 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 
 	st, query = detour.NewDtNavMeshQuery(mesh, 1000)
 	if detour.DtStatusFailed(st) {
-		return path, fmt.Errorf("query creation failed with status 0x%x\n", st)
+		return path, fmt.Errorf("query creation failed with status %v\n", st)
 	}
 	// define the extents vector for the nearest polygon query
 	extents = d3.NewVec3XYZ(0, 2, 0)
@@ -76,7 +72,7 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 	// get org polygon reference
 	st, orgRef, nearestPt = query.FindNearestPoly(org, extents, filter)
 	if detour.DtStatusFailed(st) {
-		return path, fmt.Errorf("FindNearestPoly failed with 0x%x\n", st)
+		return path, fmt.Errorf("FindNearestPoly failed with %v\n", st)
 	} else if orgRef == 0 {
 		return path, fmt.Errorf("org doesn't intersect any polygons")
 	}
@@ -87,7 +83,7 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 	// get dst polygon reference
 	st, dstRef, nearestPt = query.FindNearestPoly(dst, extents, filter)
 	if detour.DtStatusFailed(st) {
-		return path, fmt.Errorf("FindNearestPoly failed with 0x%x\n", st)
+		return path, fmt.Errorf("FindNearestPoly failed with %v\n", st)
 	} else if dstRef == 0 {
 		return path, fmt.Errorf("dst doesn't intersect any polygons")
 	}
@@ -102,7 +98,7 @@ func findPath(mesh *detour.DtNavMesh, org, dst d3.Vec3) ([]detour.DtPolyRef, err
 	path = make([]detour.DtPolyRef, 100)
 	st = query.FindPath(orgRef, dstRef, org[:], dst[:], filter, &path, &pathCount, 100)
 	if detour.DtStatusFailed(st) {
-		return path, fmt.Errorf("query.FindPath failed with 0x%x\n", st)
+		return path, fmt.Errorf("query.FindPath failed with %v\n", st)
 	}
 	return path[:pathCount], nil
 
