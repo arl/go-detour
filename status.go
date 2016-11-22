@@ -1,5 +1,7 @@
 package detour
 
+import "fmt"
+
 type DtStatus uint32
 
 // High level status.
@@ -18,6 +20,32 @@ const (
 	DT_OUT_OF_NODES       = 1 << 5 // Query ran out of nodes during search.
 	DT_PARTIAL_RESULT     = 1 << 6 // Query did not reach the end location, returning best guess.
 )
+
+// Implementation of the error interface
+func (s DtStatus) Error() string {
+	if s == DT_FAILURE {
+		switch s & DT_STATUS_DETAIL_MASK {
+		case DT_WRONG_MAGIC:
+			return "wrong magic number"
+		case DT_WRONG_VERSION:
+			return "wrong version number"
+		case DT_OUT_OF_MEMORY:
+			return "out of memory"
+		case DT_INVALID_PARAM:
+			return "invalid parameter"
+		case DT_OUT_OF_NODES:
+			return "out of nodes"
+		case DT_PARTIAL_RESULT:
+			return "partial result"
+		default:
+			return fmt.Sprintf("unspecified error 0x%x", s)
+		}
+	}
+	if s == DT_IN_PROGRESS {
+		return "in progress"
+	}
+	return "success"
+}
 
 // Returns true of status is success.
 func DtStatusSucceed(status DtStatus) bool {
