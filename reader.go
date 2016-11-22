@@ -7,14 +7,13 @@ import (
 	"reflect"
 )
 
+// DtTileRef is a reference to a tile of the navigation mesh.
 type DtTileRef uint32
 
 type navMeshTileHeader struct {
 	TileRef  DtTileRef
 	DataSize int32
 }
-
-type reader struct{}
 
 // Decode reads a PNG image from r and returns it as an image.Image.
 // The type of Image returned depends on the PNG contents.
