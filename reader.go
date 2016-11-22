@@ -20,7 +20,7 @@ type navMeshTileHeader struct {
 func Decode(r io.Reader) (*DtNavMesh, error) {
 	// Read header.
 	var (
-		hdr NavMeshSetHeader
+		hdr navMeshSetHeader
 		err error
 	)
 
