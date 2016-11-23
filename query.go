@@ -134,26 +134,6 @@ type DtNavMeshQuery struct {
 	//const dtQueryFilter* filter,
 	//DtPolyRef* nearestRef, float* nearestPt) const;
 
-	///// Finds polygons that overlap the search box.
-	/////  @param[in]		center		The center of the search box. [(x, y, z)]
-	/////  @param[in]		extents		The search distance along each axis. [(x, y, z)]
-	/////  @param[in]		filter		The polygon filter to apply to the query.
-	/////  @param[out]	polys		The reference ids of the polygons that overlap the query box.
-	/////  @param[out]	polyCount	The number of polygons in the search result.
-	/////  @param[in]		maxPolys	The maximum number of polygons the search result can hold.
-	///// @returns The status flags for the query.
-	//dtStatus queryPolygons(const float* center, const float* extents,
-	//const dtQueryFilter* filter,
-	//DtPolyRef* polys, int* polyCount, const int maxPolys) const;
-
-	///// Finds polygons that overlap the search box.
-	/////  @param[in]		center		The center of the search box. [(x, y, z)]
-	/////  @param[in]		extents		The search distance along each axis. [(x, y, z)]
-	/////  @param[in]		filter		The polygon filter to apply to the query.
-	/////  @param[in]		query		The query. Polygons found will be batched together and passed to this query.
-	//dtStatus queryPolygons(const float* center, const float* extents,
-	//const dtQueryFilter* filter, DtPolyQuery* query) const;
-
 	///// Finds the non-overlapping navigation polygons in the local neighbourhood around the center position.
 	/////  @param[in]		startRef		The reference id of the polygon where the search starts.
 	/////  @param[in]		centerPos		The center of the query circle. [(x, y, z)]
@@ -268,22 +248,6 @@ type DtNavMeshQuery struct {
 	//const dtQueryFilter* filter, float (*frand)(),
 	//DtPolyRef* randomRef, float* randomPt) const;
 
-	///// Finds the closest point on the specified polygon.
-	/////  @param[in]		ref			The reference id of the polygon.
-	/////  @param[in]		pos			The position to check. [(x, y, z)]
-	/////  @param[out]	closest		The closest point on the polygon. [(x, y, z)]
-	/////  @param[out]	posOverPoly	True of the position is over the polygon.
-	///// @returns The status flags for the query.
-	//dtStatus closestPointOnPoly(DtPolyRef ref, const float* pos, float* closest, bool* posOverPoly) const;
-
-	///// Returns a point on the boundary closest to the source point if the source point is outside the
-	///// polygon's xz-bounds.
-	/////  @param[in]		ref			The reference id to the polygon.
-	/////  @param[in]		pos			The position to check. [(x, y, z)]
-	/////  @param[out]	closest		The closest point. [(x, y, z)]
-	///// @returns The status flags for the query.
-	//dtStatus closestPointOnPolyBoundary(DtPolyRef ref, const float* pos, float* closest) const;
-
 	///// Gets the height of the polygon at the provided position using the height detail. (Most accurate.)
 	/////  @param[in]		ref			The reference id of the polygon.
 	/////  @param[in]		pos			A position within the xz-bounds of the polygon. [(x, y, z)]
@@ -306,38 +270,8 @@ type DtNavMeshQuery struct {
 	//bool isInClosedList(DtPolyRef ref) const;
 	///// @}
 
-	//private:
-	//// Explicitly disabled copy constructor and copy assignment operator
-	//dtNavMeshQuery(const dtNavMeshQuery&);
-	//dtNavMeshQuery& operator=(const dtNavMeshQuery&);
-
-	///// Queries polygons within a tile.
-	//void queryPolygonsInTile(const DtMeshTile* tile, const float* qmin, const float* qmax,
-	//const dtQueryFilter* filter, DtPolyQuery* query) const;
-
-	///// Returns portal points between two polygons.
-	//dtStatus getPortalPoints(DtPolyRef from, DtPolyRef to, float* left, float* right,
-	//unsigned char& fromType, unsigned char& toType) const;
-
-	///// Returns edge mid point between two polygons.
-	//dtStatus getEdgeMidPoint(DtPolyRef from, DtPolyRef to, float* mid) const;
-
-	//// Appends vertex to a straight path
-	//dtStatus appendVertex(const float* pos, const unsigned char flags, const DtPolyRef ref,
-	//float* straightPath, unsigned char* straightPathFlags, DtPolyRef* straightPathRefs,
-	//int* straightPathCount, const int maxStraightPath) const;
-
-	//// Appends intermediate portal points to a straight path.
-	//dtStatus appendPortals(const int startIdx, const int endIdx, const float* endPos, const DtPolyRef* path,
-	//float* straightPath, unsigned char* straightPathFlags, DtPolyRef* straightPathRefs,
-	//int* straightPathCount, const int maxStraightPath, const int options) const;
-
-	//// Gets the path leading to the specified end node.
-	//dtStatus getPathToNode(struct dtNode* endNode, DtPolyRef* path, int* pathCount, int maxPath) const;
-
-	nav   *DtNavMesh  // Pointer to navmesh data.
-	query dtQueryData // Sliced query state.
-
+	nav          *NavMesh     // Pointer to navmesh data.
+	query        queryData    // Sliced query state.
 	tinyNodePool *DtNodePool  // Pointer to small node pool.
 	nodePool     *DtNodePool  // Pointer to node pool.
 	openList     *dtNodeQueue // Pointer to open list queue.
