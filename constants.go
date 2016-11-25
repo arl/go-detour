@@ -7,11 +7,11 @@ const (
 
 const (
 	// The maximum number of vertices per navigation polygon.
-	dtVertsPerPolygon uint32 = 6
+	vertsPerPolygon uint32 = 6
 
 	// A flag that indicates that an off-mesh connection can be traversed in both directions. (Is bidirectional.)
-	dtOffMeshConBidir uint32 = 1
+	offMeshConBidir uint32 = 1
 
 	// The maximum number of user defined area ids.
-	dtMaxAreas int32 = 64
+	maxAreas int32 = 64
 )

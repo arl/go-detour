@@ -8,14 +8,14 @@ import (
 
 func TestFindNearestPolyInTile(t *testing.T) {
 	var (
-		mesh *DtNavMesh
+		mesh *NavMesh
 		err  error
 	)
 
 	pathTests := []struct {
 		pt   d3.Vec3   // point
 		ext  d3.Vec3   // search extents
-		want DtPolyRef // wanted poly ref
+		want PolyRef // wanted poly ref
 	}{
 		{
 			d3.Vec3{5, 0, 10},

@@ -15,7 +15,7 @@ func checkt(t *testing.T, err error) {
 	}
 }
 
-func loadTestNavMesh(fname string) (*DtNavMesh, error) {
+func loadTestNavMesh(fname string) (*NavMesh, error) {
 	var (
 		f   *os.File
 		err error
@@ -31,19 +31,19 @@ func loadTestNavMesh(fname string) (*DtNavMesh, error) {
 
 func TestFindPath(t *testing.T) {
 	var (
-		mesh *DtNavMesh
+		mesh *NavMesh
 		err  error
 	)
 
 	pathTests := []struct {
 		org, dst         d3.Vec3
-		wantPath         []DtPolyRef
+		wantPath         []PolyRef
 		wantStraightPath []d3.Vec3
 	}{
 		{
 			d3.Vec3{5, 0, 10},
 			d3.Vec3{50, 0, 30},
-			[]DtPolyRef{0x440000, 0x460007, 0x520007, 0x540003, 0x5c0001, 0x5e0000, 0x600000, 0x620000},
+			[]PolyRef{0x440000, 0x460007, 0x520007, 0x540003, 0x5c0001, 0x5e0000, 0x600000, 0x620000},
 			[]d3.Vec3{
 				d3.NewVec3XYZ(5, 0, 10),
 				d3.NewVec3XYZ(3.900252, 0.189468, 11.998747),
@@ -62,26 +62,26 @@ func TestFindPath(t *testing.T) {
 
 	for _, tt := range pathTests {
 		var (
-			query          *DtNavMeshQuery // the query instance
-			orgRef, dstRef DtPolyRef       // find poly query results
-			org, dst       d3.Vec3         // find poly query results
-			st             DtStatus        // status flags
-			path           []DtPolyRef     // returned path
+			query          *NavMeshQuery // the query instance
+			orgRef, dstRef PolyRef       // find poly query results
+			org, dst       d3.Vec3       // find poly query results
+			st             Status        // status flags
+			path           []PolyRef     // returned path
 		)
 
-		st, query = NewDtNavMeshQuery(mesh, 1000)
-		if DtStatusFailed(st) {
+		st, query = NewNavMeshQuery(mesh, 1000)
+		if StatusFailed(st) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
 		// define the extents vector for the nearest polygon query
 		extents := d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
-		filter := NewDtQueryFilter()
+		filter := NewQueryFilter()
 
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
-		if DtStatusFailed(st) {
+		if StatusFailed(st) {
 			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
 		}
 		if !mesh.IsValidPolyRef(orgRef) {
@@ -90,7 +90,7 @@ func TestFindPath(t *testing.T) {
 
 		// get dst polygon reference
 		st, dstRef, dst = query.FindNearestPoly(tt.dst, extents, filter)
-		if DtStatusFailed(st) {
+		if StatusFailed(st) {
 			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
 		}
 		if !mesh.IsValidPolyRef(dstRef) {
@@ -101,9 +101,9 @@ func TestFindPath(t *testing.T) {
 		var (
 			pathCount int32
 		)
-		path = make([]DtPolyRef, 100)
+		path = make([]PolyRef, 100)
 		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
-		if DtStatusFailed(st) {
+		if StatusFailed(st) {
 			t.Errorf("query.FindPath failed with 0x%x\n", st)
 		}
 
@@ -115,7 +115,7 @@ func TestFindPath(t *testing.T) {
 		var (
 			straightPath      []d3.Vec3
 			straightPathFlags []uint8
-			straightPathRefs  []DtPolyRef
+			straightPathRefs  []PolyRef
 			maxStraightPath   int32
 		)
 		// slices that receive the straight path
@@ -125,15 +125,15 @@ func TestFindPath(t *testing.T) {
 			straightPath[i] = d3.NewVec3()
 		}
 		straightPathFlags = make([]uint8, maxStraightPath)
-		straightPathRefs = make([]DtPolyRef, maxStraightPath)
+		straightPathRefs = make([]PolyRef, maxStraightPath)
 
 		st, _ = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
-		if DtStatusFailed(st) {
+		if StatusFailed(st) {
 			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
 		}
 
-		if (straightPathFlags[0] & DtStraightPathStart) == 0 {
-			t.Errorf("straightPath start is not flagged DT_STRAIGHTPATH_START")
+		if (straightPathFlags[0] & StraightPathStart) == 0 {
+			t.Errorf("straightPath start is not flagged StraightPathStart")
 		}
 
 		for i := int32(0); i < pathCount; i++ {
@@ -146,17 +146,17 @@ func TestFindPath(t *testing.T) {
 
 func TestFindPathSpecialCases(t *testing.T) {
 	var (
-		mesh *DtNavMesh
+		mesh *NavMesh
 		err  error
 	)
 
 	pathTests := []struct {
-		msg           string   // test description
-		org, dst      d3.Vec3  // path origin and destination points
-		wantStatus    DtStatus // expected status
-		wantPathCount int32    // expected path count
+		msg           string  // test description
+		org, dst      d3.Vec3 // path origin and destination points
+		wantStatus    Status  // expected status
+		wantPathCount int32   // expected path count
 	}{
-		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, DtSuccess, 1},
+		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, Success, 1},
 	}
 
 	mesh, err = loadTestNavMesh("navmesh.bin")
@@ -164,26 +164,26 @@ func TestFindPathSpecialCases(t *testing.T) {
 
 	for _, tt := range pathTests {
 		var (
-			query          *DtNavMeshQuery // the query instance
-			orgRef, dstRef DtPolyRef       // find poly query results
-			org, dst       d3.Vec3         // find poly query results
-			st             DtStatus        // status flags
-			path           []DtPolyRef     // returned path
+			query          *NavMeshQuery // the query instance
+			orgRef, dstRef PolyRef       // find poly query results
+			org, dst       d3.Vec3       // find poly query results
+			st             Status        // status flags
+			path           []PolyRef     // returned path
 		)
 
-		st, query = NewDtNavMeshQuery(mesh, 1000)
-		if DtStatusFailed(st) {
+		st, query = NewNavMeshQuery(mesh, 1000)
+		if StatusFailed(st) {
 			t.Errorf("query creation failed with status 0x%x\n", st)
 		}
 		// define the extents vector for the nearest polygon query
 		extents := d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
-		filter := NewDtQueryFilter()
+		filter := NewQueryFilter()
 
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
-		if DtStatusFailed(st) {
+		if StatusFailed(st) {
 			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
 		}
 		if !mesh.IsValidPolyRef(orgRef) {
@@ -192,7 +192,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 
 		// get dst polygon reference
 		st, dstRef, dst = query.FindNearestPoly(tt.dst, extents, filter)
-		if DtStatusFailed(st) {
+		if StatusFailed(st) {
 			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
 		}
 		if !mesh.IsValidPolyRef(dstRef) {
@@ -202,7 +202,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		// FindPath
 		var pathCount int32
 
-		path = make([]DtPolyRef, 100)
+		path = make([]PolyRef, 100)
 		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
 
 		if st != tt.wantStatus {

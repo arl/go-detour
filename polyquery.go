@@ -8,25 +8,25 @@ import (
 )
 
 // Provides custom polygon query behavior.
-// Used by dtNavMeshQuery.queryPolygons.
-type dtPolyQuery interface {
+// Used by NavMeshQuery.queryPolygons.
+type polyQuery interface {
 
 	// Called for each batch of unique polygons touched by the search area in
-	// dtNavMeshQuery::queryPolygons. This can be called multiple times for a
+	// NavMeshQuery::queryPolygons. This can be called multiple times for a
 	// single query.
-	process(tile *DtMeshTile, polys []*DtPoly, refs []DtPolyRef, count int32)
+	process(tile *MeshTile, polys []*Poly, refs []PolyRef, count int32)
 }
 
-type dtFindNearestPolyQuery struct {
-	query              *DtNavMeshQuery
+type findNearestPolyQuery struct {
+	query              *NavMeshQuery
 	center             d3.Vec3
 	nearestDistanceSqr float32
-	nearestRef         DtPolyRef
+	nearestRef         PolyRef
 	nearestPoint       d3.Vec3
 }
 
-func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center d3.Vec3) *dtFindNearestPolyQuery {
-	return &dtFindNearestPolyQuery{
+func newFindNearestPolyQuery(query *NavMeshQuery, center d3.Vec3) *findNearestPolyQuery {
+	return &findNearestPolyQuery{
 		query:              query,
 		center:             center,
 		nearestDistanceSqr: math32.MaxFloat32,
@@ -35,7 +35,7 @@ func newDtFindNearestPolyQuery(query *DtNavMeshQuery, center d3.Vec3) *dtFindNea
 	}
 }
 
-func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []DtPolyRef, count int32) {
+func (q *findNearestPolyQuery) process(tile *MeshTile, polys []*Poly, refs []PolyRef, count int32) {
 
 	for i := int32(0); i < count; i++ {
 		ref := refs[i]
@@ -70,16 +70,16 @@ func (q *dtFindNearestPolyQuery) process(tile *DtMeshTile, polys []*DtPoly, refs
 	}
 }
 
-type dtCollectPolysQuery struct {
-	polys        []DtPolyRef
+type collectPolysQuery struct {
+	polys        []PolyRef
 	maxPolys     int32
 	numCollected int32
 	overflow     bool
 }
 
-func newDtCollectPolysQuery(polys []DtPolyRef, maxPolys int32) *dtCollectPolysQuery {
+func newCollectPolysQuery(polys []PolyRef, maxPolys int32) *collectPolysQuery {
 
-	return &dtCollectPolysQuery{
+	return &collectPolysQuery{
 		polys:        polys,
 		maxPolys:     maxPolys,
 		numCollected: 0,
@@ -87,7 +87,7 @@ func newDtCollectPolysQuery(polys []DtPolyRef, maxPolys int32) *dtCollectPolysQu
 	}
 }
 
-func (q *dtCollectPolysQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []DtPolyRef, count int32) {
+func (q *collectPolysQuery) process(tile *MeshTile, polys []*Poly, refs []PolyRef, count int32) {
 
 	numLeft := q.maxPolys - q.numCollected
 	toCopy := count
@@ -96,9 +96,7 @@ func (q *dtCollectPolysQuery) process(tile *DtMeshTile, polys []*DtPoly, refs []
 		toCopy = numLeft
 	}
 
-	log.Fatal("to be checked")
-	//memcpy(m_polys + m_numCollected, refs, (size_t)toCopy * sizeof(DtPolyRef));
-	//TODO: check that...
+	log.Fatal("untested")
 	copy(q.polys[q.numCollected:], refs[0:toCopy])
 	q.numCollected += toCopy
 }
