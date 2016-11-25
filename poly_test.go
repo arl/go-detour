@@ -44,9 +44,9 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 	)
 
 	pathTests := []struct {
-		msg     string    // test description
-		pt      d3.Vec3   // point
-		ext     d3.Vec3   // search extents
+		msg     string  // test description
+		pt      d3.Vec3 // point
+		ext     d3.Vec3 // search extents
 		wantSt  Status  // expected status
 		wantRef PolyRef // expected ref (if query succeeded)
 	}{
@@ -72,10 +72,11 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 			q   *NavMeshQuery
 			st  Status
 			ref PolyRef
+			f   QueryFilter
 		)
 
 		st, q = NewNavMeshQuery(mesh, 100)
-		f := NewQueryFilter()
+		f = NewStandardQueryFilter()
 
 		st, ref, _ = q.FindNearestPoly(tt.pt, tt.ext, f)
 		if st != tt.wantSt {
