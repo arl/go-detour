@@ -63,6 +63,7 @@ func TestFindPath(t *testing.T) {
 	for _, tt := range pathTests {
 		var (
 			query          *NavMeshQuery // the query instance
+			filter         QueryFilter   // the query filter
 			orgRef, dstRef PolyRef       // find poly query results
 			org, dst       d3.Vec3       // find poly query results
 			st             Status        // status flags
@@ -77,7 +78,7 @@ func TestFindPath(t *testing.T) {
 		extents := d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
-		filter := NewQueryFilter()
+		filter = NewStandardQueryFilter()
 
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
@@ -165,6 +166,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 	for _, tt := range pathTests {
 		var (
 			query          *NavMeshQuery // the query instance
+			filter         QueryFilter   // the query filter
 			orgRef, dstRef PolyRef       // find poly query results
 			org, dst       d3.Vec3       // find poly query results
 			st             Status        // status flags
@@ -179,7 +181,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		extents := d3.NewVec3XYZ(0, 2, 0)
 
 		// create a default query filter
-		filter := NewQueryFilter()
+		filter = NewStandardQueryFilter()
 
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
