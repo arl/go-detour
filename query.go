@@ -283,7 +283,7 @@ type queryData struct {
 	lastBestNodeCost float32
 	startRef, endRef PolyRef
 	startPos, endPos d3.Vec3
-	filter           *QueryFilter
+	filter           QueryFilter
 	options          uint32
 	raycastLimitSqr  float32
 }
@@ -369,7 +369,7 @@ func NewNavMeshQuery(nav *NavMesh, maxNodes int32) (Status, *NavMeshQuery) {
 func (q *NavMeshQuery) FindPath(
 	startRef, endRef PolyRef,
 	startPos, endPos d3.Vec3,
-	filter *QueryFilter,
+	filter QueryFilter,
 	path *[]PolyRef,
 	pathCount *int32,
 	maxPath int32) Status {
@@ -475,7 +475,7 @@ func (q *NavMeshQuery) FindPath(
 			)
 			q.nav.TileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
 
-			if !filter.passFilter(neighbourRef, neighbourTile, neighbourPoly) {
+			if !filter.PassFilter(neighbourRef, neighbourTile, neighbourPoly) {
 				continue
 			}
 
@@ -1321,7 +1321,7 @@ func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 // Note: If the search box does not intersect any polygons st will be
 // Success, but ref will be zero. So if in doubt, check ref before using pt.
 func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
-	filter *QueryFilter) (st Status, ref PolyRef, pt d3.Vec3) {
+	filter QueryFilter) (st Status, ref PolyRef, pt d3.Vec3) {
 
 	assert.True(q.nav != nil, "Nav should not be nil")
 
@@ -1360,7 +1360,7 @@ func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 // are included in the partial result set is undefined.
 func (q *NavMeshQuery) queryPolygons6(
 	center, extents []float32,
-	filter *QueryFilter,
+	filter QueryFilter,
 	polys []PolyRef,
 	polyCount *int32,
 	maxPolys int32) Status {
@@ -1398,7 +1398,7 @@ func (q *NavMeshQuery) queryPolygons6(
 // until all overlapping polygons have been processed.
 func (q *NavMeshQuery) queryPolygons4(
 	center, extents d3.Vec3,
-	filter *QueryFilter,
+	filter QueryFilter,
 	query polyQuery) Status {
 
 	assert.True(q.nav != nil, "navmesh should not be nill")
@@ -1432,7 +1432,7 @@ func (q *NavMeshQuery) queryPolygons4(
 func (q *NavMeshQuery) queryPolygonsInTile(
 	tile *MeshTile,
 	qmin, qmax []float32,
-	filter *QueryFilter,
+	filter QueryFilter,
 	query polyQuery) {
 
 	assert.True(q.nav != nil, "navmesh should not be nill")
@@ -1486,7 +1486,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 
 			if isLeafNode && overlap {
 				ref := base | PolyRef(node.I)
-				if filter.passFilter(ref, tile, &tile.Polys[node.I]) {
+				if filter.PassFilter(ref, tile, &tile.Polys[node.I]) {
 					polyRefs[n] = ref
 					polys[n] = &tile.Polys[node.I]
 
@@ -1519,7 +1519,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 			}
 			// Must pass filter
 			ref := base | PolyRef(i)
-			if !filter.passFilter(ref, tile, p) {
+			if !filter.PassFilter(ref, tile, p) {
 				continue
 			}
 			// Calc polygon bounds.

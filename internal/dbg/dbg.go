@@ -52,8 +52,8 @@ func findPath(mesh *detour.NavMesh, org, dst d3.Vec3) ([]detour.PolyRef, error) 
 	var (
 		orgRef, dstRef detour.PolyRef       // references of org/dst polygon refs
 		query          *detour.NavMeshQuery // the query instance
-		filter         *detour.QueryFilter  // filter to use for various queries
-		extents        d3.Vec3                // search distance for polygon search (3 axis)
+		filter         detour.QueryFilter   // filter to use for various queries
+		extents        d3.Vec3              // search distance for polygon search (3 axis)
 		nearestPt      d3.Vec3
 		st             detour.Status
 		path           []detour.PolyRef
@@ -67,7 +67,7 @@ func findPath(mesh *detour.NavMesh, org, dst d3.Vec3) ([]detour.PolyRef, error) 
 	extents = d3.NewVec3XYZ(0, 2, 0)
 
 	// create a default query filter
-	filter = detour.NewQueryFilter()
+	filter = detour.NewStandardQueryFilter()
 
 	// get org polygon reference
 	st, orgRef, nearestPt = query.FindNearestPoly(org, extents, filter)
