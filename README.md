@@ -3,7 +3,7 @@
 
 ## What is go-detour?
 
-**[go-detour][1]** is a [Detour][2], an amazing multi-platform library for
+**[go-detour][1]** is a port of [Detour][2], an amazing multi-platform library for
 navigation mesh path-finding, to the [Go language][3].
 
 
