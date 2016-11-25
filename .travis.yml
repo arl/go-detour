@@ -1,0 +1,20 @@
+language: go
+
+go: 
+ - 1.7
+
+sudo: false
+
+before_script:
+  - go vet ./...
+
+before_install:
+- go get github.com/axw/gocov/gocov
+- go get github.com/mattn/goveralls
+- if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+- go get github.com/golang/lint/golint
+
+script:
+- ./golint.bash
+- ./testandcover.bash
+- $HOME/gopath/bin/goveralls -coverprofile=profile.cov -service=travis-ci
