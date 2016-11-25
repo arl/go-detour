@@ -20,7 +20,7 @@ import "github.com/aurelien-rainone/gogeo/f32/d3"
 //   - Setting the include flags to 0 will result in all polygons being
 //     excluded.
 //
-//  Custom Implementations<
+//  Custom Implementations
 //
 //   - DT_VIRTUAL_QUERYFILTER must be defined in order to extend this class.
 //
