@@ -110,7 +110,7 @@ func (qf *QueryFilter) PassFilter(ref PolyRef, tile *MeshTile, poly *Poly) bool 
 //   curRef   The reference id of the current polygon.
 //   curTile  The tile containing the current polygon.
 //   curPoly  The current polygon.
-//   nextRef  The refernece id of the next polygon.
+//   nextRef  The reference id of the next polygon.
 //   nextTile The tile containing the next polygon.
 //   nextPoly The next polygon.
 func (qf *QueryFilter) Cost(pa, pb d3.Vec3,
