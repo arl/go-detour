@@ -15,8 +15,8 @@ type navMeshTileHeader struct {
 	DataSize int32
 }
 
-// Decode reads a PNG image from r and returns it as an image.Image.
-// The type of Image returned depends on the PNG contents.
+// Decode reads a tiled navigation mesh from r and returns the loaded NavMesh
+// object or nil and an error in case of failure.
 func Decode(r io.Reader) (*NavMesh, error) {
 	// Read header.
 	var (
