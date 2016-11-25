@@ -475,7 +475,7 @@ func (q *NavMeshQuery) FindPath(
 			)
 			q.nav.TileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
 
-			if !filter.passFilter(neighbourRef, neighbourTile, neighbourPoly) {
+			if !filter.PassFilter(neighbourRef, neighbourTile, neighbourPoly) {
 				continue
 			}
 
@@ -1486,7 +1486,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 
 			if isLeafNode && overlap {
 				ref := base | PolyRef(node.I)
-				if filter.passFilter(ref, tile, &tile.Polys[node.I]) {
+				if filter.PassFilter(ref, tile, &tile.Polys[node.I]) {
 					polyRefs[n] = ref
 					polys[n] = &tile.Polys[node.I]
 
@@ -1519,7 +1519,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 			}
 			// Must pass filter
 			ref := base | PolyRef(i)
-			if !filter.passFilter(ref, tile, p) {
+			if !filter.PassFilter(ref, tile, p) {
 				continue
 			}
 			// Calc polygon bounds.

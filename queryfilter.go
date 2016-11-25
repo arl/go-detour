@@ -88,13 +88,13 @@ func (qf *QueryFilter) ExcludeFlags() uint16 { return qf.excludeFlags }
 // SetExcludeFlags sets the exclude flags for the filter.
 func (qf *QueryFilter) SetExcludeFlags(flags uint16) { qf.excludeFlags = flags }
 
-// passFilter returns true if the polygon can be visited.  (I.e. Is traversable.)
+// PassFilter returns true if the polygon can be visited.  (I.e. Is traversable.)
 //
 //  Arguments:
 //   ref     The reference id of the polygon test.
 //   tile    The tile containing the polygon.
 //   poly    The polygon to test.
-func (qf *QueryFilter) passFilter(ref PolyRef, tile *MeshTile, poly *Poly) bool {
+func (qf *QueryFilter) PassFilter(ref PolyRef, tile *MeshTile, poly *Poly) bool {
 	return (poly.Flags&qf.includeFlags) != 0 && (poly.Flags&qf.excludeFlags) == 0
 }
 
