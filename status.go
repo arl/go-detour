@@ -24,7 +24,7 @@ const (
 
 // Implementation of the error interface
 func (s Status) Error() string {
-	if s == Failure {
+	if s&Failure != 0 {
 		switch s & StatusDetailMask {
 		case WrongMagic:
 			return "wrong magic number"

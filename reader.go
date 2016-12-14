@@ -69,6 +69,11 @@ func Decode(r io.Reader) (*NavMesh, error) {
 		if status&Failure != 0 {
 			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
 		}
+		//fmt.Printf("tile %d: %v\n", i, mesh.Tiles[i])
+		if len(mesh.Tiles[i].OffMeshCons) > 0 {
+			fmt.Printf("tile %d has off-mesh connections,\n%v\n", i, mesh.Tiles[i].OffMeshCons)
+			fmt.Println("links", mesh.Tiles[i].Links)
+		}
 	}
 	return &mesh, nil
 }

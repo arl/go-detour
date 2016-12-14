@@ -232,6 +232,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 
 	tile.OffMeshCons = make([]OffMeshConnection, hdr.OffMeshConCount)
 	if err = r.readSlice(&tile.OffMeshCons, binary.LittleEndian); err != nil {
+		log.Println("hdr.OffMeshConCount:", hdr.OffMeshConCount)
 		log.Fatalln("couldn't read tile.OffMeshCons:", err)
 	}
 
@@ -366,7 +367,7 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 }
 
 // getPolyRefBase returns the polygon reference for the base polygon in the
-//specified tile.
+// specified tile.
 //
 // Example use case:
 //  base := navmesh.GetPolyRefBase(tile);
@@ -462,8 +463,7 @@ type bvNode struct {
 // two vertices.
 type OffMeshConnection struct {
 	// The endpoints of the connection. [(ax, ay, az, bx, by, bz)]
-	//Pos [6]float32
-	PosA, PosB d3.Vec3
+	Pos [6]float32
 
 	// The radius of the endpoints. [Limit: >= 0]
 	Rad float32
@@ -482,7 +482,7 @@ type OffMeshConnection struct {
 
 	// The id of the offmesh connection. (User assigned
 	// when the navigation mesh is built)
-	UserID uint
+	UserID uint32
 }
 
 const (
@@ -562,7 +562,7 @@ func (m *NavMesh) baseOffMeshLinks(tile *MeshTile) {
 		ext = []float32{con.Rad, tile.Header.WalkableClimb, con.Rad}
 
 		// Find polygon to connect to.
-		p = con.PosA // First vertex
+		p = con.Pos[0:3] // First vertex
 		nearestPt := make([]float32, 3)
 		ref := m.FindNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
@@ -915,7 +915,6 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 			continue
 		}
 
-		panic("untested")
 		targetPoly := &target.Polys[targetCon.Poly]
 		// Skip off-mesh connections which start location could not be connected at all.
 		if targetPoly.FirstLink == nullLink {
@@ -925,7 +924,7 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 		ext := []float32{targetCon.Rad, target.Header.WalkableClimb, targetCon.Rad}
 
 		// Find polygon to connect to.
-		p := targetCon.PosB
+		p := targetCon.Pos[3:6]
 		nearestPt := d3.NewVec3()
 		ref := m.FindNearestPolyInTile(tile, p, ext, nearestPt)
 		if ref == 0 {
