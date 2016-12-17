@@ -1,5 +1,10 @@
 package detour
 
+import (
+	"fmt"
+	"time"
+)
+
 /// Recast log categories.
 /// @see rcContext
 type rcLogCategory int
@@ -21,7 +26,7 @@ type rcContexter interface {
 	///  @param[in]		category	The category of the message.
 	///  @param[in]		msg			The formatted message.
 	///  @param[in]		len			The length of the formatted message.
-	doLog(category rcLogCategory, format string, args ...interface{})
+	doLog(category rcLogCategory, msg string)
 
 	/// Clears all timers. (Resets all to unused.)
 	doResetTimers()
@@ -37,7 +42,7 @@ type rcContexter interface {
 	/// Returns the total accumulated time of the specified performance timer.
 	///  @param[in]		label	The category of the timer.
 	///  @return The accumulated time of the timer, or -1 if timers are disabled or the timer has never been started.
-	doGetAccumulatedTime(label rcTimerLabel) int
+	doGetAccumulatedTime(label rcTimerLabel) time.Duration
 }
 
 type rcContext struct {
@@ -100,7 +105,7 @@ func (ctx *rcContext) log(category rcLogCategory, format string, v ...interface{
 	if !ctx.m_logEnabled {
 		return
 	}
-	ctx.doLog(category, format, v...)
+	ctx.doLog(category, fmt.Sprintf(format, v...))
 }
 
 func (ctx *rcContext) Progressf(format string, v ...interface{}) {
@@ -145,11 +150,11 @@ func (ctx *rcContext) stopTimer(label rcTimerLabel) {
 /// Returns the total accumulated time of the specified performance timer.
 ///  @param	label	The category of the timer.
 ///  @return The accumulated time of the timer, or -1 if timers are disabled or the timer has never been started.
-func (ctx *rcContext) getAccumulatedTime(label rcTimerLabel) int {
+func (ctx *rcContext) AccumulatedTime(label rcTimerLabel) time.Duration {
 
 	if ctx.m_timerEnabled {
 		return ctx.doGetAccumulatedTime(label)
 	} else {
-		return -1
+		return time.Duration(0)
 	}
 }
