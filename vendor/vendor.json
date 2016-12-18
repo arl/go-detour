@@ -9,6 +9,12 @@
 			"revisionTime": "2016-11-04T20:36:14Z"
 		},
 		{
+			"checksumSHA1": "naASsiAE/p1LeW3ZHwiHR0vxRDo=",
+			"path": "github.com/aurelien-rainone/gobj",
+			"revision": "cc2511db4cc51926c472a7ec6fb4a462eb607e15",
+			"revisionTime": "2016-12-18T16:28:25Z"
+		},
+		{
 			"checksumSHA1": "rwCZrvXWJz+PEVH8nS4PPZp/uN0=",
 			"path": "github.com/aurelien-rainone/gogeo/f32",
 			"revision": "cf71a1134c4a279b382e8dc150da23382442e861",
