@@ -1,150 +1,15 @@
 package gobj
 
 import (
-	"errors"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 )
 
-// Vertex represents a 4D vertex.
-type Vertex [4]float64
-
-// NewVertex2D returns a 2D Vertex.
-func NewVertex2D(x, y float64) Vertex {
-	return Vertex{x, y, 0, 0}
-}
-
-// NewVertex3D returns a 3D Vertex.
-func NewVertex3D(x, y, z float64) Vertex {
-	return Vertex{x, y, z, 0}
-}
-
-// NewVertex4D returns a 4D Vertex.
-func NewVertex4D(x, y, z, w float64) Vertex {
-	return Vertex{x, y, z, w}
-}
-
-// Scale scales every coordinates by a given scale factor.
-func (v *Vertex) Scale(f float64) {
-	for i := range v {
-		v[i] *= f
-	}
-}
-
-// X returns the vertex X component.
-func (v Vertex) X() float64 {
-	return v[0]
-}
-
-// Y returns the vertex Y component.
-func (v Vertex) Y() float64 {
-	return v[1]
-}
-
-// Z returns the vertex Z component.
-func (v Vertex) Z() float64 {
-	return v[2]
-}
-
-// W returns the vertex W component.
-func (v Vertex) W() float64 {
-	return v[3]
-}
-
-// Set initializes a vertex from a string array where every string represents a
-// vertex component.
-func (v *Vertex) Set(s []string) error {
-	var (
-		err error
-	)
-
-	if len(s) > 4 {
-		return errors.New("Vertex.Set: invalid string length")
-	}
-
-	for i := range s {
-		if v[i], err = strconv.ParseFloat(s[i], 64); err != nil {
-			return fmt.Errorf("invalid syntax \"%v\": %s", s[i], err)
-		}
-	}
-
-	return nil
-}
-
 // Polygon represents a polygonal face-element.
-type Polygon []Vertex
-
-// Scale applies f scale factor to every coord of the polygon vertices.
-func (p *Polygon) Scale(f float64) {
-	for i := range *p {
-		(*p)[i].Scale(f)
-	}
-}
-
-// AABB computes and returns the axis-aligned bounding-box
-// of the polygon.
-func (p *Polygon) AABB() AABB {
-	bb := NewAABB()
-	for _, v := range *p {
-		updateMin(&bb.MinX, v.X())
-		updateMin(&bb.MinY, v.Y())
-		updateMin(&bb.MinZ, v.Z())
-		updateMax(&bb.MaxX, v.X())
-		updateMax(&bb.MaxY, v.Y())
-		updateMax(&bb.MaxZ, v.Z())
-	}
-	return bb
-}
-
-// AABB is an axis-aligned bounding box.
-type AABB struct {
-	MinX, MaxX float64
-	MinY, MaxY float64
-	MinZ, MaxZ float64
-}
-
-// NewAABB initializes the bounding box.
 //
-// The bounding box will be valid after the first call to extend.
-func NewAABB() AABB {
-	return AABB{
-		MinX: math.Inf(1),
-		MinY: math.Inf(1),
-		MinZ: math.Inf(1),
-		MaxX: math.Inf(-1),
-		MaxY: math.Inf(-1),
-		MaxZ: math.Inf(-1),
-	}
-}
-
-func (bb *AABB) extend(other AABB) {
-	// update the min and max for each coord
-	updateMin(&bb.MinX, other.MinX)
-	updateMin(&bb.MinY, other.MinY)
-	updateMin(&bb.MinZ, other.MinZ)
-	updateMax(&bb.MaxX, other.MaxX)
-	updateMax(&bb.MaxY, other.MaxY)
-	updateMax(&bb.MaxZ, other.MaxZ)
-}
-
-// Scale scales the axis aligned bounding box.
-func (bb *AABB) Scale(f float64) {
-	bb.MinX *= f
-	bb.MinY *= f
-	bb.MinZ *= f
-	bb.MaxX *= f
-	bb.MaxY *= f
-	bb.MaxZ *= f
-}
-
-func (bb AABB) String() string {
-	return fmt.Sprintf("x[%f, %f], y[%f, %f], z[%f, %f]",
-		bb.MinX, bb.MaxX,
-		bb.MinY, bb.MaxY,
-		bb.MinZ, bb.MaxZ)
-}
+// It is a slice of the indices of the vertices of which the face is made of.
+type Polygon []int32
 
 // OBJFile describes the content of an OBJ geometry definition file.
 type OBJFile struct {
@@ -175,7 +40,6 @@ func (of *OBJFile) parseVertex(kw string, data []string) error {
 	if err != nil {
 		return err
 	}
-	// discard the Z coordinate
 	of.verts = append(of.verts, v)
 	return nil
 }
@@ -189,11 +53,19 @@ func (of *OBJFile) parseFace(kw string, data []string) error {
 		if err != nil {
 			return fmt.Errorf("invalid vertex coordinate value \"%s\"", s)
 		}
-		p = append(p, of.verts[vidx-1])
+		p = append(p, int32(vidx-1))
 	}
 
-	// extend the mesh bounding box with the polygon's one
-	of.aabb.extend(p.AABB())
+	// extend the mesh aabb with the polygon's one
+	for _, vidx := range p {
+		updateMin(&of.aabb.MinX, of.verts[vidx].X())
+		updateMin(&of.aabb.MinY, of.verts[vidx].Y())
+		updateMin(&of.aabb.MinZ, of.verts[vidx].Z())
+		updateMax(&of.aabb.MaxX, of.verts[vidx].X())
+		updateMax(&of.aabb.MaxY, of.verts[vidx].Y())
+		updateMax(&of.aabb.MaxZ, of.verts[vidx].Z())
+	}
+
 	of.polys = append(of.polys, p)
 	return nil
 }
