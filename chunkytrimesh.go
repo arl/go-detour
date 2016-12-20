@@ -26,7 +26,7 @@ type BoundsItem struct {
 	i    int32
 }
 
-func calcExtends(items []*BoundsItem, nitems, imin, imax int32, bmin []float32, bmax []float32) {
+func calcExtends(items []BoundsItem, nitems, imin, imax int32, bmin []float32, bmax []float32) {
 	bmin[0] = items[imin].bmin[0]
 	bmin[1] = items[imin].bmin[1]
 
@@ -58,7 +58,7 @@ func longestAxis(x, y float32) int {
 	return 0
 }
 
-type alongXAxis []*BoundsItem
+type alongXAxis []BoundsItem
 
 // Len is the number of elements in the collection.
 func (s alongXAxis) Len() int {
@@ -83,10 +83,10 @@ func (s alongXAxis) Less(i, j int) bool {
 
 // Swap swaps the elements with indexes i and j.
 func (s alongXAxis) Swap(i, j int) {
-	s[i], s[j] = s[j], s[j]
+	s[i], s[j] = s[j], s[i]
 }
 
-type alongYAxis []*BoundsItem
+type alongYAxis []BoundsItem
 
 // Len is the number of elements in the collection.
 func (s alongYAxis) Len() int {
@@ -111,10 +111,10 @@ func (s alongYAxis) Less(i, j int) bool {
 
 // Swap swaps the elements with indexes i and j.
 func (s alongYAxis) Swap(i, j int) {
-	s[i], s[j] = s[j], s[j]
+	s[i], s[j] = s[j], s[i]
 }
 
-func subdivide(items []*BoundsItem, nitems, imin, imax, trisPerChunk int32,
+func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 	curNode *int32, nodes []rcChunkyTriMeshNode, maxNodes int32,
 	curTri *int32, outTris, inTris []int32) {
 
@@ -191,7 +191,7 @@ func rcCreateChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk in
 	cm.ntris = ntris
 
 	// Build tree
-	items := make([]*BoundsItem, ntris)
+	items := make([]BoundsItem, ntris)
 	if len(items) == 0 {
 		return false
 	}
