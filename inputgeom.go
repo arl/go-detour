@@ -84,9 +84,9 @@ type InputGeom struct {
 func (ig *InputGeom) load(ctx *rcContext, path string) bool {
 
 	switch filepath.Ext(path) {
-	case "obj":
+	case ".obj":
 		return ig.loadMesh(ctx, path)
-	case "gset":
+	case ".gset":
 		//return loadGeomSet(ctx, filepath);
 		log.Printf("gset input geometry not implemented")
 	}
@@ -101,7 +101,7 @@ func (ig *InputGeom) loadMesh(ctx *rcContext, path string) bool {
 	ig.m_offMeshConCount = 0
 	ig.m_volumeCount = 0
 
-	ig.m_mesh = new(rcMeshLoaderObj)
+	ig.m_mesh = newMeshLoaderObj()
 	if ig.m_mesh == nil {
 		ctx.log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.")
 		return false

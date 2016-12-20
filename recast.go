@@ -4,12 +4,12 @@ import "github.com/aurelien-rainone/gogeo/f32/d3"
 
 func rcCalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
-	bmin = verts[:3]
-	bmax = verts[:3]
-	for i := int32(1); i < nv; i++ {
-		v := verts[i*3 : 3+i*3]
+	copy(bmin, verts[:3])
+	copy(bmax, verts[:3])
+	for i := int32(0); i < nv; i += 3 {
+		v := verts[i : i+3]
 		d3.Vec3Min(bmin, v)
-		d3.Vec3Min(bmax, v)
+		d3.Vec3Max(bmax, v)
 	}
 }
 
