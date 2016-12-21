@@ -125,3 +125,43 @@ func (ig *InputGeom) loadMesh(ctx *rcContext, path string) bool {
 
 	return true
 }
+
+/// Method to return static mesh data.
+func (ig *InputGeom) Mesh() *rcMeshLoaderObj {
+	return ig.m_mesh
+}
+
+func (ig *InputGeom) MeshBoundsMin() [3]float32 {
+	return ig.m_meshBMin
+}
+
+func (ig *InputGeom) MeshBoundsMax() [3]float32 {
+	return ig.m_meshBMax
+}
+
+func (ig *InputGeom) NavMeshBoundsMin() [3]float32 {
+	if ig.m_hasBuildSettings {
+		return ig.m_buildSettings.navMeshBMin
+	} else {
+		return ig.m_meshBMin
+	}
+}
+
+func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
+	if ig.m_hasBuildSettings {
+		return ig.m_buildSettings.navMeshBMax
+	} else {
+		return ig.m_meshBMax
+	}
+}
+
+func (ig *InputGeom) ChunkyMesh() *rcChunkyTriMesh {
+	return ig.m_chunkyMesh
+}
+
+func (ig *InputGeom) BuildSettings() *BuildSettings {
+	if ig.m_hasBuildSettings {
+		return &ig.m_buildSettings
+	}
+	return nil
+}

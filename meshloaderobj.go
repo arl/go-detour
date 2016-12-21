@@ -91,3 +91,31 @@ func (mlo *rcMeshLoaderObj) load(filename string) error {
 	mlo.m_filename = filename
 	return nil
 }
+
+func (mlo *rcMeshLoaderObj) Filename() string {
+	return mlo.m_filename
+}
+
+func (mlo *rcMeshLoaderObj) Scale() float32 {
+	return mlo.m_scale
+}
+
+func (mlo *rcMeshLoaderObj) Verts() []float32 {
+	return mlo.m_verts
+}
+
+func (mlo *rcMeshLoaderObj) Tris() []int32 {
+	return mlo.m_tris
+}
+
+func (mlo *rcMeshLoaderObj) Normals() []float32 {
+	return mlo.m_normals
+}
+
+func (mlo *rcMeshLoaderObj) VertCount() int32 {
+	return mlo.m_vertCount
+}
+
+func (mlo *rcMeshLoaderObj) TriCount() int32 {
+	return mlo.m_triCount
+}
