@@ -1,4 +1,4 @@
-package detour
+package recast
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-type rcMeshLoaderObj struct {
+type MeshLoaderObj struct {
 	m_filename  string
 	m_scale     float32
 	m_verts     []float32
@@ -18,13 +18,13 @@ type rcMeshLoaderObj struct {
 	m_triCount  int32
 }
 
-func newMeshLoaderObj() *rcMeshLoaderObj {
-	return &rcMeshLoaderObj{
+func NewMeshLoaderObj() *MeshLoaderObj {
+	return &MeshLoaderObj{
 		m_scale: 1.0,
 	}
 }
 
-func (mlo *rcMeshLoaderObj) load(filename string) error {
+func (mlo *MeshLoaderObj) Load(filename string) error {
 	var (
 		obj *gobj.OBJFile
 		err error
@@ -92,30 +92,30 @@ func (mlo *rcMeshLoaderObj) load(filename string) error {
 	return nil
 }
 
-func (mlo *rcMeshLoaderObj) Filename() string {
+func (mlo *MeshLoaderObj) Filename() string {
 	return mlo.m_filename
 }
 
-func (mlo *rcMeshLoaderObj) Scale() float32 {
+func (mlo *MeshLoaderObj) Scale() float32 {
 	return mlo.m_scale
 }
 
-func (mlo *rcMeshLoaderObj) Verts() []float32 {
+func (mlo *MeshLoaderObj) Verts() []float32 {
 	return mlo.m_verts
 }
 
-func (mlo *rcMeshLoaderObj) Tris() []int32 {
+func (mlo *MeshLoaderObj) Tris() []int32 {
 	return mlo.m_tris
 }
 
-func (mlo *rcMeshLoaderObj) Normals() []float32 {
+func (mlo *MeshLoaderObj) Normals() []float32 {
 	return mlo.m_normals
 }
 
-func (mlo *rcMeshLoaderObj) VertCount() int32 {
+func (mlo *MeshLoaderObj) VertCount() int32 {
 	return mlo.m_vertCount
 }
 
-func (mlo *rcMeshLoaderObj) TriCount() int32 {
+func (mlo *MeshLoaderObj) TriCount() int32 {
 	return mlo.m_triCount
 }

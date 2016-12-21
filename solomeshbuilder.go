@@ -1,8 +1,10 @@
 package detour
 
+import "github.com/aurelien-rainone/go-detour/recast"
+
 type SoloMesh struct {
-	ctx      *rcContext
-	buildCtx BuildContext
+	ctx      *recast.Context
+	buildCtx recast.BuildContext
 	geom     InputGeom
 	meshName string
 	//cfg      rcConfig
@@ -10,7 +12,7 @@ type SoloMesh struct {
 
 func NewSoloMesh() *SoloMesh {
 	sm := &SoloMesh{}
-	sm.ctx = newRcContext(true, &sm.buildCtx)
+	sm.ctx = recast.NewContext(true, &sm.buildCtx)
 	return sm
 }
 
@@ -19,7 +21,7 @@ func (sm *SoloMesh) Load(path string) bool {
 	if !sm.geom.load(sm.ctx, path) {
 		return false
 	}
-	sm.buildCtx.dumpLog("Geom load log %s:", path)
+	sm.buildCtx.DumpLog("Geom load log %s:", path)
 	return true
 }
 

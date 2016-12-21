@@ -1,4 +1,4 @@
-package detour
+package recast
 
 import (
 	"sort"
@@ -6,14 +6,14 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-type rcChunkyTriMeshNode struct {
+type ChunkyTriMeshNode struct {
 	bmin [2]float32
 	bmax [2]float32
 	i, n int32
 }
 
-type rcChunkyTriMesh struct {
-	nodes           []rcChunkyTriMeshNode
+type ChunkyTriMesh struct {
+	nodes           []ChunkyTriMeshNode
 	nnodes          int32
 	tris            []int32
 	ntris           int32
@@ -115,7 +115,7 @@ func (s alongYAxis) Swap(i, j int) {
 }
 
 func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
-	curNode *int32, nodes []rcChunkyTriMeshNode, maxNodes int32,
+	curNode *int32, nodes []ChunkyTriMeshNode, maxNodes int32,
 	curTri *int32, outTris, inTris []int32) {
 
 	inum := imax - imin
@@ -176,9 +176,9 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 
 /// Creates partitioned triangle mesh (AABB tree),
 /// where each node contains at max trisPerChunk triangles.
-func rcCreateChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int32, cm *rcChunkyTriMesh) bool {
+func CreateChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int32, cm *ChunkyTriMesh) bool {
 	nchunks := (ntris + trisPerChunk - 1) / trisPerChunk
-	cm.nodes = make([]rcChunkyTriMeshNode, nchunks*4)
+	cm.nodes = make([]ChunkyTriMeshNode, nchunks*4)
 	if len(cm.nodes) == 0 {
 		return false
 	}
@@ -261,7 +261,7 @@ func checkOverlapRect(amin, amax, bmin, bmax [2]float32) bool {
 }
 
 /// Returns the chunk indices which overlap the input rectable.
-func (cm *rcChunkyTriMesh) rcGetChunksOverlappingRect(bmin, bmax [2]float32, ids []int32, maxIds int32) bool {
+func (cm *ChunkyTriMesh) rcGetChunksOverlappingRect(bmin, bmax [2]float32, ids []int32, maxIds int32) bool {
 	// Traverse tree
 	var i, n int32
 	for i < cm.nnodes {
@@ -325,7 +325,7 @@ func checkOverlapSegment(p, q, bmin, bmax [2]float32) bool {
 }
 
 /// Returns the chunk indices which overlap the input segment.
-func (cm *rcChunkyTriMesh) rcGetChunksOverlappingSegment(p, q [2]float32, ids []int32, maxIds int32) int32 {
+func (cm *ChunkyTriMesh) rcGetChunksOverlappingSegment(p, q [2]float32, ids []int32, maxIds int32) int32 {
 	// Traverse tree
 	var i, n int32
 	for i < cm.nnodes {

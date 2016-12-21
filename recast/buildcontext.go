@@ -1,4 +1,4 @@
-package detour
+package recast
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ type BuildContext struct {
 }
 
 /// Dumps the log to stdout.
-func (ctx *BuildContext) dumpLog(format string, args ...interface{}) {
+func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
 
 	// Print header.
 	fmt.Printf(format+"\n", args...)
@@ -48,7 +48,7 @@ func (ctx *BuildContext) doResetLog() {
 	ctx.m_messageCount = 0
 }
 
-func (ctx *BuildContext) doLog(category rcLogCategory, msg string) {
+func (ctx *BuildContext) doLog(category LogCategory, msg string) {
 	if ctx.m_messageCount >= MAX_MESSAGES {
 		return
 	}
@@ -70,11 +70,11 @@ func (ctx *BuildContext) doResetTimers() {
 	}
 }
 
-func (ctx *BuildContext) doStartTimer(label rcTimerLabel) {
+func (ctx *BuildContext) doStartTimer(label TimerLabel) {
 	ctx.m_startTime[label] = time.Now()
 }
 
-func (ctx *BuildContext) doStopTimer(label rcTimerLabel) {
+func (ctx *BuildContext) doStopTimer(label TimerLabel) {
 	deltaTime := time.Now().Sub(ctx.m_startTime[label])
 	if ctx.m_accTime[label] == 0 {
 		ctx.m_accTime[label] = deltaTime
@@ -83,6 +83,6 @@ func (ctx *BuildContext) doStopTimer(label rcTimerLabel) {
 	}
 }
 
-func (ctx *BuildContext) doGetAccumulatedTime(label rcTimerLabel) time.Duration {
+func (ctx *BuildContext) doGetAccumulatedTime(label TimerLabel) time.Duration {
 	return ctx.m_accTime[label]
 }

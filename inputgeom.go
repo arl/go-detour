@@ -3,6 +3,8 @@ package detour
 import (
 	"log"
 	"path/filepath"
+
+	"github.com/aurelien-rainone/go-detour/recast"
 )
 
 const (
@@ -56,8 +58,8 @@ type BuildSettings struct {
 }
 
 type InputGeom struct {
-	m_chunkyMesh *rcChunkyTriMesh
-	m_mesh       *rcMeshLoaderObj
+	m_chunkyMesh *recast.ChunkyTriMesh
+	m_mesh       *recast.MeshLoaderObj
 
 	m_meshBMin, m_meshBMax [3]float32
 	m_buildSettings        BuildSettings
@@ -81,7 +83,7 @@ type InputGeom struct {
 	//@}
 }
 
-func (ig *InputGeom) load(ctx *rcContext, path string) bool {
+func (ig *InputGeom) load(ctx *recast.Context, path string) bool {
 
 	switch filepath.Ext(path) {
 	case ".obj":
@@ -93,7 +95,7 @@ func (ig *InputGeom) load(ctx *rcContext, path string) bool {
 	return false
 }
 
-func (ig *InputGeom) loadMesh(ctx *rcContext, path string) bool {
+func (ig *InputGeom) loadMesh(ctx *recast.Context, path string) bool {
 	if ig.m_mesh != nil {
 		ig.m_chunkyMesh = nil
 		ig.m_mesh = nil
@@ -101,25 +103,25 @@ func (ig *InputGeom) loadMesh(ctx *rcContext, path string) bool {
 	ig.m_offMeshConCount = 0
 	ig.m_volumeCount = 0
 
-	ig.m_mesh = newMeshLoaderObj()
+	ig.m_mesh = recast.NewMeshLoaderObj()
 	if ig.m_mesh == nil {
-		ctx.log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.")
+		ctx.Log(recast.RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.")
 		return false
 	}
-	if ig.m_mesh.load(path) != nil {
-		ctx.log(RC_LOG_ERROR, "buildTiledNavigation: Could not load '%s'", path)
+	if ig.m_mesh.Load(path) != nil {
+		ctx.Log(recast.RC_LOG_ERROR, "buildTiledNavigation: Could not load '%s'", path)
 		return false
 	}
 
-	rcCalcBounds(ig.m_mesh.m_verts, ig.m_mesh.m_vertCount, ig.m_meshBMin[:], ig.m_meshBMax[:])
+	recast.CalcBounds(ig.m_mesh.Verts(), ig.m_mesh.VertCount(), ig.m_meshBMin[:], ig.m_meshBMax[:])
 
-	ig.m_chunkyMesh = new(rcChunkyTriMesh)
+	ig.m_chunkyMesh = new(recast.ChunkyTriMesh)
 	if ig.m_chunkyMesh == nil {
-		ctx.log(RC_LOG_ERROR, "buildTiledNavigation: Out of memory 'm_chunkyMesh'.")
+		ctx.Log(recast.RC_LOG_ERROR, "buildTiledNavigation: Out of memory 'm_chunkyMesh'.")
 		return false
 	}
-	if !rcCreateChunkyTriMesh(ig.m_mesh.m_verts, ig.m_mesh.m_tris, ig.m_mesh.m_triCount, 256, ig.m_chunkyMesh) {
-		ctx.log(RC_LOG_ERROR, "buildTiledNavigation: Failed to build chunky mesh.")
+	if !recast.CreateChunkyTriMesh(ig.m_mesh.Verts(), ig.m_mesh.Tris(), ig.m_mesh.TriCount(), 256, ig.ChunkyMesh()) {
+		ctx.Log(recast.RC_LOG_ERROR, "buildTiledNavigation: Failed to build chunky mesh.")
 		return false
 	}
 
@@ -127,7 +129,7 @@ func (ig *InputGeom) loadMesh(ctx *rcContext, path string) bool {
 }
 
 /// Method to return static mesh data.
-func (ig *InputGeom) Mesh() *rcMeshLoaderObj {
+func (ig *InputGeom) Mesh() *recast.MeshLoaderObj {
 	return ig.m_mesh
 }
 
@@ -155,7 +157,7 @@ func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
 	}
 }
 
-func (ig *InputGeom) ChunkyMesh() *rcChunkyTriMesh {
+func (ig *InputGeom) ChunkyMesh() *recast.ChunkyTriMesh {
 	return ig.m_chunkyMesh
 }
 

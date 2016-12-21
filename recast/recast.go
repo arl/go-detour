@@ -1,8 +1,8 @@
-package detour
+package recast
 
 import "github.com/aurelien-rainone/gogeo/f32/d3"
 
-func rcCalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
+func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
 	copy(bmax, verts[:3])
@@ -14,8 +14,8 @@ func rcCalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 }
 
 /// Recast performance timer categories.
-/// @see rcContext
-type rcTimerLabel int
+/// @see Context
+type TimerLabel int
 
 const (
 	/// The user defined total time of the build.
