@@ -51,8 +51,7 @@ func FilterLowHangingWalkableObstacles(ctx *Context, walkableClimb int32, solid 
 // A span is a ledge if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) > walkableClimb</tt>
 //
 // @see rcHeightfield, rcConfig
-func FilterLedgeSpans(ctx *Context, walkableHeight, walkableClimb int32,
-	solid *Heightfield) {
+func FilterLedgeSpans(ctx *Context, walkableHeight, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
 	ctx.StartTimer(RC_TIMER_FILTER_BORDER)
 
@@ -141,6 +140,38 @@ func FilterLedgeSpans(ctx *Context, walkableHeight, walkableClimb int32,
 				} else if int32(asmax-asmin) > walkableClimb {
 					// If the difference between all neighbours is too large,
 					// we are at steep slope, mark the span as ledge.
+					s.area = RC_NULL_AREA
+				}
+			}
+		}
+	}
+}
+
+/// For this filter, the clearance above the span is the distance from the span's
+/// maximum to the next higher span's minimum. (Same grid column.)
+///
+/// @see rcHeightfield, rcConfig
+func FilterWalkableLowHeightSpans(ctx *Context, walkableHeight int32, solid *Heightfield) {
+	assert.True(ctx != nil, "ctx should not be nil")
+	ctx.StartTimer(RC_TIMER_FILTER_WALKABLE)
+
+	w := solid.Width
+	h := solid.Height
+	MAX_HEIGHT := int32(0xffff)
+
+	// Remove walkable flag from spans which do not have enough
+	// space above them for the agent to stand there.
+	for y := int32(0); y < h; y++ {
+		for x := int32(0); x < w; x++ {
+			for s := solid.Spans[x+y*w]; s != nil; s = s.next {
+				bot := int32(s.smax)
+				var top int32
+				if s.next != nil {
+					top = int32(s.next.smin)
+				} else {
+					top = int32(MAX_HEIGHT)
+				}
+				if (top - bot) <= walkableHeight {
 					s.area = RC_NULL_AREA
 				}
 			}

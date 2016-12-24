@@ -153,7 +153,7 @@ func (sm *SoloMesh) Build() bool {
 	// as well as filter spans where the character cannot possibly stand.
 	recast.FilterLowHangingWalkableObstacles(sm.ctx, sm.cfg.WalkableClimb, m_solid)
 	recast.FilterLedgeSpans(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid)
-	//rcFilterWalkableLowHeightSpans(m_ctx, m_cfg.walkableHeight, *m_solid)
+	recast.FilterWalkableLowHeightSpans(sm.ctx, sm.cfg.WalkableHeight, m_solid)
 
 	sm.buildCtx.DumpLog("Navmesh Build log")
 	return true
