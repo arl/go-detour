@@ -18,7 +18,6 @@ type BuildContext struct {
 	m_messages     [MAX_MESSAGES]string
 	m_messageCount int
 	m_textPool     string
-	//int m_textPoolSize;
 }
 
 /// Dumps the log to stdout.

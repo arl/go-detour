@@ -64,6 +64,7 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 	}
 
 	// Calculate normals.
+	// TODO: factor this with recast.calcTriNormal
 	mlo.m_normals = make([]float32, mlo.m_triCount*3)
 	for i := int32(0); i < mlo.m_triCount*3; i += 3 {
 		v0 := mlo.m_verts[mlo.m_tris[i]*3 : 3+mlo.m_tris[i]*3]

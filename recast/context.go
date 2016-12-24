@@ -120,12 +120,12 @@ func (ctx *Context) Errorf(format string, v ...interface{}) {
 
 /// Enables or disables the performance timers.
 ///  @param[in]		state	TRUE if timers should be enabled.
-func (ctx *Context) enableTimer(state bool) {
+func (ctx *Context) EnableTimer(state bool) {
 	ctx.m_timerEnabled = state
 }
 
 /// Clears all peformance timers. (Resets all to unused.)
-func (ctx *Context) resetTimers() {
+func (ctx *Context) ResetTimers() {
 	if ctx.m_timerEnabled {
 		ctx.doResetTimers()
 	}
@@ -133,7 +133,7 @@ func (ctx *Context) resetTimers() {
 
 /// Starts the specified performance timer.
 ///  @param	label	The category of the timer.
-func (ctx *Context) startTimer(label TimerLabel) {
+func (ctx *Context) StartTimer(label TimerLabel) {
 	if ctx.m_timerEnabled {
 		ctx.doStartTimer(label)
 	}
@@ -141,7 +141,7 @@ func (ctx *Context) startTimer(label TimerLabel) {
 
 /// Stops the specified performance timer.
 ///  @param	label	The category of the timer.
-func (ctx *Context) stopTimer(label TimerLabel) {
+func (ctx *Context) StopTimer(label TimerLabel) {
 	if ctx.m_timerEnabled {
 		ctx.doStopTimer(label)
 	}

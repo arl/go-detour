@@ -1,7 +1,18 @@
 package recast
 
-import "github.com/aurelien-rainone/gogeo/f32/d3"
+import (
+	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
+)
 
+// Heighfield functions
+
+// CalcBounds calculates the bounding box of an array of vertices.
+//  @param[in]		verts	An array of vertices. [(x, y, z) * @p nv]
+//  @param[in]		nv		The number of vertices in the @p verts array.
+//  @param[out]	bmin	The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
+//  @param[out]	bmax	The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
+// TODO: should return bmin, bmax
 func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
@@ -10,6 +21,52 @@ func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 		v := verts[i : i+3]
 		d3.Vec3Min(bmin, v)
 		d3.Vec3Max(bmax, v)
+	}
+}
+
+// CalcGridSize calculates the grid size based on the bounding box and grid cell
+// size.
+
+//  @param[in]		bmin	The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
+//  @param[in]		bmax	The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
+//  @param[in]		cs		The xz-plane cell size. [Limit: > 0] [Units: wu]
+//  @param[out]	w		The width along the x-axis. [Limit: >= 0] [Units: vx]
+//  @param[out]	h		The height along the z-axis. [Limit: >= 0] [Units: vx]
+func CalcGridSize(bmin, bmax [3]float32, cs float32) (w, h int32) {
+	w = int32((bmax[0]-bmin[0])/cs + 0.5)
+	h = int32((bmax[2]-bmin[2])/cs + 0.5)
+	return
+}
+
+func calcTriNormal(v0, v1, v2, norm d3.Vec3) {
+	d3.Vec3Cross(norm, v1.Sub(v0), v2.Sub(v0))
+	norm.Normalize()
+}
+
+/// @par
+///
+/// Only sets the area id's for the walkable triangles.  Does not alter the
+/// area id's for unwalkable triangles.
+///
+/// See the #rcConfig documentation for more information on the configuration parameters.
+///
+/// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
+func MarkWalkableTriangles(ctx *Context, walkableSlopeAngle float32,
+	verts []float32, nv int32,
+	tris []int32, nt int32,
+	areas []uint8) {
+	walkableThr := math32.Cosh(walkableSlopeAngle / 180.0 * math32.Pi)
+
+	var norm [3]float32
+	for i := int32(0); i < nt; i++ {
+		//tri := tris[i*3 : i*3+3]
+		tri0, tri1, tri2 := tris[i*3], tris[1+i*3], tris[2+i*3]
+		//calcTriNormal(verts[tri[0]*3tri[0]*3], &verts[tri[1]*3], &verts[tri[2]*3], norm);
+		calcTriNormal(verts[tri0:tri0+3], verts[tri1:tri1+3], verts[tri2:tri2+3], norm[:])
+		// Check if the face is walkable.
+		if norm[1] > walkableThr {
+			areas[i] = RC_WALKABLE_AREA
+		}
 	}
 }
 
@@ -77,3 +134,49 @@ const (
 	/// The maximum number of timers.  (Used for iterating timers.)
 	RC_MAX_TIMERS
 )
+
+var (
+	xOffset, yOffset [4]int32
+)
+
+func init() {
+	xOffset = [4]int32{-1, 0, 1, 0}
+	yOffset = [4]int32{0, 1, 0, -1}
+}
+
+// Gets the standard width (x-axis) offset for the specified direction.
+//  @param[in]		dir		The direction. [Limits: 0 <= value < 4]
+//  @return The width offset to apply to the current cell position to move
+//  	in the direction.
+func GetDirOffsetX(dir int) int32 {
+	return xOffset[dir&0x03]
+}
+
+// Gets the standard height (z-axis) offset for the specified direction.
+//  @param[in]		dir		The direction. [Limits: 0 <= value < 4]
+//  @return The height offset to apply to the current cell position to move
+//  	in the direction.
+func GetDirOffsetY(dir int) int32 {
+	return yOffset[dir&0x03]
+}
+
+func iMin(a, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func iMax(a, b int32) int32 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func iAbs(a int32) int32 {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
