@@ -155,6 +155,36 @@ func (sm *SoloMesh) Build() bool {
 	recast.FilterLedgeSpans(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid)
 	recast.FilterWalkableLowHeightSpans(sm.ctx, sm.cfg.WalkableHeight, m_solid)
 
+	// CONTINUER ICI
+
+	// Compact the heightfield so that it is faster to handle from now on.
+	// This will result more cache coherent data as well as the neighbours
+	// between walkable cells will be calculated.
+	/*
+		m_chf := &CompactHeightfield{}
+		if (!rcBuildCompactHeightfield(m_ctx, m_cfg.walkableHeight, m_cfg.walkableClimb, *m_solid, *m_chf)) {
+			m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
+			return 0;
+		}
+
+		if (!m_keepInterResults) {
+			rcFreeHeightField(m_solid);
+			m_solid = 0;
+		}
+
+		// Erode the walkable area by agent radius.
+		if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf)) {
+			m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
+			return 0;
+		}
+
+		// (Optional) Mark areas.
+		const ConvexVolume* vols = m_geom.getConvexVolumes();
+		for (int i  = 0; i < m_geom.getConvexVolumeCount(); ++i) {
+			rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);
+		}
+	*/
+
 	sm.buildCtx.DumpLog("Navmesh Build log")
 	return true
 }
