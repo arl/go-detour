@@ -1,6 +1,8 @@
 package detour
 
 import (
+	"fmt"
+
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
 )
@@ -28,7 +30,8 @@ func (sm *SoloMesh) Load(path string) bool {
 	return true
 }
 
-func (sm *SoloMesh) Build() bool {
+func (sm *SoloMesh) Build() ([]uint8, bool) {
+	var navData []uint8
 	keepInterResults := false
 
 	bmin := sm.geom.NavMeshBoundsMin()
@@ -41,8 +44,6 @@ func (sm *SoloMesh) Build() bool {
 	//
 	// Step 1. Initialize build config.
 	//
-
-	// TODO: continuer ici in Sample_SoloMesh.cpp (handleBuild)
 
 	// Init build configuration from GUI
 	// TODO: original comment says gfrom GUI but it will be either from command
@@ -115,11 +116,11 @@ func (sm *SoloMesh) Build() bool {
 	m_solid := recast.NewHeightfield()
 	if m_solid == nil {
 		sm.ctx.Errorf("buildNavigation: Out of memory 'solid'.")
-		return false
+		return navData, false
 	}
 	if !m_solid.Create(sm.ctx, sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch) {
 		sm.ctx.Errorf("buildNavigation: Could not create solid heightfield.")
-		return false
+		return navData, false
 	}
 
 	// Allocate array that can hold triangle area types.
@@ -128,7 +129,7 @@ func (sm *SoloMesh) Build() bool {
 	m_triareas := make([]uint8, ntris)
 	if len(m_triareas) == 0 {
 		sm.ctx.Errorf("buildNavigation: Out of memory 'm_triareas' (%d).", ntris)
-		return false
+		return navData, false
 	}
 
 	// Find triangles which are walkable based on their slope and rasterize them.
@@ -137,7 +138,7 @@ func (sm *SoloMesh) Build() bool {
 	recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, m_triareas)
 	if !recast.RasterizeTriangles(sm.ctx, verts, nverts, tris, m_triareas, ntris, m_solid, sm.cfg.WalkableClimb) {
 		sm.ctx.Errorf("buildNavigation: Could not rasterize triangles.")
-		return false
+		return navData, false
 	}
 
 	if !keepInterResults {
@@ -155,36 +156,42 @@ func (sm *SoloMesh) Build() bool {
 	recast.FilterLedgeSpans(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid)
 	recast.FilterWalkableLowHeightSpans(sm.ctx, sm.cfg.WalkableHeight, m_solid)
 
-	// CONTINUER ICI
-
 	// Compact the heightfield so that it is faster to handle from now on.
 	// This will result more cache coherent data as well as the neighbours
 	// between walkable cells will be calculated.
-	/*
-		m_chf := &CompactHeightfield{}
-		if (!rcBuildCompactHeightfield(m_ctx, m_cfg.walkableHeight, m_cfg.walkableClimb, *m_solid, *m_chf)) {
-			m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
-			return 0;
-		}
+	m_chf := &recast.CompactHeightfield{}
+	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid, m_chf) {
+		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
+		return navData, false
+	}
 
-		if (!m_keepInterResults) {
-			rcFreeHeightField(m_solid);
-			m_solid = 0;
-		}
+	fmt.Println(m_chf)
 
-		// Erode the walkable area by agent radius.
-		if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf)) {
-			m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
-			return 0;
-		}
+	//if (!m_keepInterResults) {
+	//rcFreeHeightField(m_solid);
+	//m_solid = 0;
+	//}
 
-		// (Optional) Mark areas.
-		const ConvexVolume* vols = m_geom.getConvexVolumes();
-		for (int i  = 0; i < m_geom.getConvexVolumeCount(); ++i) {
-			rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);
-		}
-	*/
+	//// Erode the walkable area by agent radius.
+	//if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf)) {
+	//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
+	//return 0;
+	//}
 
+	//// (Optional) Mark areas.
+	//vols := m_geom.getConvexVolumes();
+	//for i := int32(0); i < m_geom.getConvexVolumeCount(); i++ {
+	//rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);
+	//}
+
+	// END
+
+	// Show performance stats.
+	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL))
+	//	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", m_pmesh->nverts, m_pmesh->npolys);
+
+	//m_tileBuildTime := sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL) / 1000.0
+	//dataSize = navDataSize
 	sm.buildCtx.DumpLog("Navmesh Build log")
-	return true
+	return navData, true
 }

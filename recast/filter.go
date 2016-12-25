@@ -83,7 +83,7 @@ func FilterLedgeSpans(ctx *Context, walkableHeight, walkableClimb int32, solid *
 				asmin := s.smax
 				asmax := s.smax
 
-				for dir := 0; dir < 4; dir++ {
+				for dir := int32(0); dir < 4; dir++ {
 					dx := x + GetDirOffsetX(dir)
 					dy := y + GetDirOffsetY(dir)
 					// Skip neighbours which are out of bounds.

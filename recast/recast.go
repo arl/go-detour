@@ -17,8 +17,8 @@ func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
 	copy(bmax, verts[:3])
-	for i := int32(0); i < nv; i += 3 {
-		v := verts[i : i+3]
+	for i := int32(1); i < nv; i++ {
+		v := verts[i*3 : i*3+3]
 		d3.Vec3Min(bmin, v)
 		d3.Vec3Max(bmax, v)
 	}
@@ -144,11 +144,31 @@ func init() {
 	yOffset = [4]int32{0, 1, 0, -1}
 }
 
+// Sets the neighbor connection data for the specified direction.
+//  @param[in]		s		The span to update.
+//  @param[in]		dir		The direction to set. [Limits: 0 <= value < 4]
+//  @param[in]		i		The index of the neighbor span.
+func SetCon(s *CompactSpan, dir, i int32) {
+	shift := uint32(uint32(dir * 6))
+	con := uint32(s.con)
+	s.con = (con ^ (0x3f << shift)) | ((uint32(i & 0x3f)) << shift)
+}
+
+// Gets neighbor connection data for the specified direction.
+//  @param[in]		s		The span to check.
+//  @param[in]		dir		The direction to check. [Limits: 0 <= value < 4]
+//  @return The neighbor connection data for the specified direction,
+//  	or #RC_NOT_CONNECTED if there is no connection.
+func GetCon(s *CompactSpan, dir int32) int32 {
+	shift := uint32(dir * 6)
+	return int32((s.con >> shift) & 0x3f)
+}
+
 // Gets the standard width (x-axis) offset for the specified direction.
 //  @param[in]		dir		The direction. [Limits: 0 <= value < 4]
 //  @return The width offset to apply to the current cell position to move
 //  	in the direction.
-func GetDirOffsetX(dir int) int32 {
+func GetDirOffsetX(dir int32) int32 {
 	return xOffset[dir&0x03]
 }
 
@@ -156,7 +176,7 @@ func GetDirOffsetX(dir int) int32 {
 //  @param[in]		dir		The direction. [Limits: 0 <= value < 4]
 //  @return The height offset to apply to the current cell position to move
 //  	in the direction.
-func GetDirOffsetY(dir int) int32 {
+func GetDirOffsetY(dir int32) int32 {
 	return yOffset[dir&0x03]
 }
 

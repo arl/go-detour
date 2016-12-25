@@ -1,5 +1,11 @@
 package recast
 
+import (
+	"fmt"
+
+	"github.com/aurelien-rainone/assertgo"
+)
+
 /// Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
 const (
 	RC_SPAN_HEIGHT_BITS uint = 16
@@ -220,4 +226,158 @@ type CompactHeightfield struct {
 	spans          []CompactSpan ///< Array of spans. [Size: #spanCount]
 	dist           []uint16      ///< Array containing border distance data. [Size: #spanCount]
 	areas          []uint8       ///< Array containing area id data. [Size: #spanCount]
+}
+
+func (hf *Heightfield) GetHeightFieldSpanCount(ctx *Context) int32 {
+	w := hf.Width
+	h := hf.Height
+	spanCount := int32(0)
+	for y := int32(0); y < h; y++ {
+		for x := int32(0); x < w; x++ {
+			for s := hf.Spans[x+y*w]; s != nil; s = s.next {
+				if s.area != RC_NULL_AREA {
+					spanCount++
+				}
+			}
+		}
+	}
+	return spanCount
+}
+
+/// This is just the beginning of the process of fully building a compact heightfield.
+/// Various filters may be applied, then the distance field and regions built.
+/// E.g: #rcBuildDistanceField and #rcBuildRegions
+///
+/// See the #rcConfig documentation for more information on the configuration parameters.
+///
+/// @see rcAllocCompactHeightfield, rcHeightfield, rcCompactHeightfield, rcConfig
+func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
+	hf *Heightfield, chf *CompactHeightfield) bool {
+
+	assert.True(ctx != nil, "ctx should not be nil")
+	ctx.StartTimer(RC_TIMER_BUILD_COMPACTHEIGHTFIELD)
+
+	w := hf.Width
+	h := hf.Height
+	spanCount := hf.GetHeightFieldSpanCount(ctx)
+
+	// Fill in header.
+	chf.width = w
+	chf.height = h
+	chf.spanCount = spanCount
+	chf.walkableHeight = walkableHeight
+	chf.walkableClimb = walkableClimb
+	chf.maxRegions = 0
+	copy(chf.bmin[:], hf.BMin[:])
+	copy(chf.bmax[:], hf.BMax[:])
+	chf.bmax[1] += float32(walkableHeight) * hf.Ch
+	chf.cs = hf.Cs
+	chf.ch = hf.Ch
+	chf.cells = make([]CompactCell, w*h)
+	if len(chf.cells) == 0 {
+		ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.cells' (%d)", w*h)
+		return false
+	}
+	//memset(chf.cells, 0, sizeof(rcCompactCell)*w*h)
+	chf.spans = make([]CompactSpan, spanCount)
+	fmt.Println("spanCount", spanCount)
+	//if len(chf.spans) == 0 {
+	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.spans' (%d)", spanCount)
+	//return false
+	//}
+	//memset(chf.spans, 0, sizeof(rcCompactSpan)*spanCount);
+	chf.areas = make([]uint8, spanCount)
+	//if len(chf.areas) == 0 {
+	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.areas' (%d)", spanCount)
+	//return false
+	//}
+	//memset(chf.areas, RC_NULL_AREA, sizeof(unsigned char)*spanCount);
+
+	MAX_HEIGHT := int32(0xffff)
+
+	// Fill in cells and spans.
+	var idx uint32
+	for y := int32(0); y < h; y++ {
+		for x := int32(0); x < w; x++ {
+			s := hf.Spans[x+y*w]
+			// If there are no spans at this cell, just leave the data to index=0, count=0.
+			if s == nil {
+				continue
+			}
+			c := chf.cells[x+y*w]
+			c.index = idx
+			c.count = 0
+			for s != nil {
+				if s.area != RC_NULL_AREA {
+					bot := int32(s.smax)
+					var top int32
+					if s.next != nil {
+						top = int32(s.next.smin)
+					} else {
+						top = MAX_HEIGHT
+					}
+					chf.spans[idx].y = uint16(int32Clamp(bot, 0, 0xffff))
+					chf.spans[idx].h = uint8(int32Clamp(top-bot, 0, 0xff))
+					chf.areas[idx] = s.area
+					idx++
+					c.count++
+				}
+				s = s.next
+			}
+		}
+	}
+
+	// Find neighbour connections.
+	const MAX_LAYERS = RC_NOT_CONNECTED - 1
+	tooHighNeighbour := int32(0)
+	for y := int32(0); y < h; y++ {
+		for x := int32(0); x < w; x++ {
+			c := chf.cells[x+y*w]
+			i := int32(c.index)
+			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
+				s := chf.spans[i]
+
+				for dir := int32(0); dir < 4; dir++ {
+					SetCon(&s, dir, RC_NOT_CONNECTED)
+					nx := x + GetDirOffsetX(dir)
+					ny := y + GetDirOffsetY(dir)
+					// First check that the neighbour cell is in bounds.
+					if nx < 0 || ny < 0 || nx >= w || ny >= h {
+						continue
+					}
+
+					// Iterate over all neighbour spans and check if any of the is
+					// accessible from current cell.
+					nc := chf.cells[nx+ny*w]
+					k := int32(nc.index)
+					for nk := int32(nc.index + uint32(nc.count)); k < nk; k++ {
+						ns := chf.spans[k]
+						bot := iMax(int32(s.y), int32(ns.y))
+						top := iMin(int32(s.y)+int32(s.h), int32(ns.y)+int32(ns.h))
+
+						// Check that the gap between the spans is walkable,
+						// and that the climb height between the gaps is not too high.
+						if (top-bot) >= walkableHeight && iAbs(int32(ns.y)-int32(s.y)) <= walkableClimb {
+							// Mark direction as walkable.
+							lidx := k - int32(nc.index)
+							if lidx < 0 || lidx > MAX_LAYERS {
+								tooHighNeighbour = iMax(tooHighNeighbour, lidx)
+								continue
+							}
+							SetCon(&s, dir, lidx)
+							break
+						}
+					}
+
+				}
+			}
+		}
+	}
+
+	if tooHighNeighbour > MAX_LAYERS {
+		ctx.Errorf("rcBuildCompactHeightfield: Heightfield has too many layers %d (max: %d)",
+			tooHighNeighbour, MAX_LAYERS)
+	}
+
+	return true
 }
