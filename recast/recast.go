@@ -43,7 +43,18 @@ func calcTriNormal(v0, v1, v2, norm d3.Vec3) {
 	norm.Normalize()
 }
 
-/// @par
+/// Sets the area id of all triangles with a slope below the specified value
+/// to #RC_WALKABLE_AREA.
+///  @ingroup recast
+///  @param[in,out]	ctx					The build context to use during the operation.
+///  @param[in]		walkableSlopeAngle	The maximum slope that is considered walkable.
+///  									[Limits: 0 <= value < 90] [Units: Degrees]
+///  @param[in]		verts				The vertices. [(x, y, z) * @p nv]
+///  @param[in]		nv					The number of vertices.
+///  @param[in]		tris				The triangle vertex indices. [(vertA, vertB, vertC) * @p nt]
+///  @param[in]		nt					The number of triangles.
+///  @param[out]	areas				The triangle area ids. [Length: >= @p nt]
+
 ///
 /// Only sets the area id's for the walkable triangles.  Does not alter the
 /// area id's for unwalkable triangles.
@@ -64,6 +75,42 @@ func MarkWalkableTriangles(ctx *Context, walkableSlopeAngle float32,
 		// Check if the face is walkable.
 		if norm[1] > walkableThr {
 			areas[i] = RC_WALKABLE_AREA
+		}
+	}
+}
+
+/// Sets the area id of all triangles with a slope greater than or equal to the specified value to #RC_NULL_AREA.
+///  @ingroup recast
+///  @param[in,out]	ctx					The build context to use during the operation.
+///  @param[in]		walkableSlopeAngle	The maximum slope that is considered walkable.
+///  									[Limits: 0 <= value < 90] [Units: Degrees]
+///  @param[in]		verts				The vertices. [(x, y, z) * @p nv]
+///  @param[in]		nv					The number of vertices.
+///  @param[in]		tris				The triangle vertex indices. [(vertA, vertB, vertC) * @p nt]
+///  @param[in]		nt					The number of triangles.
+///  @param[out]	areas				The triangle area ids. [Length: >= @p nt]
+/// @par
+///
+/// Only sets the area id's for the unwalkable triangles.  Does not alter the
+/// area id's for walkable triangles.
+///
+/// See the #rcConfig documentation for more information on the configuration parameters.
+///
+/// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
+func ClearUnwalkableTriangles(ctx *Context, walkableSlopeAngle float32,
+	verts []float32, nv int32,
+	tris []int32, nt int32,
+	areas []uint8) {
+	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math32.Pi)
+
+	var norm [3]float32
+
+	for i := int32(0); i < nt; i++ {
+		tri := tris[i*3:]
+		calcTriNormal(verts[tri[0]*3:], verts[tri[1]*3:], verts[tri[2]*3:], norm[:])
+		// Check if the face is walkable.
+		if norm[1] <= walkableThr {
+			areas[i] = RC_NULL_AREA
 		}
 	}
 }

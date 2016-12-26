@@ -181,3 +181,41 @@ func TestMarkWalkableTriangles(t *testing.T) {
 		}
 	})
 }
+
+func TestClearUnwalkableTriangles(t *testing.T) {
+	var ctx *Context
+	walkableSlopeAngle := float32(45)
+	verts := []float32{
+		0, 0, 0,
+		1, 0, 0,
+		0, 0, -1,
+	}
+	nv := int32(3)
+	walkable_tri := []int32{0, 1, 2}
+	unwalkable_tri := []int32{0, 2, 1}
+	nt := int32(1)
+	areas := []uint8{42}
+
+	t.Run("Sets area ID of unwalkable triangle to RC_NULL_AREA", func(t *testing.T) {
+		ClearUnwalkableTriangles(ctx, walkableSlopeAngle, verts, nv, unwalkable_tri, nt, areas)
+
+		if areas[0] != RC_NULL_AREA {
+			t.Fatalf("areas[0] should be RC_NULL_AREA, got %v", areas[0])
+		}
+	})
+	t.Run("Does not modify walkable triangle aread ID's", func(t *testing.T) {
+		ClearUnwalkableTriangles(ctx, walkableSlopeAngle, verts, nv, walkable_tri, nt, areas)
+
+		if areas[0] != 42 {
+			t.Fatalf("areas[0] should be 42, got %v", areas[0])
+		}
+	})
+	t.Run("Slopes equal to the max slope are considered unwalkable.", func(t *testing.T) {
+		walkableSlopeAngle = 0
+		ClearUnwalkableTriangles(ctx, walkableSlopeAngle, verts, nv, walkable_tri, nt, areas)
+
+		if areas[0] != RC_NULL_AREA {
+			t.Fatalf("areas[0] should be RC_NULL_AREA, got %v", areas[0])
+		}
+	})
+}
