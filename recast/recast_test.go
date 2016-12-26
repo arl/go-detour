@@ -219,3 +219,198 @@ func TestClearUnwalkableTriangles(t *testing.T) {
 		}
 	})
 }
+
+func TestAddSpan(t *testing.T) {
+	var ctx *Context
+
+	verts := []float32{
+		1, 2, 3,
+		0, 2, 6,
+	}
+	var bmin, bmax [3]float32
+	CalcBounds(verts, 2, bmin[:], bmax[:])
+
+	cellSize := float32(1.5)
+	cellHeight := float32(2)
+
+	w, h := CalcGridSize(bmin, bmax, cellSize)
+
+	var (
+		hf           Heightfield
+		x, y         int32
+		smin, smax   uint16
+		area         uint8
+		flagMergeThr int32
+	)
+
+	testSetup := func() {
+
+		res := hf.Create(ctx, w, h, bmin[:], bmax[:], cellSize, cellHeight)
+		if !res {
+			t.Fatalf("Heightfield should have been successfully created")
+		}
+
+		x, y = 0, 0
+		smin, smax = 0, 1
+		area = 42
+		flagMergeThr = 1
+	}
+	//ok, so the test setUp state is not clearly reset because when we run the test that was failing before alone, its not failing anymore...
+
+	t.Run("Add a span to an empty heightfield.", func(t *testing.T) {
+		testSetup()
+		res := hf.addSpan(x, y, smin, smax, area, flagMergeThr)
+		if !res {
+			t.Fatalf("result should be true")
+		}
+
+		if hf.Spans[0] == nil {
+			t.Fatalf("want hf.Spans[0] != nil, got nil")
+		}
+		if hf.Spans[0].smin != smin {
+			t.Fatalf("want hf.Spans[0].smin == smin, got %v", hf.Spans[0].smin)
+		}
+		if hf.Spans[0].smax != smax {
+			t.Fatalf("want hf.Spans[0].smax == smax, got %v", hf.Spans[0].smax)
+		}
+		if hf.Spans[0].area != area {
+			t.Fatalf("want hf.Spans[0].area == area, got %v", hf.Spans[0].area)
+		}
+	})
+
+	t.Run("Add a span that gets merged with an existing span.", func(t *testing.T) {
+		testSetup()
+		res := hf.addSpan(x, y, smin, smax, area, flagMergeThr)
+		if !res {
+			t.Fatalf("result should be true")
+		}
+		if hf.Spans[0] == nil {
+			t.Fatalf("want hf.Spans[0] != nil, got nil")
+		}
+		if hf.Spans[0].smin != smin {
+			t.Fatalf("want hf.Spans[0].smin == smin, got %v", hf.Spans[0].smin)
+		}
+		if hf.Spans[0].smax != smax {
+			t.Fatalf("want hf.Spans[0].smax == smax, got %v", hf.Spans[0].smax)
+		}
+		if hf.Spans[0].area != area {
+			t.Fatalf("want hf.Spans[0].area == area, got %v", hf.Spans[0].area)
+		}
+
+		smin = 1
+		smax = 2
+		res = hf.addSpan(x, y, smin, smax, area, flagMergeThr)
+
+		if !res {
+			t.Fatalf("result should be true")
+		}
+		if hf.Spans[0] == nil {
+			t.Fatalf("want hf.Spans[0] != nil, got nil")
+		}
+		if hf.Spans[0].smin != 0 {
+			t.Fatalf("want hf.Spans[0].smin == 0, got %v", hf.Spans[0].smin)
+		}
+		if hf.Spans[0].smax != 2 {
+			t.Fatalf("want hf.Spans[0].smax == 2, got %v", hf.Spans[0].smax)
+		}
+		if hf.Spans[0].area != area {
+			t.Fatalf("want hf.Spans[0].area == area, got %v", hf.Spans[0].area)
+		}
+	})
+
+	t.Run("Add a span that merges with two spans above and below.", func(t *testing.T) {
+		testSetup()
+		smin = 0
+		smax = 1
+		res := hf.addSpan(x, y, smin, smax, area, flagMergeThr)
+		if !res {
+			t.Fatalf("result should be true")
+		}
+		if hf.Spans[0] == nil {
+			t.Fatalf("want hf.Spans[0] != nil, got nil")
+		}
+		if hf.Spans[0].smin != smin {
+			t.Fatalf("want hf.Spans[0].smin == smin, got %v", hf.Spans[0].smin)
+		}
+		if hf.Spans[0].smax != smax {
+			t.Fatalf("want hf.Spans[0].smax == smax, got %v", hf.Spans[0].smax)
+		}
+		if hf.Spans[0].area != area {
+			t.Fatalf("want hf.Spans[0].area == area, got %v", hf.Spans[0].area)
+		}
+		if hf.Spans[0].next != nil {
+			t.Fatalf("want hf.Spans[0].next == nil, got %v", hf.Spans[0].next)
+		}
+
+		smin = 2
+		smax = 3
+		res = hf.addSpan(x, y, smin, smax, area, flagMergeThr)
+		if !res {
+			t.Fatalf("result should be true")
+		}
+		if hf.Spans[0].next == nil {
+			t.Fatalf("want hf.Spans[0].next != nil, got nil")
+		}
+		if hf.Spans[0].next.smin != smin {
+			t.Fatalf("want hf.Spans[0].next.smin == smin, got %v", hf.Spans[0].next.smin)
+		}
+		if hf.Spans[0].next.smax != smax {
+			t.Fatalf("want hf.Spans[0].next.smax == smax, got %v", hf.Spans[0].next.smax)
+		}
+		if hf.Spans[0].next.area != area {
+			t.Fatalf("want hf.Spans[0].next.area == area, got %v", hf.Spans[0].next.area)
+		}
+
+		smin = 1
+		smax = 2
+		res = hf.addSpan(x, y, smin, smax, area, flagMergeThr)
+
+		if !res {
+			t.Fatalf("result should be true")
+		}
+		if hf.Spans[0] == nil {
+			t.Fatalf("want hf.Spans[0] != nil, got nil")
+		}
+		if hf.Spans[0].smin != 0 {
+			t.Fatalf("want hf.Spans[0].smin == 0, got %v", hf.Spans[0].smin)
+		}
+		if hf.Spans[0].smax != 3 {
+			t.Fatalf("want hf.Spans[0].smax == 3, got %v", hf.Spans[0].smax)
+		}
+		if hf.Spans[0].area != area {
+			t.Fatalf("want hf.Spans[0].area == area, got %v", hf.Spans[0].area)
+		}
+		if hf.Spans[0].next != nil {
+			t.Fatalf("want hf.Spans[0].next == nil, got %v", hf.Spans[0].next)
+		}
+	})
+
+	//SECTION()
+	//{
+	//smin = 0;
+	//smax = 1;
+	//REQUIRE(rcAddSpan(&ctx, hf, x, y, smin, smax, area, flagMergeThr));
+	//REQUIRE(hf.Spans[0] != 0);
+	//REQUIRE(hf.Spans[0]->smin == smin);
+	//REQUIRE(hf.spans[0]->smax == smax);
+	//REQUIRE(hf.spans[0]->area == area);
+	//REQUIRE(hf.spans[0]->next == 0);
+
+	//smin = 2;
+	//smax = 3;
+	//REQUIRE(rcAddSpan(&ctx, hf, x, y, smin, smax, area, flagMergeThr));
+	//REQUIRE(hf.spans[0]->next != 0);
+	//REQUIRE(hf.spans[0]->next->smin == smin);
+	//REQUIRE(hf.spans[0]->next->smax == smax);
+	//REQUIRE(hf.spans[0]->next->area == area);
+
+	//smin = 1;
+	//smax = 2;
+	//REQUIRE(rcAddSpan(&ctx, hf, x, y, smin, smax, area, flagMergeThr));
+	//REQUIRE(hf.spans[0] != 0);
+	//REQUIRE(hf.spans[0]->smin == 0);
+	//REQUIRE(hf.spans[0]->smax == 3);
+	//REQUIRE(hf.spans[0]->area == area);
+	//REQUIRE(hf.spans[0]->next == 0);
+	//}
+}
