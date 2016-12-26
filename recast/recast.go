@@ -55,14 +55,12 @@ func MarkWalkableTriangles(ctx *Context, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
-	walkableThr := math32.Cosh(walkableSlopeAngle / 180.0 * math32.Pi)
+	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math32.Pi)
 
 	var norm [3]float32
 	for i := int32(0); i < nt; i++ {
-		//tri := tris[i*3 : i*3+3]
-		tri0, tri1, tri2 := tris[i*3], tris[1+i*3], tris[2+i*3]
-		//calcTriNormal(verts[tri[0]*3tri[0]*3], &verts[tri[1]*3], &verts[tri[2]*3], norm);
-		calcTriNormal(verts[tri0:tri0+3], verts[tri1:tri1+3], verts[tri2:tri2+3], norm[:])
+		tri := tris[i*3:]
+		calcTriNormal(verts[tri[0]*3:], verts[tri[1]*3:], verts[tri[2]*3:], norm[:])
 		// Check if the face is walkable.
 		if norm[1] > walkableThr {
 			areas[i] = RC_WALKABLE_AREA
