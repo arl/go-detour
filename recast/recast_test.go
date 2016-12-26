@@ -384,33 +384,83 @@ func TestAddSpan(t *testing.T) {
 			t.Fatalf("want hf.Spans[0].next == nil, got %v", hf.Spans[0].next)
 		}
 	})
+}
 
-	//SECTION()
-	//{
-	//smin = 0;
-	//smax = 1;
-	//REQUIRE(rcAddSpan(&ctx, hf, x, y, smin, smax, area, flagMergeThr));
-	//REQUIRE(hf.Spans[0] != 0);
-	//REQUIRE(hf.Spans[0]->smin == smin);
-	//REQUIRE(hf.spans[0]->smax == smax);
-	//REQUIRE(hf.spans[0]->area == area);
-	//REQUIRE(hf.spans[0]->next == 0);
+func TestRasterizeTriangle(t *testing.T) {
+	var ctx Context
+	verts := []float32{
+		0, 0, 0,
+		1, 0, 0,
+		0, 0, -1,
+	}
+	var bmin, bmax [3]float32
+	CalcBounds(verts, 3, bmin[:], bmax[:])
 
-	//smin = 2;
-	//smax = 3;
-	//REQUIRE(rcAddSpan(&ctx, hf, x, y, smin, smax, area, flagMergeThr));
-	//REQUIRE(hf.spans[0]->next != 0);
-	//REQUIRE(hf.spans[0]->next->smin == smin);
-	//REQUIRE(hf.spans[0]->next->smax == smax);
-	//REQUIRE(hf.spans[0]->next->area == area);
+	cellSize := float32(0.5)
+	cellHeight := float32(0.5)
 
-	//smin = 1;
-	//smax = 2;
-	//REQUIRE(rcAddSpan(&ctx, hf, x, y, smin, smax, area, flagMergeThr));
-	//REQUIRE(hf.spans[0] != 0);
-	//REQUIRE(hf.spans[0]->smin == 0);
-	//REQUIRE(hf.spans[0]->smax == 3);
-	//REQUIRE(hf.spans[0]->area == area);
-	//REQUIRE(hf.spans[0]->next == 0);
-	//}
+	w, h := CalcGridSize(bmin, bmax, cellSize)
+
+	var solid Heightfield
+	res := solid.Create(&ctx, w, h, bmin[:], bmax[:], cellSize, cellHeight)
+	if !res {
+		t.Fatalf("Heightfield should have been successfully created")
+	}
+
+	area := uint8(42)
+	flagMergeThr := int32(1)
+
+	res = RasterizeTriangle(&ctx, verts[0:3], verts[3:6], verts[6:9], area, &solid, flagMergeThr)
+
+	if solid.Spans[0+0*w] == nil {
+		t.Fatalf("solid.Spans[0 + 0 * w] == nil")
+	}
+	if solid.Spans[1+0*w] != nil {
+		t.Fatalf("solid.Spans[1 + 0 * w] != nil")
+	}
+	if solid.Spans[0+1*w] == nil {
+		t.Fatalf("solid.Spans[0 + 1 * w] == nil")
+	}
+	if solid.Spans[1+1*w] == nil {
+		t.Fatalf("solid.Spans[1 + 1 * w] == nil")
+	}
+
+	if solid.Spans[0+0*w].smin != 0 {
+		t.Fatalf("solid.Spans[0 + 0 * w].smin != 0")
+	}
+	if solid.Spans[0+0*w].smax != 1 {
+		t.Fatalf("solid.Spans[0 + 0 * w].smax != 1")
+	}
+	if solid.Spans[0+0*w].area != area {
+		t.Fatalf("solid.Spans[0 + 0 * w].area != area")
+	}
+	if solid.Spans[0+0*w].next != nil {
+		t.Fatalf("solid.Spans[0 + 0 * w].next != nil")
+	}
+
+	if solid.Spans[0+1*w].smin != 0 {
+		t.Fatalf("solid.Spans[0 + 1 * w].smin != 0")
+	}
+	if solid.Spans[0+1*w].smax != 1 {
+		t.Fatalf("solid.Spans[0 + 1 * w].smax != 1")
+	}
+	if solid.Spans[0+1*w].area != area {
+		t.Fatalf("solid.Spans[0 + 1 * w].area != area")
+	}
+	if solid.Spans[0+1*w].next != nil {
+		t.Fatalf("solid.Spans[0 + 1 * w].next != nil")
+	}
+
+	if solid.Spans[1+1*w].smin != 0 {
+		t.Fatalf("solid.Spans[1 + 1 * w].smin != 0")
+	}
+	if solid.Spans[1+1*w].smax != 1 {
+		t.Fatalf("solid.Spans[1 + 1 * w].smax != 1")
+	}
+	if solid.Spans[1+1*w].area != area {
+		t.Fatalf("solid.Spans[1 + 1 * w].area != area")
+	}
+	if solid.Spans[1+1*w].next != nil {
+		t.Fatalf("solid.Spans[1 + 1 * w].next != nil")
+	}
 }

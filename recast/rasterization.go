@@ -8,6 +8,29 @@ import (
 
 /// @par
 ///
+/// No spans will be added if the triangle does not overlap the heightfield grid.
+///
+/// @see rcHeightfield
+func RasterizeTriangle(ctx *Context, v0, v1, v2 d3.Vec3,
+	area uint8, solid *Heightfield,
+	flagMergeThr int32) bool {
+	assert.True(ctx != nil, "ctx should not be nil")
+
+	ctx.StartTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+	defer ctx.StopTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+
+	ics := 1.0 / solid.Cs
+	ich := 1.0 / solid.Ch
+	if !rasterizeTri(v0, v1, v2, area, solid, solid.BMin[:], solid.BMax[:], solid.Cs, ics, ich, flagMergeThr) {
+		ctx.Errorf("RasterizeTriangle: Out of memory.")
+		return false
+	}
+
+	return true
+}
+
+/// @par
+///
 /// Spans will only be added for triangles that overlap the heightfield grid.
 ///
 /// @see rcHeightfield
