@@ -7,6 +7,12 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
+func require(t *testing.T, exp bool, err string) {
+	if !exp {
+		t.Fatalf(err)
+	}
+}
+
 func TestiMin(t *testing.T) {
 	ttable := []struct {
 		a, b, res int32
@@ -412,55 +418,207 @@ func TestRasterizeTriangle(t *testing.T) {
 
 	res = RasterizeTriangle(&ctx, verts[0:3], verts[3:6], verts[6:9], area, &solid, flagMergeThr)
 
-	if solid.Spans[0+0*w] == nil {
-		t.Fatalf("solid.Spans[0 + 0 * w] == nil")
+	require(t, solid.Spans[0+0*w] != nil, "solid.Spans[0+0*w]")
+	require(t, solid.Spans[1+0*w] == nil, "!solid.Spans[1+0*w]")
+	require(t, solid.Spans[0+1*w] != nil, "solid.Spans[0+1*w]")
+	require(t, solid.Spans[1+1*w] != nil, "solid.Spans[1+1*w]")
+
+	require(t, solid.Spans[0+0*w].smin == 0, "solid.Spans[0+0*w].smin == 0")
+	require(t, solid.Spans[0+0*w].smax == 1, "solid.Spans[0+0*w].smax == 1")
+	require(t, solid.Spans[0+0*w].area == area, "solid.Spans[0+0*w].area == area")
+	require(t, solid.Spans[0+0*w].next == nil, "!solid.Spans[0+0*w].next")
+
+	require(t, solid.Spans[0+1*w].smin == 0, "solid.Spans[0+1*w].smin == 0")
+	require(t, solid.Spans[0+1*w].smax == 1, "solid.Spans[0+1*w].smax == 1")
+	require(t, solid.Spans[0+1*w].area == area, "solid.Spans[0+1*w].area == area")
+	require(t, solid.Spans[0+1*w].next == nil, "!solid.Spans[0+1*w].next")
+
+	require(t, solid.Spans[1+1*w].smin == 0, "solid.Spans[1+1*w].smin == 0")
+	require(t, solid.Spans[1+1*w].smax == 1, "solid.Spans[1+1*w].smax == 1")
+	require(t, solid.Spans[1+1*w].area == area, "solid.Spans[1+1*w].area == area")
+	require(t, solid.Spans[1+1*w].next == nil, "!solid.Spans[1+1*w].next")
+}
+
+func TestRasterizeTriangles(t *testing.T) {
+	var ctx Context
+	verts := []float32{
+		0, 0, 0,
+		1, 0, 0,
+		0, 0, -1,
+		0, 0, 1,
 	}
-	if solid.Spans[1+0*w] != nil {
-		t.Fatalf("solid.Spans[1 + 0 * w] != nil")
+	tris := []int32{
+		0, 1, 2,
+		0, 3, 1,
 	}
-	if solid.Spans[0+1*w] == nil {
-		t.Fatalf("solid.Spans[0 + 1 * w] == nil")
+	areas := []uint8{
+		1,
+		2,
 	}
-	if solid.Spans[1+1*w] == nil {
-		t.Fatalf("solid.Spans[1 + 1 * w] == nil")
+	var bmin, bmax [3]float32
+	CalcBounds(verts, 4, bmin[:], bmax[:])
+
+	cellSize := float32(0.5)
+	cellHeight := float32(0.5)
+
+	w, h := CalcGridSize(bmin, bmax, cellSize)
+
+	var (
+		solid        Heightfield
+		flagMergeThr int32
+	)
+	res := solid.Create(&ctx, w, h, bmin[:], bmax[:], cellSize, cellHeight)
+	if !res {
+		t.Fatalf("Heightfield should have been successfully created")
 	}
 
-	if solid.Spans[0+0*w].smin != 0 {
-		t.Fatalf("solid.Spans[0 + 0 * w].smin != 0")
-	}
-	if solid.Spans[0+0*w].smax != 1 {
-		t.Fatalf("solid.Spans[0 + 0 * w].smax != 1")
-	}
-	if solid.Spans[0+0*w].area != area {
-		t.Fatalf("solid.Spans[0 + 0 * w].area != area")
-	}
-	if solid.Spans[0+0*w].next != nil {
-		t.Fatalf("solid.Spans[0 + 0 * w].next != nil")
+	flagMergeThr = 1
+
+	// SECTION("Rasterize some triangles")
+	res = RasterizeTriangles(&ctx, verts, 4, tris, areas, 2, &solid, flagMergeThr)
+	if !res {
+		t.Fatalf("result should be true")
 	}
 
-	if solid.Spans[0+1*w].smin != 0 {
-		t.Fatalf("solid.Spans[0 + 1 * w].smin != 0")
+	require(t, solid.Spans[0+0*w] != nil, "solid.spans[0 + 0 * w]")
+	require(t, solid.Spans[0+1*w] != nil, "solid.spans[0 + 1 * w]")
+	require(t, solid.Spans[0+2*w] != nil, "solid.spans[0 + 2 * w]")
+	require(t, solid.Spans[0+3*w] != nil, "solid.spans[0 + 3 * w]")
+	require(t, solid.Spans[1+0*w] == nil, "!solid.spans[1 + 0 * w]")
+	require(t, solid.Spans[1+1*w] != nil, "solid.spans[1 + 1 * w]")
+	require(t, solid.Spans[1+2*w] != nil, "solid.spans[1 + 2 * w]")
+	require(t, solid.Spans[1+3*w] == nil, "!solid.spans[1 + 3 * w]")
+
+	require(t, solid.Spans[0+0*w].smin == 0, "solid.spans[0 + 0 * w].smin == 0")
+	require(t, solid.Spans[0+0*w].smax == 1, "solid.spans[0 + 0 * w].smax == 1")
+	require(t, solid.Spans[0+0*w].area == 1, "solid.spans[0 + 0 * w].area == 1")
+	require(t, solid.Spans[0+0*w].next == nil, "!solid.spans[0 + 0 * w].next")
+
+	require(t, solid.Spans[0+1*w].smin == 0, "solid.spans[0 + 1 * w].smin == 0")
+	require(t, solid.Spans[0+1*w].smax == 1, "solid.spans[0 + 1 * w].smax == 1")
+	require(t, solid.Spans[0+1*w].area == 1, "solid.spans[0 + 1 * w].area == 1")
+	require(t, solid.Spans[0+1*w].next == nil, "!solid.spans[0 + 1 * w].next")
+
+	require(t, solid.Spans[0+2*w].smin == 0, "solid.spans[0 + 2 * w].smin == 0")
+	require(t, solid.Spans[0+2*w].smax == 1, "solid.spans[0 + 2 * w].smax == 1")
+	require(t, solid.Spans[0+2*w].area == 2, "solid.spans[0 + 2 * w].area == 2")
+	require(t, solid.Spans[0+2*w].next == nil, "!solid.spans[0 + 2 * w].next")
+
+	require(t, solid.Spans[0+3*w].smin == 0, "solid.spans[0 + 3 * w].smin == 0")
+	require(t, solid.Spans[0+3*w].smax == 1, "solid.spans[0 + 3 * w].smax == 1")
+	require(t, solid.Spans[0+3*w].area == 2, "solid.spans[0 + 3 * w].area == 2")
+	require(t, solid.Spans[0+3*w].next == nil, "!solid.spans[0 + 3 * w].next")
+
+	require(t, solid.Spans[1+1*w].smin == 0, "solid.spans[1 + 1 * w].smin == 0")
+	require(t, solid.Spans[1+1*w].smax == 1, "solid.spans[1 + 1 * w].smax == 1")
+	require(t, solid.Spans[1+1*w].area == 1, "solid.spans[1 + 1 * w].area == 1")
+	require(t, solid.Spans[1+1*w].next == nil, "!solid.spans[1 + 1 * w].next")
+
+	require(t, solid.Spans[1+2*w].smin == 0, "solid.spans[1 + 2 * w].smin == 0")
+	require(t, solid.Spans[1+2*w].smax == 1, "solid.spans[1 + 2 * w].smax == 1")
+	require(t, solid.Spans[1+2*w].area == 2, "solid.spans[1 + 2 * w].area == 2")
+	require(t, solid.Spans[1+2*w].next == nil, "!solid.spans[1 + 2 * w].next")
+
+	//SECTION("Unsigned short overload")
+	utris := []int32{
+		0, 1, 2,
+		0, 3, 1,
 	}
-	if solid.Spans[0+1*w].smax != 1 {
-		t.Fatalf("solid.Spans[0 + 1 * w].smax != 1")
-	}
-	if solid.Spans[0+1*w].area != area {
-		t.Fatalf("solid.Spans[0 + 1 * w].area != area")
-	}
-	if solid.Spans[0+1*w].next != nil {
-		t.Fatalf("solid.Spans[0 + 1 * w].next != nil")
+	res = RasterizeTriangles(&ctx, verts, 4, utris, areas, 2, &solid, flagMergeThr)
+	if !res {
+		t.Fatalf("result should be true")
 	}
 
-	if solid.Spans[1+1*w].smin != 0 {
-		t.Fatalf("solid.Spans[1 + 1 * w].smin != 0")
+	require(t, solid.Spans[0+0*w] != nil, "solid.Spans[0 + 0 * w])")
+	require(t, solid.Spans[0+1*w] != nil, "solid.Spans[0 + 1 * w])")
+	require(t, solid.Spans[0+2*w] != nil, "solid.Spans[0 + 2 * w])")
+	require(t, solid.Spans[0+3*w] != nil, "solid.Spans[0 + 3 * w])")
+	require(t, solid.Spans[1+0*w] == nil, "!solid.Spans[1 + 0 * w])")
+	require(t, solid.Spans[1+1*w] != nil, "solid.Spans[1 + 1 * w])")
+	require(t, solid.Spans[1+2*w] != nil, "solid.Spans[1 + 2 * w])")
+	require(t, solid.Spans[1+3*w] == nil, "!solid.Spans[1 + 3 * w])")
+
+	require(t, solid.Spans[0+0*w].smin == 0, "solid.Spans[0 + 0 * w].smin == 0)")
+	require(t, solid.Spans[0+0*w].smax == 1, "solid.Spans[0 + 0 * w].smax == 1)")
+	require(t, solid.Spans[0+0*w].area == 1, "solid.Spans[0 + 0 * w].area == 1)")
+	require(t, solid.Spans[0+0*w].next == nil, "!solid.Spans[0 + 0 * w].next)")
+
+	require(t, solid.Spans[0+1*w].smin == 0, "solid.Spans[0 + 1 * w].smin == 0)")
+	require(t, solid.Spans[0+1*w].smax == 1, "solid.Spans[0 + 1 * w].smax == 1)")
+	require(t, solid.Spans[0+1*w].area == 1, "solid.Spans[0 + 1 * w].area == 1)")
+	require(t, solid.Spans[0+1*w].next == nil, "!solid.Spans[0 + 1 * w].next)")
+
+	require(t, solid.Spans[0+2*w].smin == 0, "solid.Spans[0 + 2 * w].smin == 0)")
+	require(t, solid.Spans[0+2*w].smax == 1, "solid.Spans[0 + 2 * w].smax == 1)")
+	require(t, solid.Spans[0+2*w].area == 2, "solid.Spans[0 + 2 * w].area == 2)")
+	require(t, solid.Spans[0+2*w].next == nil, "!solid.Spans[0 + 2 * w].next)")
+
+	require(t, solid.Spans[0+3*w].smin == 0, "solid.Spans[0 + 3 * w].smin == 0)")
+	require(t, solid.Spans[0+3*w].smax == 1, "solid.Spans[0 + 3 * w].smax == 1)")
+	require(t, solid.Spans[0+3*w].area == 2, "solid.Spans[0 + 3 * w].area == 2)")
+	require(t, solid.Spans[0+3*w].next == nil, "!solid.Spans[0 + 3 * w].next)")
+
+	require(t, solid.Spans[1+1*w].smin == 0, "solid.Spans[1 + 1 * w].smin == 0)")
+	require(t, solid.Spans[1+1*w].smax == 1, "solid.Spans[1 + 1 * w].smax == 1)")
+	require(t, solid.Spans[1+1*w].area == 1, "solid.Spans[1 + 1 * w].area == 1)")
+	require(t, solid.Spans[1+1*w].next == nil, "!solid.Spans[1 + 1 * w].next)")
+
+	require(t, solid.Spans[1+2*w].smin == 0, "solid.Spans[1 + 2 * w].smin == 0)")
+	require(t, solid.Spans[1+2*w].smax == 1, "solid.Spans[1 + 2 * w].smax == 1)")
+	require(t, solid.Spans[1+2*w].area == 2, "solid.Spans[1 + 2 * w].area == 2)")
+	require(t, solid.Spans[1+2*w].next == nil, "!solid.Spans[1 + 2 * w].next)")
+
+	//SECTION("Triangle list overload")
+	vertsList := []float32{
+		0, 0, 0,
+		1, 0, 0,
+		0, 0, -1,
+		0, 0, 0,
+		0, 0, 1,
+		1, 0, 0,
 	}
-	if solid.Spans[1+1*w].smax != 1 {
-		t.Fatalf("solid.Spans[1 + 1 * w].smax != 1")
+
+	res = RasterizeTriangles2(&ctx, vertsList, areas, 2, &solid, flagMergeThr)
+	if !res {
+		t.Fatalf("result should be true")
 	}
-	if solid.Spans[1+1*w].area != area {
-		t.Fatalf("solid.Spans[1 + 1 * w].area != area")
-	}
-	if solid.Spans[1+1*w].next != nil {
-		t.Fatalf("solid.Spans[1 + 1 * w].next != nil")
-	}
+
+	require(t, solid.Spans[0+0*w] != nil, "solid.Spans[0 + 0 * w]")
+	require(t, solid.Spans[0+1*w] != nil, "solid.Spans[0 + 1 * w]")
+	require(t, solid.Spans[0+2*w] != nil, "solid.Spans[0 + 2 * w]")
+	require(t, solid.Spans[0+3*w] != nil, "solid.Spans[0 + 3 * w]")
+	require(t, solid.Spans[1+0*w] == nil, "!solid.Spans[1 + 0 * w]")
+	require(t, solid.Spans[1+1*w] != nil, "solid.Spans[1 + 1 * w]")
+	require(t, solid.Spans[1+2*w] != nil, "solid.Spans[1 + 2 * w]")
+	require(t, solid.Spans[1+3*w] == nil, "!solid.Spans[1 + 3 * w]")
+
+	require(t, solid.Spans[0+0*w].smin == 0, "solid.Spans[0 + 0 * w].smin == 0")
+	require(t, solid.Spans[0+0*w].smax == 1, "solid.Spans[0 + 0 * w].smax == 1")
+	require(t, solid.Spans[0+0*w].area == 1, "solid.Spans[0 + 0 * w].area == 1")
+	require(t, solid.Spans[0+0*w].next == nil, "!solid.Spans[0 + 0 * w].next")
+
+	require(t, solid.Spans[0+1*w].smin == 0, "solid.Spans[0 + 1 * w].smin == 0")
+	require(t, solid.Spans[0+1*w].smax == 1, "solid.Spans[0 + 1 * w].smax == 1")
+	require(t, solid.Spans[0+1*w].area == 1, "solid.Spans[0 + 1 * w].area == 1")
+	require(t, solid.Spans[0+1*w].next == nil, "!solid.Spans[0 + 1 * w].next")
+
+	require(t, solid.Spans[0+2*w].smin == 0, "solid.Spans[0 + 2 * w].smin == 0")
+	require(t, solid.Spans[0+2*w].smax == 1, "solid.Spans[0 + 2 * w].smax == 1")
+	require(t, solid.Spans[0+2*w].area == 2, "solid.Spans[0 + 2 * w].area == 2")
+	require(t, solid.Spans[0+2*w].next == nil, "!solid.Spans[0 + 2 * w].next")
+
+	require(t, solid.Spans[0+3*w].smin == 0, "solid.Spans[0 + 3 * w].smin == 0")
+	require(t, solid.Spans[0+3*w].smax == 1, "solid.Spans[0 + 3 * w].smax == 1")
+	require(t, solid.Spans[0+3*w].area == 2, "solid.Spans[0 + 3 * w].area == 2")
+	require(t, solid.Spans[0+3*w].next == nil, "!solid.Spans[0 + 3 * w].next")
+
+	require(t, solid.Spans[1+1*w].smin == 0, "solid.Spans[1 + 1 * w].smin == 0")
+	require(t, solid.Spans[1+1*w].smax == 1, "solid.Spans[1 + 1 * w].smax == 1")
+	require(t, solid.Spans[1+1*w].area == 1, "solid.Spans[1 + 1 * w].area == 1")
+	require(t, solid.Spans[1+1*w].next == nil, "!solid.Spans[1 + 1 * w].next")
+
+	require(t, solid.Spans[1+2*w].smin == 0, "solid.Spans[1 + 2 * w].smin == 0")
+	require(t, solid.Spans[1+2*w].smax == 1, "solid.Spans[1 + 2 * w].smax == 1")
+	require(t, solid.Spans[1+2*w].area == 2, "solid.Spans[1 + 2 * w].area == 2")
+	require(t, solid.Spans[1+2*w].next == nil, "!solid.Spans[1 + 2 * w].next")
 }

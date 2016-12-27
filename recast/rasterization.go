@@ -40,22 +40,49 @@ func RasterizeTriangles(ctx *Context, verts []float32, nv int32,
 
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	//rcScopedTimer timer(ctx, RC_TIMER_RASTERIZE_TRIANGLES);
 	ctx.StartTimer(RC_TIMER_RASTERIZE_TRIANGLES)
 	defer ctx.StopTimer(RC_TIMER_RASTERIZE_TRIANGLES)
 
 	ics := 1.0 / solid.Cs
 	ich := 1.0 / solid.Ch
-	var tri0, tri1, tri2 int32
 	// Rasterize triangles.
 	for i := int32(0); i < nt; i++ {
-		tri0, tri1, tri2 = tris[i*3+0], tris[i*3+1], tris[i*3+2]
-		v0 := verts[tri0 : tri0+3]
-		v1 := verts[tri1 : tri1+3]
-		v2 := verts[tri2 : tri2+3]
+		v0 := verts[tris[i*3+0]*3:]
+		v1 := verts[tris[i*3+1]*3:]
+		v2 := verts[tris[i*3+2]*3:]
 		// Rasterize.
 		if !rasterizeTri(v0, v1, v2, areas[i], solid, solid.BMin[:], solid.BMax[:], solid.Cs, ics, ich, flagMergeThr) {
 			ctx.Errorf("RasterizeTriangles: Out of memory.")
+			return false
+		}
+	}
+
+	return true
+}
+
+/// @par
+///
+/// Spans will only be added for triangles that overlap the heightfield grid.
+///
+/// @see rcHeightfield
+func RasterizeTriangles2(ctx *Context, verts []float32, areas []uint8, nt int32,
+	solid *Heightfield, flagMergeThr int32) bool {
+
+	assert.True(ctx != nil, "ctx should not be nil")
+
+	ctx.StartTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+	defer ctx.StopTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+
+	ics := float32(1.0 / solid.Cs)
+	ich := float32(1.0 / solid.Ch)
+	// Rasterize triangles.
+	for i := int32(0); i < nt; i++ {
+		v0 := verts[(i*3+0)*3:]
+		v1 := verts[(i*3+1)*3:]
+		v2 := verts[(i*3+2)*3:]
+		// Rasterize.
+		if !rasterizeTri(v0, v1, v2, areas[i], solid, solid.BMin[:], solid.BMax[:], solid.Cs, ics, ich, flagMergeThr) {
+			ctx.Errorf("rcRasterizeTriangles: Out of memory.")
 			return false
 		}
 	}
