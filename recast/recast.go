@@ -1,6 +1,7 @@
 package recast
 
 import (
+	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
 )
@@ -14,11 +15,16 @@ import (
 //  @param[out]	bmax	The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
 // TODO: should return bmin, bmax
 func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
+	assert.True(len(bmin) == 3 && len(bmax) == 3, "CalcBounds: bmin and bmax are not big enough")
+	assert.True(len(verts) >= int(3*nv), "len(verts) should be at least equal to 3*nv")
+
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
 	copy(bmax, verts[:3])
+
+	var v []float32
 	for i := int32(1); i < nv; i++ {
-		v := verts[i*3 : i*3+3]
+		v = verts[i*3:]
 		d3.Vec3Min(bmin, v)
 		d3.Vec3Max(bmax, v)
 	}

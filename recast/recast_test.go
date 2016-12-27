@@ -1,7 +1,6 @@
 package recast
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/aurelien-rainone/math32"
@@ -64,6 +63,40 @@ func TestiAbs(t *testing.T) {
 	}
 }
 
+func TestCalcBounds(t *testing.T) {
+	ttable := []struct {
+		verts            []float32
+		wantmin, wantmax []float32
+	}{
+		// bounds of one vector
+		{
+			[]float32{1, 2, 3},
+			[]float32{1, 2, 3},
+			[]float32{1, 2, 3},
+		},
+		// bounds of more than one vector
+		{
+			[]float32{0, 2, 3, 1, 2, 5},
+			[]float32{0, 2, 3},
+			[]float32{1, 2, 5},
+		},
+	}
+
+	for _, tt := range ttable {
+		var bmin, bmax [3]float32
+		CalcBounds(tt.verts, int32(len(tt.verts)/3), bmin[:], bmax[:])
+
+		for i := 0; i < 3; i++ {
+			if bmin[i] != tt.wantmin[i] {
+				t.Errorf("for verts=%v, bmin[%d] == %v, want %v", tt.verts, i, bmin[i], tt.wantmin[i])
+			}
+			if bmax[i] != tt.wantmax[i] {
+				t.Errorf("for verts=%v, bmax[%d] == %v, want %v", tt.verts, i, bmax[i], tt.wantmax[i])
+			}
+		}
+	}
+}
+
 func TestCalcGridSize(t *testing.T) {
 	verts := []float32{
 		1, 2, 3,
@@ -71,7 +104,6 @@ func TestCalcGridSize(t *testing.T) {
 	}
 	var bmin, bmax [3]float32
 	CalcBounds(verts, 2, bmin[:], bmax[:])
-	fmt.Println("calcBounds", bmin, bmax)
 
 	cellSize := float32(1.5)
 
