@@ -5,19 +5,16 @@ import (
 	"time"
 )
 
-const (
-	MAX_MESSAGES   = 1000
-	TEXT_POOL_SIZE = 8000
-)
+const maxMessages = 1000
 
-/// Recast build context.
+// BuildContext if the build context for recast.
 type BuildContext struct {
-	m_startTime [RC_MAX_TIMERS]time.Time
-	m_accTime   [RC_MAX_TIMERS]time.Duration
+	startTime [RC_MAX_TIMERS]time.Time
+	accTime   [RC_MAX_TIMERS]time.Duration
 
-	m_messages     [MAX_MESSAGES]string
-	m_messageCount int
-	m_textPool     string
+	messages    [maxMessages]string
+	numMessages int
+	textPool    string
 }
 
 /// Dumps the log to stdout.
@@ -27,61 +24,60 @@ func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
 	fmt.Printf(format+"\n", args...)
 
 	// Print messages
-	//TAB_STOPS := [4]int{28, 36, 44, 52}
-	for i := 0; i < ctx.m_messageCount; i++ {
-		msg := ctx.m_messages[i]
+	for i := 0; i < ctx.numMessages; i++ {
+		msg := ctx.messages[i]
 		fmt.Println(msg)
 	}
 }
 
 func (ctx *BuildContext) LogCount() int {
-	return ctx.m_messageCount
+	return ctx.numMessages
 }
 
 /// Returns log message text.
 func (ctx *BuildContext) LogText(i int32) string {
-	return ctx.m_messages[i]
+	return ctx.messages[i]
 }
 
 func (ctx *BuildContext) doResetLog() {
-	ctx.m_messageCount = 0
+	ctx.numMessages = 0
 }
 
 func (ctx *BuildContext) doLog(category LogCategory, msg string) {
-	if ctx.m_messageCount >= MAX_MESSAGES {
+	if ctx.numMessages >= maxMessages {
 		return
 	}
 	// Store message
 	switch category {
 	case RC_LOG_PROGRESS:
-		ctx.m_messages[ctx.m_messageCount] = "PROG " + msg
+		ctx.messages[ctx.numMessages] = "PROG " + msg
 	case RC_LOG_WARNING:
-		ctx.m_messages[ctx.m_messageCount] = "WARN " + msg
+		ctx.messages[ctx.numMessages] = "WARN " + msg
 	case RC_LOG_ERROR:
-		ctx.m_messages[ctx.m_messageCount] = "ERR " + msg
+		ctx.messages[ctx.numMessages] = "ERR " + msg
 	}
-	ctx.m_messageCount++
+	ctx.numMessages++
 }
 
 func (ctx *BuildContext) doResetTimers() {
 	for i := 0; i < RC_MAX_TIMERS; i++ {
-		ctx.m_accTime[i] = time.Duration(0)
+		ctx.accTime[i] = time.Duration(0)
 	}
 }
 
 func (ctx *BuildContext) doStartTimer(label TimerLabel) {
-	ctx.m_startTime[label] = time.Now()
+	ctx.startTime[label] = time.Now()
 }
 
 func (ctx *BuildContext) doStopTimer(label TimerLabel) {
-	deltaTime := time.Now().Sub(ctx.m_startTime[label])
-	if ctx.m_accTime[label] == 0 {
-		ctx.m_accTime[label] = deltaTime
+	deltaTime := time.Now().Sub(ctx.startTime[label])
+	if ctx.accTime[label] == 0 {
+		ctx.accTime[label] = deltaTime
 	} else {
-		ctx.m_accTime[label] += deltaTime
+		ctx.accTime[label] += deltaTime
 	}
 }
 
 func (ctx *BuildContext) doGetAccumulatedTime(label TimerLabel) time.Duration {
-	return ctx.m_accTime[label]
+	return ctx.accTime[label]
 }

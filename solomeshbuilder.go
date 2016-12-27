@@ -186,6 +186,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 
 	// END
 
+	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
 	// Show performance stats.
 	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL))
 	//	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", m_pmesh->nverts, m_pmesh->npolys);
