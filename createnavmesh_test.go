@@ -13,4 +13,5 @@ func TestCreateNavMesh(t *testing.T) {
 	if !ok {
 		t.Fatalf("solomesh.Build failed")
 	}
+	t.Logf("solomesh.Build success")
 }

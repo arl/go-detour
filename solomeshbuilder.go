@@ -167,16 +167,16 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 
 	fmt.Println(m_chf)
 
-	//if (!m_keepInterResults) {
-	//rcFreeHeightField(m_solid);
-	//m_solid = 0;
-	//}
+	if !keepInterResults {
+		m_solid.Free()
+		m_solid = nil
+	}
 
-	//// Erode the walkable area by agent radius.
-	//if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf)) {
-	//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
-	//return 0;
-	//}
+	// Erode the walkable area by agent radius.
+	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, m_chf) {
+		sm.ctx.Errorf("buildNavigation: Could not erode.")
+		return navData, false
+	}
 
 	//// (Optional) Mark areas.
 	//vols := m_geom.getConvexVolumes();

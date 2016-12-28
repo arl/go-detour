@@ -74,6 +74,21 @@ func (hf *Heightfield) Create(ctx *Context, width, height int32,
 	return true
 }
 
+func (hf *Heightfield) Free() {
+	if hf == nil {
+		return
+	}
+
+	// Delete span array.
+	hf.Spans = make([]*rcSpan, 0)
+	// Delete span pools.
+	for hf.Pools != nil {
+		next := hf.Pools.next
+		hf.Pools = nil
+		hf.Pools = next
+	}
+}
+
 func (hf *Heightfield) allocSpan() *rcSpan {
 	// If running out of memory, allocate new page and update the freelist.
 	if hf.Freelist == nil || hf.Freelist.next == nil {
