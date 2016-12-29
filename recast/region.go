@@ -10,6 +10,175 @@ import "github.com/aurelien-rainone/assertgo"
 /// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
 /// re-assigned to the zero (null) region.
 ///
+/// Partitioning can result in smaller than necessary regions. @p mergeRegionArea helps
+/// reduce unecessarily small regions.
+///
+/// See the #rcConfig documentation for more information on the configuration parameters.
+///
+/// The region data will be available via the rcCompactHeightfield::maxRegions
+/// and rcCompactSpan::reg fields.
+///
+/// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
+///
+/// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+func BuildRegionsMonotone(ctx *Context, chf *CompactHeightfield,
+	borderSize, minRegionArea, mergeRegionArea int32) bool {
+	assert.True(ctx != nil, "ctx should not be nil")
+
+	ctx.StartTimer(RC_TIMER_BUILD_REGIONS)
+	defer ctx.StopTimer(RC_TIMER_BUILD_REGIONS)
+
+	w := chf.width
+	h := chf.height
+	id := uint16(1)
+
+	srcReg := make([]uint16, chf.spanCount)
+	//if (!srcReg)
+	//{
+	//ctx->log(RC_LOG_ERROR, "rcBuildRegionsMonotone: Out of memory 'src' (%d).", chf.spanCount);
+	//return false;
+	//}
+	//memset(srcReg,0,sizeof(unsigned short)*chf.spanCount);
+
+	nsweeps := iMax(chf.width, chf.height)
+	sweeps := make([]sweepSpan, nsweeps)
+	//rcScopedDelete<rcSweepSpan> sweeps((rcSweepSpan*)rcAlloc(sizeof(rcSweepSpan)*nsweeps, RC_ALLOC_TEMP));
+	//if (!sweeps)
+	//{
+	//ctx->log(RC_LOG_ERROR, "rcBuildRegionsMonotone: Out of memory 'sweeps' (%d).", nsweeps);
+	//return false;
+	//}
+
+	// Mark border regions.
+	if borderSize > 0 {
+		// Make sure border will not overflow.
+		bw := iMin(w, borderSize)
+		bh := iMin(h, borderSize)
+		// Paint regions
+		paintRectRegion(0, bw, 0, h, id|RC_BORDER_REG, chf, srcReg)
+		id++
+		paintRectRegion(w-bw, w, 0, h, id|RC_BORDER_REG, chf, srcReg)
+		id++
+		paintRectRegion(0, w, 0, bh, id|RC_BORDER_REG, chf, srcReg)
+		id++
+		paintRectRegion(0, w, h-bh, h, id|RC_BORDER_REG, chf, srcReg)
+		id++
+
+		chf.borderSize = borderSize
+	}
+
+	prev := make([]int32, 256)
+
+	// Sweep one line at a time.
+	for y := borderSize; y < h-borderSize; y++ {
+		// Collect spans from this row.
+		prev = make([]int32, id+1)
+		//memset(&prev[0],0,sizeof(int)*id);
+		rid := uint16(1)
+
+		for x := borderSize; x < w-borderSize; x++ {
+			c := &chf.cells[x+y*w]
+
+			i := int32(c.index)
+			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
+				s := &chf.spans[i]
+				if chf.areas[i] == RC_NULL_AREA {
+					continue
+				}
+
+				// -x
+				previd := uint16(0)
+				if GetCon(s, 0) != RC_NOT_CONNECTED {
+					ax := x + GetDirOffsetX(0)
+					ay := y + GetDirOffsetY(0)
+					ai := int32(chf.cells[ax+ay*w].index) + GetCon(s, 0)
+					if (srcReg[ai]&RC_BORDER_REG) == 0 && chf.areas[i] == chf.areas[ai] {
+
+						previd = srcReg[ai]
+					}
+				}
+
+				if previd == 0 {
+					previd = rid
+					rid++
+					sweeps[previd].rid = previd
+					sweeps[previd].ns = 0
+					sweeps[previd].nei = 0
+				}
+
+				// -y
+				if GetCon(s, 3) != RC_NOT_CONNECTED {
+					ax := x + GetDirOffsetX(3)
+					ay := y + GetDirOffsetY(3)
+					ai := int32(chf.cells[ax+ay*w].index) + GetCon(s, 3)
+					if (srcReg[ai] != 0) && (srcReg[ai]&RC_BORDER_REG) == 0 && chf.areas[i] == chf.areas[ai] {
+						nr := uint16(srcReg[ai])
+						if (sweeps[previd].nei == 0) || sweeps[previd].nei == nr {
+							sweeps[previd].nei = nr
+							sweeps[previd].ns++
+							prev[nr]++
+						} else {
+							sweeps[previd].nei = RC_NULL_NEI
+						}
+					}
+				}
+
+				srcReg[i] = previd
+			}
+		}
+
+		// Create unique ID.
+		for i := uint16(1); i < rid; i++ {
+			if sweeps[i].nei != RC_NULL_NEI && sweeps[i].nei != 0 && prev[sweeps[i].nei] == int32(sweeps[i].ns) {
+				sweeps[i].id = sweeps[i].nei
+			} else {
+				sweeps[i].id = id
+				id++
+			}
+		}
+
+		// Remap IDs
+		for x := borderSize; x < w-borderSize; x++ {
+			c := &chf.cells[x+y*w]
+			i := int32(c.index)
+			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
+				if srcReg[i] > 0 && srcReg[i] < rid {
+					srcReg[i] = sweeps[srcReg[i]].id
+				}
+			}
+		}
+	}
+
+	{
+		ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+
+		// Merge regions and filter out small regions.
+		overlaps := make([]int32, 0)
+		chf.maxRegions = id
+		if !mergeAndFilterRegions(ctx, minRegionArea, mergeRegionArea, &chf.maxRegions, chf, srcReg, &overlaps) {
+			return false
+		}
+
+		// Monotone partitioning does not generate overlapping regions.
+		ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+	}
+
+	// Store the result out.
+	for i := int32(0); i < chf.spanCount; i++ {
+		chf.spans[i].reg = srcReg[i]
+	}
+
+	return true
+}
+
+/// @par
+///
+/// Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
+/// Contours will form simple polygons.
+///
+/// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
+/// re-assigned to the zero (null) region.
+///
 /// Watershed partitioning can result in smaller than necessary regions, especially in diagonal corridors.
 /// @p mergeRegionArea helps reduce unecessarily small regions.
 ///
@@ -983,4 +1152,13 @@ func mergeAndFilterRegions(ctx *Context, minRegionArea, mergeRegionSize int32,
 		regions[i] = nil
 	}
 	return true
+}
+
+const RC_NULL_NEI uint16 = 0xffff
+
+type sweepSpan struct {
+	rid uint16 // row id
+	id  uint16 // region id
+	ns  uint16 // number samples
+	nei uint16 // neighbour id
 }

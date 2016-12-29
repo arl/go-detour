@@ -237,8 +237,8 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	} else if sm.partitionType == SAMPLE_PARTITION_MONOTONE {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
-		if !BuildRegionsMonotone(m_ctx, *m_chf, 0, m_cfg.minRegionArea, m_cfg.mergeRegionArea) {
-			m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build monotone regions.")
+		if !recast.BuildRegionsMonotone(sm.ctx, m_chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
+			sm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
 			return navData, false
 		}
 	} else {
@@ -248,6 +248,21 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build layer regions.")
 		//return navData, false
 		//}
+	}
+
+	//
+	// Step 5. Trace and simplify region contours.
+	//
+
+	// Create contours.
+	m_cset := &recast.ContourSet{}
+	//if (!m_cset) {
+	//sm.ctx.Errorf("buildNavigation: Out of memory 'cset'.");
+	//return false;
+	//}
+	if !recast.BuildContours(sm.ctx, m_chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, *m_cset) {
+		sm.ctx.Errorf("buildNavigation: Could not create contours.")
+		return false
 	}
 
 	// END
