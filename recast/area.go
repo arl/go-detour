@@ -1,6 +1,9 @@
 package recast
 
-import "github.com/aurelien-rainone/assertgo"
+import (
+	"github.com/aurelien-rainone/assertgo"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
+)
 
 /// @par
 ///
@@ -181,4 +184,109 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 	dist = nil
 
 	return true
+}
+
+/// @par
+///
+/// The value of spacial parameters are in world units.
+///
+/// The y-values of the polygon vertices are ignored. So the polygon is effectively
+/// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
+///
+/// @see rcCompactHeightfield, rcMedianFilterWalkableArea
+func MarkConvexPolyArea(ctx *Context, verts []float32, nverts int32,
+	hmin, hmax float32, areaId uint8, chf *CompactHeightfield) {
+
+	assert.True(ctx != nil, "ctx should not be nil")
+
+	ctx.StartTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
+	defer ctx.StopTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
+
+	var bmin, bmax [3]float32
+	copy(bmin[:], verts[:3])
+	copy(bmax[:], verts[:3])
+	for i := int32(1); i*3 < nverts; i++ {
+		v := verts[i*3:]
+		d3.Vec3Min(bmin[:], v)
+		d3.Vec3Max(bmax[:], v)
+	}
+	bmin[1] = hmin
+	bmax[1] = hmax
+
+	minx := int32(((bmin[0] - chf.bmin[0]) / chf.cs))
+	miny := int32(((bmin[1] - chf.bmin[1]) / chf.ch))
+	minz := int32(((bmin[2] - chf.bmin[2]) / chf.cs))
+	maxx := int32(((bmax[0] - chf.bmin[0]) / chf.cs))
+	maxy := int32(((bmax[1] - chf.bmin[1]) / chf.ch))
+	maxz := int32(((bmax[2] - chf.bmin[2]) / chf.cs))
+
+	if maxx < 0 {
+		return
+	}
+	if minx >= chf.width {
+		return
+	}
+	if maxz < 0 {
+		return
+	}
+	if minz >= chf.height {
+		return
+	}
+
+	if minx < 0 {
+		minx = 0
+	}
+	if maxx >= chf.width {
+		maxx = chf.width - 1
+	}
+	if minz < 0 {
+		minz = 0
+	}
+	if maxz >= chf.height {
+		maxz = chf.height - 1
+	}
+
+	// TODO: Optimize.
+	for z := minz; z <= maxz; z++ {
+		for x := minx; x <= maxx; x++ {
+			c := chf.cells[x+z*chf.width]
+			i := int32(c.index)
+			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
+				s := &chf.spans[i]
+				if chf.areas[i] == RC_NULL_AREA {
+					continue
+				}
+				if int32(s.y) >= miny && int32(s.y) <= maxy {
+					var p [3]float32
+					p[0] = chf.bmin[0] + (float32(x)+0.5)*chf.cs
+					p[1] = 0
+					p[2] = chf.bmin[2] + (float32(z)+0.5)*chf.cs
+
+					if pointInPoly(nverts, verts, p[:]) {
+						chf.areas[i] = areaId
+					}
+				}
+			}
+		}
+	}
+}
+
+func pointInPoly(nvert int32, verts, p []float32) bool {
+	var (
+		i, j int32
+		c    bool
+	)
+
+	// TODO: check that, j = i++
+	//for j = nvert-1; i < nvert; j = i++) {
+	for j = nvert - 1; i < nvert; i++ {
+		vi := verts[i*3:]
+		vj := verts[j*3:]
+		if ((vi[2] > p[2]) != (vj[2] > p[2])) &&
+			(p[0] < (vj[0]-vi[0])*(p[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
+			c = !c
+		}
+		j = i
+	}
+	return c
 }

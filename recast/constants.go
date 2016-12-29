@@ -32,3 +32,18 @@ const RC_WALKABLE_AREA uint8 = 63
 // The value returned by #rcGetCon if the specified direction is not connected
 // to another span. (Has no neighbor.)
 const RC_NOT_CONNECTED int32 = 0x3f
+
+// Heighfield border flag.
+// If a heightfield region ID has this bit set, then the region is a border
+// region and its spans are considered unwalkable.
+// (Used during the region and contour build process.)
+// @see rcCompactSpan::reg
+const RC_BORDER_REG uint16 = 0x8000
+
+// Polygon touches multiple regions.
+// If a polygon has this region ID it was merged with or created
+// from polygons of different regions during the polymesh
+// build step that removes redundant border vertices.
+// (Used during the polymesh and detail polymesh build processes)
+// @see rcPolyMesh::regs
+const RC_MULTIPLE_REGS uint16 = 0

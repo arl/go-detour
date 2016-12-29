@@ -167,3 +167,11 @@ func (ig *InputGeom) BuildSettings() *BuildSettings {
 	}
 	return nil
 }
+
+func (ig *InputGeom) ConvexVolumes() []ConvexVolume {
+	return ig.m_volumes[:]
+}
+
+func (ig *InputGeom) ConvexVolumesCount() int32 {
+	return ig.m_volumeCount
+}

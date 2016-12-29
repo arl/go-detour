@@ -54,14 +54,16 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 	// copy vertices indices from OBJ,
 	// multiplying them by the scale factor
 	verts := obj.Verts()
-	mlo.m_vertCount = int32(len(verts)) * 3
-	fmt.Println("len(verts)", len(verts))
-	mlo.m_verts = make([]float32, mlo.m_vertCount)
-	for i := int32(0); i < mlo.m_vertCount; i += 3 {
+	count := int32(len(verts)) * 3
+	fmt.Println("count", count)
+	mlo.m_verts = make([]float32, count)
+	for i := int32(0); i < count; i += 3 {
 		mlo.m_verts[i] = float32(verts[i/3][0]) * mlo.m_scale
 		mlo.m_verts[i+1] = float32(verts[i/3][1]) * mlo.m_scale
 		mlo.m_verts[i+2] = float32(verts[i/3][2]) * mlo.m_scale
 	}
+	mlo.m_vertCount = int32(len(verts))
+	fmt.Println("vertCount", mlo.m_vertCount)
 
 	// Calculate normals.
 	// TODO: factor this with recast.calcTriNormal

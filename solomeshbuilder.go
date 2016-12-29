@@ -7,17 +7,27 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
+type SamplePartitionType int
+
+const (
+	SAMPLE_PARTITION_WATERSHED SamplePartitionType = iota
+	SAMPLE_PARTITION_MONOTONE
+	SAMPLE_PARTITION_LAYERS
+)
+
 type SoloMesh struct {
-	ctx      *recast.Context
-	buildCtx recast.BuildContext
-	geom     InputGeom
-	meshName string
-	cfg      recast.Config
+	ctx           *recast.Context
+	buildCtx      recast.BuildContext
+	geom          InputGeom
+	meshName      string
+	cfg           recast.Config
+	partitionType SamplePartitionType
 }
 
 func NewSoloMesh() *SoloMesh {
 	sm := &SoloMesh{}
 	sm.ctx = recast.NewContext(true, &sm.buildCtx)
+	sm.partitionType = SAMPLE_PARTITION_MONOTONE
 	return sm
 }
 
@@ -179,17 +189,73 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	}
 
 	//// (Optional) Mark areas.
-	//vols := m_geom.getConvexVolumes();
-	//for i := int32(0); i < m_geom.getConvexVolumeCount(); i++ {
-	//rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);
-	//}
+	vols := sm.geom.ConvexVolumes()
+	for i := int32(0); i < sm.geom.ConvexVolumesCount(); i++ {
+		recast.MarkConvexPolyArea(sm.ctx, vols[i].verts[:], vols[i].nverts, vols[i].hmin, vols[i].hmax, uint8(vols[i].area), m_chf)
+	}
+
+	// Partition the heightfield so that we can use simple algorithm later to triangulate the walkable areas.
+	// There are 3 martitioning methods, each with some pros and cons:
+	// 1) Watershed partitioning
+	//   - the classic Recast partitioning
+	//   - creates the nicest tessellation
+	//   - usually slowest
+	//   - partitions the heightfield into nice regions without holes or overlaps
+	//   - the are some corner cases where this method creates produces holes and overlaps
+	//      - holes may appear when a small obstacles is close to large open area (triangulation can handle this)
+	//      - overlaps may occur if you have narrow spiral corridors (i.e stairs), this make triangulation to fail
+	//   * generally the best choice if you precompute the nacmesh, use this if you have large open areas
+	// 2) Monotone partioning
+	//   - fastest
+	//   - partitions the heightfield into regions without holes and overlaps (guaranteed)
+	//   - creates long thin polygons, which sometimes causes paths with detours
+	//   * use this if you want fast navmesh generation
+	// 3) Layer partitoining
+	//   - quite fast
+	//   - partitions the heighfield into non-overlapping regions
+	//   - relies on the triangulation code to cope with holes (thus slower than monotone partitioning)
+	//   - produces better triangles than monotone partitioning
+	//   - does not have the corner cases of watershed partitioning
+	//   - can be slow and create a bit ugly tessellation (still better than monotone)
+	//     if you have large open areas with small obstacles (not a problem if you use tiles)
+	//   * good choice to use for tiled navmesh with medium and small sized tiles
+
+	if sm.partitionType == SAMPLE_PARTITION_WATERSHED {
+		// Prepare for region partitioning, by calculating distance field along the walkable surface.
+		//if (!rcBuildDistanceField(m_ctx, *m_chf))
+		//{
+		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build distance field.");
+		//return navData, false
+		//}
+
+		//// Partition the walkable surface into simple regions without holes.
+		//if (!rcBuildRegions(m_ctx, *m_chf, 0, m_cfg.minRegionArea, m_cfg.mergeRegionArea))
+		//{
+		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
+		//return navData, false
+		//}
+	} else if sm.partitionType == SAMPLE_PARTITION_MONOTONE {
+		// Partition the walkable surface into simple regions without holes.
+		// Monotone partitioning does not need distancefield.
+		if !BuildRegionsMonotone(m_ctx, *m_chf, 0, m_cfg.minRegionArea, m_cfg.mergeRegionArea) {
+			m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build monotone regions.")
+			return navData, false
+		}
+	} else {
+		// SAMPLE_PARTITION_LAYERS
+		// Partition the walkable surface into simple regions without holes.
+		//if !rcBuildLayerRegions(m_ctx, *m_chf, 0, m_cfg.minRegionArea) {
+		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build layer regions.")
+		//return navData, false
+		//}
+	}
 
 	// END
 
 	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
 	// Show performance stats.
 	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL))
-	//	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", m_pmesh->nverts, m_pmesh->npolys);
+	//	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", m_pmesh.nverts, m_pmesh.npolys);
 
 	//m_tileBuildTime := sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL) / 1000.0
 	//dataSize = navDataSize

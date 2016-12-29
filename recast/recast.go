@@ -16,7 +16,7 @@ import (
 // TODO: should return bmin, bmax
 func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	assert.True(len(bmin) == 3 && len(bmax) == 3, "CalcBounds: bmin and bmax are not big enough")
-	assert.True(len(verts) >= int(3*nv), "len(verts) should be at least equal to 3*nv")
+	assert.True(len(verts) >= int(3*nv), "len(verts) should be at least equal to 3*nv, but len(verts) == %d and nv = %d", len(verts), nv)
 
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
