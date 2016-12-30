@@ -47,3 +47,19 @@ const RC_BORDER_REG uint16 = 0x8000
 // (Used during the polymesh and detail polymesh build processes)
 // @see rcPolyMesh::regs
 const RC_MULTIPLE_REGS uint16 = 0
+
+// Border vertex flag.
+// If a region ID has this bit set, then the associated element lies on
+// a tile border. If a contour vertex's region ID has this bit set, the
+// vertex will later be removed in order to match the segments and vertices
+// at tile boundaries.
+// (Used during the build process.)
+// @see rcCompactSpan::reg, #rcContour::verts, #rcContour::rverts
+const RC_BORDER_VERTEX int32 = 0x10000
+
+// Area border flag.
+// If a region ID has this bit set, then the associated element lies on
+// the border of an area.
+// (Used during the region and contour build process.)
+// @see rcCompactSpan::reg, #rcContour::verts, #rcContour::rverts
+const RC_AREA_BORDER int32 = 0x20000
