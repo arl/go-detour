@@ -1,8 +1,6 @@
 package detour
 
 import (
-	"fmt"
-
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
 )
@@ -175,7 +173,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		return navData, false
 	}
 
-	fmt.Println(m_chf)
+	//fmt.Println(m_chf)
 
 	if !keepInterResults {
 		m_solid.Free()
@@ -260,9 +258,24 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//sm.ctx.Errorf("buildNavigation: Out of memory 'cset'.");
 	//return false;
 	//}
-	if !recast.BuildContours(sm.ctx, m_chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, *m_cset) {
+	if !recast.BuildContours(sm.ctx, m_chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, m_cset, recast.RC_CONTOUR_TESS_WALL_EDGES) {
 		sm.ctx.Errorf("buildNavigation: Could not create contours.")
-		return false
+		return navData, false
+	}
+
+	//
+	// Step 6. Build polygons mesh from contours.
+	//
+
+	// Build polygon navmesh from the contours.
+	m_pmesh = &recast.PolyMesh{}
+	//if !m_pmesh {
+	//sm.ctx.Errorf("buildNavigation: Out of memory 'pmesh'.")
+	//return navData, false
+	//}
+	if !recast.BuildPolyMesh(sm.ctx, m_cset, sm.cfg.MaxVertsPerPoly, *m_pmesh) {
+		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
+		return navData, false
 	}
 
 	// END
