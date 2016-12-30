@@ -15,8 +15,8 @@ type navMeshTileHeader struct {
 	DataSize int32
 }
 
-// Decode reads a PNG image from r and returns it as an image.Image.
-// The type of Image returned depends on the PNG contents.
+// Decode reads a tiled navigation mesh from r and returns the loaded NavMesh
+// object or nil and an error in case of failure.
 func Decode(r io.Reader) (*NavMesh, error) {
 	// Read header.
 	var (
@@ -68,6 +68,11 @@ func Decode(r io.Reader) (*NavMesh, error) {
 		status, _ := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef)
 		if status&Failure != 0 {
 			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
+		}
+		//fmt.Printf("tile %d: %v\n", i, mesh.Tiles[i])
+		if len(mesh.Tiles[i].OffMeshCons) > 0 {
+			fmt.Printf("tile %d has off-mesh connections,\n%v\n", i, mesh.Tiles[i].OffMeshCons)
+			fmt.Println("links", mesh.Tiles[i].Links)
 		}
 	}
 	return &mesh, nil

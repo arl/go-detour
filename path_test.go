@@ -29,7 +29,7 @@ func loadTestNavMesh(fname string) (*NavMesh, error) {
 	return Decode(f)
 }
 
-func TestFindPath(t *testing.T) {
+func TestFindPathFindStraightPath(t *testing.T) {
 	var (
 		mesh *NavMesh
 		err  error
@@ -117,6 +117,7 @@ func TestFindPath(t *testing.T) {
 			straightPath      []d3.Vec3
 			straightPathFlags []uint8
 			straightPathRefs  []PolyRef
+			straightPathCount int32
 			maxStraightPath   int32
 		)
 		// slices that receive the straight path
@@ -128,13 +129,17 @@ func TestFindPath(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]PolyRef, maxStraightPath)
 
-		st, _ = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
+		st, straightPathCount = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
 		if StatusFailed(st) {
 			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
 		}
 
 		if (straightPathFlags[0] & StraightPathStart) == 0 {
 			t.Errorf("straightPath start is not flagged StraightPathStart")
+		}
+
+		if (straightPathFlags[straightPathCount-1] & StraightPathEnd) == 0 {
+			t.Errorf("straightPath end is not flagged StraightPathEnd")
 		}
 
 		for i := int32(0); i < pathCount; i++ {

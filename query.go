@@ -499,7 +499,7 @@ func (q *NavMeshQuery) FindPath(
 					neighbourRef, neighbourPoly, neighbourTile,
 					neighbourNode.Pos[:])
 				if StatusFailed(status) {
-					log.Fatalf("getEdgeMidPoint failed")
+					log.Println("getEdgeMidPoint failed:", status)
 				}
 			}
 
@@ -627,7 +627,7 @@ func (q *NavMeshQuery) FindStraightPath(
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
 	maxStraightPath int32,
-	options int32) (Status, int32) {
+	options int32) (st Status, StraightPathCount int32) {
 
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
@@ -662,6 +662,7 @@ func (q *NavMeshQuery) FindStraightPath(
 		straightPath, straightPathFlags, straightPathRefs,
 		&count, maxStraightPath)
 	if stat != InProgress {
+		fmt.Println("FindStraightPath returns", stat, count)
 		return stat, count
 	}
 
@@ -714,6 +715,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					if count >= maxStraightPath {
 						stat |= BufferTooSmall
 					}
+					fmt.Println("FindStraightPath 2 returns", stat, count)
 					return stat, count
 				}
 
@@ -749,6 +751,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, maxStraightPath, options)
 						if stat != InProgress {
+							fmt.Println("FindStraightPath 3 returns", stat, count)
 							return stat, count
 						}
 					}
@@ -769,6 +772,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count, maxStraightPath)
 					if stat != InProgress {
+						fmt.Println("FindStraightPath 4 returns", stat, count)
 						return stat, count
 					}
 
@@ -802,6 +806,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, maxStraightPath, options)
 						if stat != InProgress {
+							fmt.Println("FindStraightPath 5 returns", stat, count)
 							return stat, count
 						}
 					}
@@ -822,6 +827,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count, maxStraightPath)
 					if stat != InProgress {
+						fmt.Println("FindStraightPath 6 returns", stat, count)
 						return stat, count
 					}
 
@@ -844,6 +850,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				straightPath, straightPathFlags, straightPathRefs,
 				&count, maxStraightPath, options)
 			if stat != InProgress {
+				fmt.Println("FindStraightPath 7 returns", stat, count)
 				return stat, count
 			}
 		}
@@ -858,6 +865,7 @@ func (q *NavMeshQuery) FindStraightPath(
 	if count >= maxStraightPath {
 		stat |= BufferTooSmall
 	}
+	fmt.Println("FindStraightPath 8 returns", stat, count)
 	return stat, count
 }
 
@@ -973,10 +981,9 @@ func (q *NavMeshQuery) appendVertex(
 func (q *NavMeshQuery) getEdgeMidPoint(
 	from PolyRef, fromPoly *Poly, fromTile *MeshTile,
 	to PolyRef, toPoly *Poly, toTile *MeshTile,
-	mid []float32) Status {
+	mid d3.Vec3) Status {
 
-	left := make([]float32, 3)
-	right := make([]float32, 3)
+	left, right := d3.NewVec3(), d3.NewVec3()
 
 	if StatusFailed(q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
 		return Failure | InvalidParam
@@ -1036,6 +1043,7 @@ func (q *NavMeshQuery) getPortalPoints8(
 
 	// Handle off-mesh connections.
 	if fromPoly.Type() == polyTypeOffMeshConnection {
+		log.Println("fromPoly is an offMeshConnection")
 		// Find link that points to first vertex.
 		for i := fromPoly.FirstLink; i != nullLink; i = fromTile.Links[i].Next {
 			if fromTile.Links[i].Ref == to {
@@ -1047,11 +1055,16 @@ func (q *NavMeshQuery) getPortalPoints8(
 				return Success
 			}
 		}
+		log.Println("failure 1")
 		return Failure | InvalidParam
 	}
 
 	if toPoly.Type() == polyTypeOffMeshConnection {
+		log.Println("toPoly is an offMeshConnection")
+		log.Printf("toPoly := %#v\n", toPoly)
+		log.Printf("toPoly.FirstLink %#v\n", toPoly.FirstLink)
 		for i := toPoly.FirstLink; i != nullLink; i = toTile.Links[i].Next {
+			log.Printf("link %d\n", i)
 			if toTile.Links[i].Ref == from {
 				// TODO: AR, repass here and test
 				v := toTile.Links[i].Edge
@@ -1061,6 +1074,7 @@ func (q *NavMeshQuery) getPortalPoints8(
 				return Success
 			}
 		}
+		log.Println("failure 2, toPoly:", toPoly)
 		return Failure | InvalidParam
 	}
 
@@ -1193,7 +1207,6 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 	nv := poly.VertCount
 	var i uint8
 	for i = 0; i < nv; i++ {
-		// TODO: could probably use copy
 		idx := i * 3
 		jdx := poly.Verts[i] * 3
 		copy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
@@ -1408,7 +1421,7 @@ func (q *NavMeshQuery) queryPolygons4(
 	}
 
 	bmin := center.Sub(extents)
-	bmax := center.Sub(extents)
+	bmax := center.Add(extents)
 
 	// Find tiles the query touches.
 	minx, miny := q.nav.CalcTileLoc(bmin)
@@ -1421,6 +1434,8 @@ func (q *NavMeshQuery) queryPolygons4(
 		for x := minx; x <= maxx; x++ {
 			nneis := q.nav.TilesAt(x, y, neis, maxNeis)
 			for j := int32(0); j < nneis; j++ {
+				fmt.Println("offmeshcons in tile:", neis[j].OffMeshCons)
+				fmt.Println("q.queryPolygonsInTile(", neis[j].OffMeshCons, bmin[:], bmax[:], filter, query, ")")
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
 		}
@@ -1515,6 +1530,8 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 			p := &tile.Polys[i]
 			// Do not return off-mesh connection polygons.
 			if p.Type() == polyTypeOffMeshConnection {
+
+				log.Fatalf("do return off-mesh connection polygons")
 				continue
 			}
 			// Must pass filter
