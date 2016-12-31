@@ -1,6 +1,8 @@
 package detour
 
 import (
+	"fmt"
+
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
 )
@@ -268,15 +270,19 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//
 
 	// Build polygon navmesh from the contours.
-	m_pmesh = &recast.PolyMesh{}
 	//if !m_pmesh {
 	//sm.ctx.Errorf("buildNavigation: Out of memory 'pmesh'.")
 	//return navData, false
 	//}
-	if !recast.BuildPolyMesh(sm.ctx, m_cset, sm.cfg.MaxVertsPerPoly, *m_pmesh) {
+	var ret bool
+	var m_pmesh *recast.PolyMesh
+
+	m_pmesh, ret = recast.BuildPolyMesh(sm.ctx, m_cset, sm.cfg.MaxVertsPerPoly)
+	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
 		return navData, false
 	}
+	fmt.Println(m_pmesh)
 
 	// END
 

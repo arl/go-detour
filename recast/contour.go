@@ -139,7 +139,7 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 			var ndiags int32
 			corner := hole.verts[bestVertex*4:]
 			for j := int32(0); j < outline.nverts; j++ {
-				if inCone(j, outline.nverts, outline.verts, corner) {
+				if inCone4(j, outline.nverts, outline.verts, corner) {
 					dx := outline.verts[j*4+0] - corner[0]
 					dz := outline.verts[j*4+2] - corner[2]
 					diags[ndiags].vert = j
@@ -1075,7 +1075,7 @@ func intersectSegCountour(d0, d1 []int32, i, n int32, verts []int32) bool {
 	return false
 }
 
-func inCone(i, n int32, verts, pj []int32) bool {
+func inCone4(i, n int32, verts, pj []int32) bool {
 	pi := verts[i*4:]
 	pi1 := verts[next(i, n)*4:]
 	pin1 := verts[prev(i, n)*4:]
