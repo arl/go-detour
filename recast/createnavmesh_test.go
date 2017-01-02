@@ -1,11 +1,11 @@
-package detour
+package recast
 
 import "testing"
 
 func TestCreateNavMesh(t *testing.T) {
 	var meshName string
 
-	meshName = "testdata/wallfloors.obj"
+	meshName = "../testdata/wallfloors.obj"
 	//meshName = "testdata/dungeon.obj"
 	soloMesh := NewSoloMesh()
 	soloMesh.Load(meshName)
