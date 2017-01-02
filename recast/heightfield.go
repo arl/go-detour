@@ -1,10 +1,6 @@
 package recast
 
-import (
-	"fmt"
-
-	"github.com/aurelien-rainone/assertgo"
-)
+import "github.com/aurelien-rainone/assertgo"
 
 /// Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
 const (
@@ -295,7 +291,7 @@ func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
 	}
 	//memset(chf.cells, 0, sizeof(rcCompactCell)*w*h)
 	chf.spans = make([]CompactSpan, spanCount)
-	fmt.Println("spanCount", spanCount)
+	//fmt.Println("spanCount", spanCount)
 	//if len(chf.spans) == 0 {
 	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.spans' (%d)", spanCount)
 	//return false

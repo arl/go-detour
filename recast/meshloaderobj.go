@@ -2,7 +2,6 @@ package recast
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/aurelien-rainone/gobj"
 	"github.com/aurelien-rainone/math32"
@@ -55,7 +54,7 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 	// multiplying them by the scale factor
 	verts := obj.Verts()
 	count := int32(len(verts)) * 3
-	fmt.Println("count", count)
+	//fmt.Println("count", count)
 	mlo.m_verts = make([]float32, count)
 	for i := int32(0); i < count; i += 3 {
 		mlo.m_verts[i] = float32(verts[i/3][0]) * mlo.m_scale
@@ -63,7 +62,7 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 		mlo.m_verts[i+2] = float32(verts[i/3][2]) * mlo.m_scale
 	}
 	mlo.m_vertCount = int32(len(verts))
-	fmt.Println("vertCount", mlo.m_vertCount)
+	//fmt.Println("vertCount", mlo.m_vertCount)
 
 	// Calculate normals.
 	// TODO: factor this with recast.calcTriNormal
@@ -90,7 +89,7 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 		}
 	}
 
-	fmt.Println("obj.AABB()", obj.AABB())
+	//fmt.Println("obj.AABB()", obj.AABB())
 	mlo.m_filename = filename
 	return nil
 }
