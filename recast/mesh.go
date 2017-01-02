@@ -21,11 +21,10 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 	var edgeCount int32
 
 	//rcEdge* edges = (rcEdge*)rcAlloc(sizeof(rcEdge)*maxEdgeCount, RC_ALLOC_TEMP);
-	edges := make([]Edge, maxEdgeCount)
-	//if (!edges) {
-	//rcFree(firstEdge);
-	//return false;
-	//}
+	edges := make([]*Edge, maxEdgeCount)
+	for i := range edges {
+		edges[i] = new(Edge)
+	}
 
 	for i := int32(0); i < nverts; i++ {
 		firstEdge[i] = RC_MESH_NULL_IDX
@@ -47,7 +46,7 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 			}
 
 			if v0 < v1 {
-				edge := &edges[edgeCount]
+				edge := edges[edgeCount]
 				edge.vert[0] = v0
 				edge.vert[1] = v1
 				edge.poly[0] = uint16(i)
@@ -77,7 +76,7 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 			}
 			if v0 > v1 {
 				for e := uint16(firstEdge[v1]); e != RC_MESH_NULL_IDX; e = nextEdge[e] {
-					edge := &edges[e]
+					edge := edges[e]
 					if edge.vert[1] == v0 && edge.poly[0] == edge.poly[1] {
 						edge.poly[1] = uint16(i)
 						edge.polyEdge[1] = uint16(j)
@@ -90,7 +89,7 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 
 	// Store adjacency
 	for i := int32(0); i < edgeCount; i++ {
-		e := &edges[i]
+		e := edges[i]
 		if e.poly[0] != e.poly[1] {
 			p0 := polys[int32(e.poly[0])*vertsPerPoly*2:]
 			p1 := polys[int32(e.poly[1])*vertsPerPoly*2:]
