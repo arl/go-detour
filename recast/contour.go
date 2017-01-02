@@ -7,7 +7,7 @@ import (
 )
 
 func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
-	s := &chf.spans[i]
+	s := chf.spans[i]
 	ch = int32(s.y)
 	dirp := (dir + 1) & 0x3
 
@@ -21,14 +21,14 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
 		ai := int32(chf.cells[ax+ay*chf.width].index) + GetCon(s, dir)
-		as := &chf.spans[ai]
+		as := chf.spans[ai]
 		ch = iMax(ch, int32(as.y))
 		regs[1] = chf.spans[ai].reg | uint16(chf.areas[ai]<<16)
 		if GetCon(as, dirp) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dirp)
 			ay2 := ay + GetDirOffsetY(dirp)
 			ai2 := int32(chf.cells[ax2+ay2*chf.width].index) + GetCon(as, dirp)
-			as2 := &chf.spans[ai2]
+			as2 := chf.spans[ai2]
 			ch = iMax(ch, int32(as2.y))
 			regs[2] = chf.spans[ai2].reg | uint16(chf.areas[ai2]<<16)
 		}
@@ -37,7 +37,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		ax := x + GetDirOffsetX(dirp)
 		ay := y + GetDirOffsetY(dirp)
 		ai := int32(chf.cells[ax+ay*chf.width].index) + GetCon(s, dirp)
-		as := &chf.spans[ai]
+		as := chf.spans[ai]
 		ch = iMax(ch, int32(as.y))
 		regs[3] = chf.spans[ai].reg | uint16(chf.areas[ai]<<16)
 		if GetCon(as, dir) != RC_NOT_CONNECTED {
@@ -229,7 +229,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	maxContours := iMax(int32(chf.maxRegions), 8)
 	cset.conts = make([]*Contour, maxContours)
 	for i := range cset.conts {
-		cset.conts[i] = &Contour{}
+		cset.conts[i] = new(Contour)
 	}
 	//if (!cset.conts) {
 	//return false;
@@ -248,11 +248,11 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	// Mark boundaries.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := &chf.cells[x+y*w]
+			c := chf.cells[x+y*w]
 			i := int32(c.index)
 			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
 				var res uint8
-				s := &chf.spans[i]
+				s := chf.spans[i]
 				if (chf.spans[i].reg != 0) || ((chf.spans[i].reg & RC_BORDER_REG) != 0) {
 					flags[i] = 0
 					continue
@@ -281,7 +281,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := &chf.cells[x+y*w]
+			c := chf.cells[x+y*w]
 			i := int32(c.index)
 			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
 				if flags[i] == 0 || flags[i] == 0xf {
@@ -504,7 +504,7 @@ func walkContour2(x, y, i int32,
 				break
 			}
 			r := int32(0)
-			s := &chf.spans[i]
+			s := chf.spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
 				ax := x + GetDirOffsetX(int32(dir))
 				ay := y + GetDirOffsetY(int32(dir))
@@ -528,7 +528,7 @@ func walkContour2(x, y, i int32,
 			ni := int32(-1)
 			nx := x + GetDirOffsetX(int32(dir))
 			ny := y + GetDirOffsetY(int32(dir))
-			s := &chf.spans[i]
+			s := chf.spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
 				nc := chf.cells[nx+ny*chf.width]
 				ni = int32(nc.index) + GetCon(s, int32(dir))

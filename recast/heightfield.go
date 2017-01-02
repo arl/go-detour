@@ -60,13 +60,13 @@ func (hf *Heightfield) Create(ctx *Context, width, height int32,
 	hf.Cs = cs
 	hf.Ch = ch
 	hf.Spans = make([]*rcSpan, hf.Width*hf.Height)
-	if len(hf.Spans) == 0 {
-		// NOTE: since in Go, we don't have (for now) any way to check that we
-		// are out of memory, this check doesn't have any sense, but for
-		// completeness with the originla C code, I'll let it, hopefully it will
-		// be replaced one day by a proper "allocation done check"
-		return false
-	}
+	//if len(hf.Spans) == 0 {
+	// NOTE: since in Go, we don't have (for now) any way to check that we
+	// are out of memory, this check doesn't have any sense, but for
+	// completeness with the originla C code, I'll let it, hopefully it will
+	// be replaced one day by a proper "allocation done check"
+	//return false
+	//}
 	return true
 }
 
@@ -221,22 +221,22 @@ type CompactSpan struct {
 /// A compact, static heightfield representing unobstructed space.
 /// @ingroup recast
 type CompactHeightfield struct {
-	width          int32         ///< The width of the heightfield. (Along the x-axis in cell units.)
-	height         int32         ///< The height of the heightfield. (Along the z-axis in cell units.)
-	spanCount      int32         ///< The number of spans in the heightfield.
-	walkableHeight int32         ///< The walkable height used during the build of the field.  (See: rcConfig::walkableHeight)
-	walkableClimb  int32         ///< The walkable climb used during the build of the field. (See: rcConfig::walkableClimb)
-	borderSize     int32         ///< The AABB border size used during the build of the field. (See: rcConfig::borderSize)
-	maxDistance    uint16        ///< The maximum distance value of any span within the field.
-	maxRegions     uint16        ///< The maximum region id of any span within the field.
-	bmin           [3]float32    ///< The minimum bounds in world space. [(x, y, z)]
-	bmax           [3]float32    ///< The maximum bounds in world space. [(x, y, z)]
-	cs             float32       ///< The size of each cell. (On the xz-plane.)
-	ch             float32       ///< The height of each cell. (The minimum increment along the y-axis.)
-	cells          []CompactCell ///< Array of cells. [Size: #width*#height]
-	spans          []CompactSpan ///< Array of spans. [Size: #spanCount]
-	dist           []uint16      ///< Array containing border distance data. [Size: #spanCount]
-	areas          []uint8       ///< Array containing area id data. [Size: #spanCount]
+	width          int32          ///< The width of the heightfield. (Along the x-axis in cell units.)
+	height         int32          ///< The height of the heightfield. (Along the z-axis in cell units.)
+	spanCount      int32          ///< The number of spans in the heightfield.
+	walkableHeight int32          ///< The walkable height used during the build of the field.  (See: rcConfig::walkableHeight)
+	walkableClimb  int32          ///< The walkable climb used during the build of the field. (See: rcConfig::walkableClimb)
+	borderSize     int32          ///< The AABB border size used during the build of the field. (See: rcConfig::borderSize)
+	maxDistance    uint16         ///< The maximum distance value of any span within the field.
+	maxRegions     uint16         ///< The maximum region id of any span within the field.
+	bmin           [3]float32     ///< The minimum bounds in world space. [(x, y, z)]
+	bmax           [3]float32     ///< The maximum bounds in world space. [(x, y, z)]
+	cs             float32        ///< The size of each cell. (On the xz-plane.)
+	ch             float32        ///< The height of each cell. (The minimum increment along the y-axis.)
+	cells          []*CompactCell ///< Array of cells. [Size: #width*#height]
+	spans          []*CompactSpan ///< Array of spans. [Size: #spanCount]
+	dist           []uint16       ///< Array containing border distance data. [Size: #spanCount]
+	areas          []uint8        ///< Array containing area id data. [Size: #spanCount]
 }
 
 func (hf *Heightfield) GetHeightFieldSpanCount(ctx *Context) int32 {
@@ -284,13 +284,21 @@ func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
 	chf.bmax[1] += float32(walkableHeight) * hf.Ch
 	chf.cs = hf.Cs
 	chf.ch = hf.Ch
-	chf.cells = make([]CompactCell, w*h)
-	if len(chf.cells) == 0 {
-		ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.cells' (%d)", w*h)
-		return false
+	chf.cells = make([]*CompactCell, w*h)
+	for i := range chf.cells {
+		chf.cells[i] = new(CompactCell)
 	}
+
+	//if len(chf.cells) == 0 {
+	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.cells' (%d)", w*h)
+	//return false
+	//}
 	//memset(chf.cells, 0, sizeof(rcCompactCell)*w*h)
-	chf.spans = make([]CompactSpan, spanCount)
+	chf.spans = make([]*CompactSpan, spanCount)
+	for i := range chf.spans {
+		chf.spans[i] = new(CompactSpan)
+	}
+
 	//fmt.Println("spanCount", spanCount)
 	//if len(chf.spans) == 0 {
 	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.spans' (%d)", spanCount)
@@ -303,6 +311,9 @@ func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
 	//return false
 	//}
 	//memset(chf.areas, RC_NULL_AREA, sizeof(unsigned char)*spanCount);
+	for i := range chf.areas {
+		chf.areas[i] = RC_NULL_AREA
+	}
 
 	MAX_HEIGHT := int32(0xffff)
 
@@ -349,7 +360,7 @@ func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
 				s := chf.spans[i]
 
 				for dir := int32(0); dir < 4; dir++ {
-					SetCon(&s, dir, RC_NOT_CONNECTED)
+					SetCon(s, dir, RC_NOT_CONNECTED)
 					nx := x + GetDirOffsetX(dir)
 					ny := y + GetDirOffsetY(dir)
 					// First check that the neighbour cell is in bounds.
@@ -375,7 +386,7 @@ func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
 								tooHighNeighbour = iMax(tooHighNeighbour, lidx)
 								continue
 							}
-							SetCon(&s, dir, lidx)
+							SetCon(s, dir, lidx)
 							break
 						}
 					}
