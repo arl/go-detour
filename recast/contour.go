@@ -7,46 +7,46 @@ import (
 )
 
 func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
-	s := chf.spans[i]
-	ch = int32(s.y)
+	s := chf.Spans[i]
+	ch = int32(s.Y)
 	dirp := (dir + 1) & 0x3
 
 	regs := [4]uint16{0, 0, 0, 0}
 
 	// Combine region and area codes in order to prevent
 	// border vertices which are in between two areas to be removed.
-	regs[0] = chf.spans[i].reg | uint16(chf.areas[i]<<16)
+	regs[0] = chf.Spans[i].Reg | uint16(chf.Areas[i]<<16)
 
 	if GetCon(s, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
-		ai := int32(chf.cells[ax+ay*chf.width].index) + GetCon(s, dir)
-		as := chf.spans[ai]
-		ch = iMax(ch, int32(as.y))
-		regs[1] = chf.spans[ai].reg | uint16(chf.areas[ai]<<16)
+		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
+		as := chf.Spans[ai]
+		ch = iMax(ch, int32(as.Y))
+		regs[1] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
 		if GetCon(as, dirp) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dirp)
 			ay2 := ay + GetDirOffsetY(dirp)
-			ai2 := int32(chf.cells[ax2+ay2*chf.width].index) + GetCon(as, dirp)
-			as2 := chf.spans[ai2]
-			ch = iMax(ch, int32(as2.y))
-			regs[2] = chf.spans[ai2].reg | uint16(chf.areas[ai2]<<16)
+			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dirp)
+			as2 := chf.Spans[ai2]
+			ch = iMax(ch, int32(as2.Y))
+			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
 		}
 	}
 	if GetCon(s, dirp) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dirp)
 		ay := y + GetDirOffsetY(dirp)
-		ai := int32(chf.cells[ax+ay*chf.width].index) + GetCon(s, dirp)
-		as := chf.spans[ai]
-		ch = iMax(ch, int32(as.y))
-		regs[3] = chf.spans[ai].reg | uint16(chf.areas[ai]<<16)
+		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dirp)
+		as := chf.Spans[ai]
+		ch = iMax(ch, int32(as.Y))
+		regs[3] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
 		if GetCon(as, dir) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dir)
 			ay2 := ay + GetDirOffsetY(dir)
-			ai2 := int32(chf.cells[ax2+ay2*chf.width].index) + GetCon(as, dir)
-			as2 := chf.spans[ai2]
-			ch = iMax(ch, int32(as2.y))
-			regs[2] = chf.spans[ai2].reg | uint16(chf.areas[ai2]<<16)
+			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dir)
+			as2 := chf.Spans[ai2]
+			ch = iMax(ch, int32(as2.Y))
+			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
 		}
 	}
 
@@ -202,31 +202,31 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	cset *ContourSet, buildFlags int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	w := chf.width
-	h := chf.height
-	borderSize := chf.borderSize
+	w := chf.Width
+	h := chf.Height
+	borderSize := chf.BorderSize
 
 	ctx.StartTimer(RC_TIMER_BUILD_CONTOURS)
 	defer ctx.StopTimer(RC_TIMER_BUILD_CONTOURS)
 
-	copy(cset.bmin[:], chf.bmin[:])
-	copy(cset.bmax[:], chf.bmax[:])
+	copy(cset.bmin[:], chf.BMin[:])
+	copy(cset.bmax[:], chf.BMax[:])
 	if borderSize > 0 {
 		// If the heightfield was build with bordersize, remove the offset.
-		pad := float32(borderSize) * chf.cs
+		pad := float32(borderSize) * chf.Cs
 		cset.bmin[0] += pad
 		cset.bmin[2] += pad
 		cset.bmax[0] -= pad
 		cset.bmax[2] -= pad
 	}
-	cset.cs = chf.cs
-	cset.ch = chf.ch
-	cset.width = chf.width - chf.borderSize*2
-	cset.height = chf.height - chf.borderSize*2
-	cset.borderSize = chf.borderSize
+	cset.cs = chf.Cs
+	cset.ch = chf.Ch
+	cset.width = chf.Width - chf.BorderSize*2
+	cset.height = chf.Height - chf.BorderSize*2
+	cset.borderSize = chf.BorderSize
 	cset.maxError = maxError
 
-	maxContours := iMax(int32(chf.maxRegions), 8)
+	maxContours := iMax(int32(chf.MaxRegions), 8)
 	cset.conts = make([]*Contour, maxContours)
 	for i := range cset.conts {
 		cset.conts[i] = new(Contour)
@@ -236,7 +236,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	//}
 	cset.nconts = 0
 
-	flags := make([]uint8, chf.spanCount)
+	flags := make([]uint8, chf.SpanCount)
 	//if (!flags)
 	//{
 	//ctx.log(RC_LOG_ERROR, "rcBuildContours: Out of memory 'flags' (%d).", chf.spanCount);
@@ -248,12 +248,12 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	// Mark boundaries.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.cells[x+y*w]
-			i := int32(c.index)
-			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
+			c := chf.Cells[x+y*w]
+			i := int32(c.Index)
+			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
-				s := chf.spans[i]
-				if (chf.spans[i].reg != 0) || ((chf.spans[i].reg & RC_BORDER_REG) != 0) {
+				s := chf.Spans[i]
+				if (chf.Spans[i].Reg != 0) || ((chf.Spans[i].Reg & RC_BORDER_REG) != 0) {
 					flags[i] = 0
 					continue
 				}
@@ -262,10 +262,10 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 					if GetCon(s, dir) != RC_NOT_CONNECTED {
 						ax := x + GetDirOffsetX(dir)
 						ay := y + GetDirOffsetY(dir)
-						ai := int32(chf.cells[ax+ay*w].index) + GetCon(s, dir)
-						r = chf.spans[ai].reg
+						ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, dir)
+						r = chf.Spans[ai].Reg
 					}
-					if r == chf.spans[i].reg {
+					if r == chf.Spans[i].Reg {
 						res |= (1 << uint(dir))
 					}
 				}
@@ -281,18 +281,18 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.cells[x+y*w]
-			i := int32(c.index)
-			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
+			c := chf.Cells[x+y*w]
+			i := int32(c.Index)
+			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if flags[i] == 0 || flags[i] == 0xf {
 					flags[i] = 0
 					continue
 				}
-				reg := chf.spans[i].reg
+				reg := chf.Spans[i].Reg
 				if (reg != 0) || ((reg & RC_BORDER_REG) != 0) {
 					continue
 				}
-				area := chf.areas[i]
+				area := chf.Areas[i]
 
 				verts = make([]int32, 0)
 				simplified = make([]int32, 0)
@@ -396,7 +396,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 		if nholes > 0 {
 			// Collect outline contour and holes contours per region.
 			// We assume that there is one outline and multiple holes.
-			nregions := chf.maxRegions + 1
+			nregions := chf.MaxRegions + 1
 
 			regions := make([]ContourRegion, nregions)
 			//if (!regions)
@@ -479,7 +479,7 @@ func walkContour2(x, y, i int32,
 	startDir := dir
 	starti := i
 
-	area := chf.areas[i]
+	area := chf.Areas[i]
 
 	iter := int32(0)
 	for iter+1 < 40000 {
@@ -504,13 +504,13 @@ func walkContour2(x, y, i int32,
 				break
 			}
 			r := int32(0)
-			s := chf.spans[i]
+			s := chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
 				ax := x + GetDirOffsetX(int32(dir))
 				ay := y + GetDirOffsetY(int32(dir))
-				ai := int32(chf.cells[ax+ay*chf.width].index) + GetCon(s, int32(dir))
-				r = int32(chf.spans[ai].reg)
-				if area != chf.areas[ai] {
+				ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, int32(dir))
+				r = int32(chf.Spans[ai].Reg)
+				if area != chf.Areas[ai] {
 					isAreaBorder = true
 				}
 			}
@@ -528,10 +528,10 @@ func walkContour2(x, y, i int32,
 			ni := int32(-1)
 			nx := x + GetDirOffsetX(int32(dir))
 			ny := y + GetDirOffsetY(int32(dir))
-			s := chf.spans[i]
+			s := chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
-				nc := chf.cells[nx+ny*chf.width]
-				ni = int32(nc.index) + GetCon(s, int32(dir))
+				nc := chf.Cells[nx+ny*chf.Width]
+				ni = int32(nc.Index) + GetCon(s, int32(dir))
 			}
 			if ni == -1 {
 				// Should not happen.

@@ -201,8 +201,8 @@ func init() {
 //  @param[in]		i		The index of the neighbor span.
 func SetCon(s *CompactSpan, dir, i int32) {
 	shift := uint32(uint32(dir * 6))
-	con := uint32(s.con)
-	s.con = (con ^ (0x3f << shift)) | ((uint32(i & 0x3f)) << shift)
+	con := uint32(s.Con)
+	s.Con = (con ^ (0x3f << shift)) | ((uint32(i & 0x3f)) << shift)
 }
 
 // Gets neighbor connection data for the specified direction.
@@ -212,7 +212,7 @@ func SetCon(s *CompactSpan, dir, i int32) {
 //  	or #RC_NOT_CONNECTED if there is no connection.
 func GetCon(s *CompactSpan, dir int32) int32 {
 	shift := uint32(dir * 6)
-	return int32((s.con >> shift) & 0x3f)
+	return int32((s.Con >> shift) & 0x3f)
 }
 
 // Gets the standard width (x-axis) offset for the specified direction.
