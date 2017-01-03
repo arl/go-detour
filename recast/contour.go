@@ -802,11 +802,11 @@ func simplifyContour(points, simplified *[]int32,
 
 func calcAreaOfPolygon2D(verts []int32, nverts int32) int32 {
 	var area, i int32
-	for j := nverts - 1; i < nverts; j = i {
-		i++
+	for j := nverts - 1; i < nverts; i++ {
 		vi := verts[i*4:]
 		vj := verts[j*4:]
 		area += vi[0]*vj[2] - vj[0]*vi[2]
+		j = i
 	}
 	return (area + 1) / 2
 }
