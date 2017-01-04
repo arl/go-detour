@@ -76,12 +76,12 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 
 /// Represents a simple, non-overlapping contour in field space.
 type Contour struct {
-	verts   []int32 // Simplified contour vertex and connection data. [Size: 4 * #nverts]
-	nverts  int32   // The number of vertices in the simplified contour.
-	rverts  []int32 // Raw contour vertex and connection data. [Size: 4 * #nrverts]
-	nrverts int32   // The number of vertices in the raw contour.
-	reg     uint16  // The region id of the contour.
-	area    uint8   // The area id of the contour.
+	Verts   []int32 // Simplified contour vertex and connection data. [Size: 4 * #nverts]
+	NVerts  int32   // The number of vertices in the simplified contour.
+	RVerts  []int32 // Raw contour vertex and connection data. [Size: 4 * #nrverts]
+	NRVerts int32   // The number of vertices in the raw contour.
+	Reg     uint16  // The region id of the contour.
+	Area    uint8   // The area id of the contour.
 }
 
 // Represents a group of related contours.
@@ -108,9 +108,9 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 	//sort.Sort(region.holes, region.nholes, sizeof(rcContourHole), compareHoles);
 	sort.Sort(compareHoles(region.holes))
 
-	maxVerts := region.outline.nverts
+	maxVerts := region.outline.NVerts
 	for i := int32(0); i < region.nholes; i++ {
-		maxVerts += region.holes[i].contour.nverts
+		maxVerts += region.holes[i].contour.NVerts
 	}
 
 	diags := make([]PotentialDiagonal, maxVerts)
@@ -128,7 +128,7 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 
 		index := int32(-1)
 		bestVertex := region.holes[i].leftmost
-		for iter := int32(0); iter < hole.nverts; iter++ {
+		for iter := int32(0); iter < hole.NVerts; iter++ {
 			// Find potential diagonals.
 			// The 'best' vertex must be in the cone described by 3 cosequtive vertices of the outline.
 			// ..o j-1
@@ -138,11 +138,11 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 			// j o-----o j+1
 			//         :
 			var ndiags int32
-			corner := hole.verts[bestVertex*4:]
-			for j := int32(0); j < outline.nverts; j++ {
-				if inCone4(j, outline.nverts, outline.verts, corner) {
-					dx := outline.verts[j*4+0] - corner[0]
-					dz := outline.verts[j*4+2] - corner[2]
+			corner := hole.Verts[bestVertex*4:]
+			for j := int32(0); j < outline.NVerts; j++ {
+				if inCone4(j, outline.NVerts, outline.Verts, corner) {
+					dx := outline.Verts[j*4+0] - corner[0]
+					dz := outline.Verts[j*4+2] - corner[2]
 					diags[ndiags].vert = j
 					diags[ndiags].dist = dx*dx + dz*dz
 					ndiags++
@@ -156,10 +156,10 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 			// Find a diagonal that is not intersecting the outline not the remaining holes.
 			index = -1
 			for j := int32(0); j < ndiags; j++ {
-				pt := outline.verts[diags[j].vert*4:]
-				intersect := intersectSegCountour(pt, corner, diags[i].vert, outline.nverts, outline.verts)
+				pt := outline.Verts[diags[j].vert*4:]
+				intersect := intersectSegCountour(pt, corner, diags[i].vert, outline.NVerts, outline.Verts)
 				for k := i; k < region.nholes && !intersect; k++ {
-					intersect = intersect || intersectSegCountour(pt, corner, -1, region.holes[k].contour.nverts, region.holes[k].contour.verts)
+					intersect = intersect || intersectSegCountour(pt, corner, -1, region.holes[k].contour.NVerts, region.holes[k].contour.Verts)
 				}
 				if !intersect {
 					index = diags[j].vert
@@ -171,7 +171,7 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 				break
 			}
 			// All the potential diagonals for the current vertex were intersecting, try next vertex.
-			bestVertex = (bestVertex + 1) % hole.nverts
+			bestVertex = (bestVertex + 1) % hole.NVerts
 		}
 
 		if index == -1 {
@@ -311,8 +311,8 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 						for j := int32(0); j < cset.NConts; j++ {
 							newConts[j] = cset.Conts[j]
 							// Reset source pointers to prevent data deletion.
-							cset.Conts[j].verts = make([]int32, 0)
-							cset.Conts[j].rverts = make([]int32, 0)
+							cset.Conts[j].Verts = make([]int32, 0)
+							cset.Conts[j].RVerts = make([]int32, 0)
 						}
 						cset.Conts = newConts
 
@@ -321,8 +321,8 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 
 					cont := cset.Conts[cset.NConts]
 					cset.NConts++
-					cont.nverts = int32(len(simplified) / 4)
-					cont.verts = make([]int32, cont.nverts*4)
+					cont.NVerts = int32(len(simplified) / 4)
+					cont.Verts = make([]int32, cont.NVerts*4)
 					//if (!cont.verts) {
 					//ctx.Errorf("BuildContours: Out of memory 'verts' (%d).", cont.nverts);
 					//return false;
@@ -330,15 +330,15 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 					//memcpy(cont.verts, &simplified[0], sizeof(int)*cont.nverts*4);
 					if borderSize > 0 {
 						// If the heightfield was build with bordersize, remove the offset.
-						for j := int32(0); j < cont.nverts; j++ {
-							v := cont.verts[j*4:]
+						for j := int32(0); j < cont.NVerts; j++ {
+							v := cont.Verts[j*4:]
 							v[0] -= borderSize
 							v[2] -= borderSize
 						}
 					}
 
-					cont.nrverts = int32(len(verts) / 4)
-					cont.rverts = make([]int32, cont.nrverts*4)
+					cont.NRVerts = int32(len(verts) / 4)
+					cont.RVerts = make([]int32, cont.NRVerts*4)
 					//if (!cont.rverts) {
 					//ctx.Errorf("rcBuildContours: Out of memory 'rverts' (%d).", cont.nrverts);
 					//return false;
@@ -346,15 +346,15 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 					//memcpy(cont.rverts, &verts[0], sizeof(int)*cont.nrverts*4);
 					if borderSize > 0 {
 						// If the heightfield was build with bordersize, remove the offset.
-						for j := int32(0); j < cont.nrverts; j++ {
-							v := cont.rverts[j*4:]
+						for j := int32(0); j < cont.NRVerts; j++ {
+							v := cont.RVerts[j*4:]
 							v[0] -= borderSize
 							v[2] -= borderSize
 						}
 					}
 
-					cont.reg = reg
-					cont.area = area
+					cont.Reg = reg
+					cont.Area = area
 				}
 			}
 		}
@@ -373,7 +373,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 		for i := int32(0); i < cset.NConts; i++ {
 			cont := cset.Conts[i]
 			// If the contour is wound backwards, it is a hole.
-			if calcAreaOfPolygon2D(cont.verts, cont.nverts) < 0 {
+			if calcAreaOfPolygon2D(cont.Verts, cont.NVerts) < 0 {
 				// TODO: check that!
 				//winding[i] = uint8(-1)
 				winding[i] = 0xff
@@ -389,28 +389,19 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			// Collect outline contour and holes contours per region.
 			// We assume that there is one outline and multiple holes.
 			nregions := chf.MaxRegions + 1
-
 			regions := make([]*ContourRegion, nregions)
-
 			holes := make([]*ContourHole, cset.NConts)
-			//rcScopedDelete<rcContourHole> holes((rcContourHole*)rcAlloc(sizeof(rcContourHole)*cset.nconts, RC_ALLOC_TEMP));
-			//if (!holes)
-			//{
-			//ctx.log(RC_LOG_ERROR, "rcBuildContours: Out of memory 'holes' (%d).", cset.nconts);
-			//return false;
-			//}
-			//memset(holes, 0, sizeof(rcContourHole)*cset.nconts);
 
 			for i := int32(0); i < cset.NConts; i++ {
 				cont := cset.Conts[i]
 				// Positively would contours are outlines, negative holes.
 				if winding[i] > 0 {
-					if regions[cont.reg].outline != nil {
-						ctx.Errorf("BuildContours: Multiple outlines for region %d.", cont.reg)
+					if regions[cont.Reg].outline != nil {
+						ctx.Errorf("BuildContours: Multiple outlines for region %d.", cont.Reg)
 					}
-					regions[cont.reg].outline = cont
+					regions[cont.Reg].outline = cont
 				} else {
-					regions[cont.reg].nholes++
+					regions[cont.Reg].nholes++
 				}
 			}
 			index := int32(0)
@@ -423,7 +414,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			}
 			for i := int32(0); i < cset.NConts; i++ {
 				cont := cset.Conts[i]
-				reg := regions[cont.reg]
+				reg := regions[cont.Reg]
 				if winding[i] < 0 {
 					reg.holes[reg.nholes].contour = cont
 					reg.nholes++
@@ -905,12 +896,12 @@ func removeDegenerateSegments(simplified *[]int32) {
 
 // Finds the lowest leftmost vertex of a contour.
 func findLeftMostVertex(contour *Contour) (minx, minz, leftmost int32) {
-	minx = contour.verts[0]
-	minz = contour.verts[2]
+	minx = contour.Verts[0]
+	minz = contour.Verts[2]
 	leftmost = 0
-	for i := int32(1); i < contour.nverts; i++ {
-		x := contour.verts[i*4+0]
-		z := contour.verts[i*4+2]
+	for i := int32(1); i < contour.NVerts; i++ {
+		x := contour.Verts[i*4+0]
+		z := contour.Verts[i*4+2]
 		if x < minx || (x == minx && z < minz) {
 			minx = x
 			minz = z
@@ -921,7 +912,7 @@ func findLeftMostVertex(contour *Contour) (minx, minz, leftmost int32) {
 }
 
 func mergeContours(ca, cb *Contour, ia, ib int32) bool {
-	maxVerts := ca.nverts + cb.nverts + 2
+	maxVerts := ca.NVerts + cb.NVerts + 2
 	verts := make([]int32, maxVerts*4)
 	//if !verts {
 	//return false
@@ -930,9 +921,9 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 	var nv int32
 
 	// Copy contour A.
-	for i := int32(0); i <= ca.nverts; i++ {
+	for i := int32(0); i <= ca.NVerts; i++ {
 		dst := verts[nv*4:]
-		src := ca.verts[((ia+i)%ca.nverts)*4:]
+		src := ca.Verts[((ia+i)%ca.NVerts)*4:]
 		dst[0] = src[0]
 		dst[1] = src[1]
 		dst[2] = src[2]
@@ -941,9 +932,9 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 	}
 
 	// Copy contour B
-	for i := int32(0); i <= cb.nverts; i++ {
+	for i := int32(0); i <= cb.NVerts; i++ {
 		dst := verts[nv*4:]
-		src := cb.verts[((ib+i)%cb.nverts)*4:]
+		src := cb.Verts[((ib+i)%cb.NVerts)*4:]
 		dst[0] = src[0]
 		dst[1] = src[1]
 		dst[2] = src[2]
@@ -952,12 +943,12 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 	}
 
 	//rcFree(ca.verts);
-	ca.verts = verts
-	ca.nverts = nv
+	ca.Verts = verts
+	ca.NVerts = nv
 
 	//rcFree(cb.verts);
-	cb.verts = make([]int32, 0)
-	cb.nverts = 0
+	cb.Verts = make([]int32, 0)
+	cb.NVerts = 0
 
 	return true
 }

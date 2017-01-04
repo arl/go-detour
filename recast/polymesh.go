@@ -83,12 +83,12 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 
 	for i := int32(0); i < cset.NConts; i++ {
 		// Skip null contours.
-		if cset.Conts[i].nverts < 3 {
+		if cset.Conts[i].NVerts < 3 {
 			continue
 		}
-		maxVertices += cset.Conts[i].nverts
-		maxTris += cset.Conts[i].nverts - 2
-		maxVertsPerCont = iMax(maxVertsPerCont, cset.Conts[i].nverts)
+		maxVertices += cset.Conts[i].NVerts
+		maxTris += cset.Conts[i].NVerts - 2
+		maxVertsPerCont = iMax(maxVertsPerCont, cset.Conts[i].NVerts)
 	}
 
 	if maxVertices >= 0xfffe {
@@ -191,16 +191,16 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		cont := cset.Conts[i]
 
 		// Skip null contours.
-		if cont.nverts < 3 {
+		if cont.NVerts < 3 {
 			continue
 		}
 
 		// Triangulate contour
-		for j := int32(0); j < cont.nverts; j++ {
+		for j := int32(0); j < cont.NVerts; j++ {
 			indices[j] = int64(j)
 		}
 
-		ntris := triangulate(cont.nverts, cont.verts, indices[:], tris[:])
+		ntris := triangulate(cont.NVerts, cont.Verts, indices[:], tris[:])
 		if ntris <= 0 {
 			// Bad triangulation, should not happen.
 			/*			printf("\tconst float bmin[3] = {%ff,%ff,%ff};\n", cset.bmin[0], cset.bmin[1], cset.bmin[2]);
@@ -218,8 +218,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		}
 
 		// Add and merge vertices.
-		for j := int32(0); j < cont.nverts; j++ {
-			v := cont.verts[j*4:]
+		for j := int32(0); j < cont.NVerts; j++ {
+			v := cont.Verts[j*4:]
 			indices[j] = int64(addVertex(uint16(v[0]), uint16(v[1]), uint16(v[2]),
 				mesh.Verts, firstVert, nextVert, &mesh.NVerts))
 			if (v[3] & RC_BORDER_VERTEX) != 0 {
@@ -304,8 +304,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 			for k := int32(0); k < nvp; k++ {
 				p[k] = q[k]
 			}
-			mesh.Regs[mesh.NPolys] = cont.reg
-			mesh.Areas[mesh.NPolys] = cont.area
+			mesh.Regs[mesh.NPolys] = cont.Reg
+			mesh.Areas[mesh.NPolys] = cont.Area
 			mesh.NPolys++
 			if mesh.NPolys > maxTris {
 				ctx.Errorf("rcBuildPolyMesh: Too many polygons %d (max:%d).", mesh.NPolys, maxTris)
