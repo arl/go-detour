@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	"github.com/aurelien-rainone/assertgo"
-	"github.com/fatih/structs"
 )
 
 func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
@@ -303,6 +302,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 				// Create contour.
 				if len(simplified)/4 >= 3 {
 					if cset.NConts >= maxContours {
+						panic("ENTERING")
 						// Allocate more contours.
 						// This happens when a region has holes.
 						oldMax := maxContours
@@ -323,11 +323,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 					cset.NConts++
 					cont.NVerts = int32(len(simplified) / 4)
 					cont.Verts = make([]int32, cont.NVerts*4)
-					//if (!cont.verts) {
-					//ctx.Errorf("BuildContours: Out of memory 'verts' (%d).", cont.nverts);
-					//return false;
-					//}
-					//memcpy(cont.verts, &simplified[0], sizeof(int)*cont.nverts*4);
+					copy(cont.Verts, simplified[:cont.NVerts*4])
 					if borderSize > 0 {
 						// If the heightfield was build with bordersize, remove the offset.
 						for j := int32(0); j < cont.NVerts; j++ {
@@ -339,11 +335,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 
 					cont.NRVerts = int32(len(verts) / 4)
 					cont.RVerts = make([]int32, cont.NRVerts*4)
-					//if (!cont.rverts) {
-					//ctx.Errorf("rcBuildContours: Out of memory 'rverts' (%d).", cont.nrverts);
-					//return false;
-					//}
-					//memcpy(cont.rverts, &verts[0], sizeof(int)*cont.nrverts*4);
+					copy(cont.RVerts, verts[:cont.NRVerts*4])
 					if borderSize > 0 {
 						// If the heightfield was build with bordersize, remove the offset.
 						for j := int32(0); j < cont.NRVerts; j++ {
@@ -358,11 +350,6 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 				}
 			}
 		}
-	}
-
-	fmt.Println("in BuildContours(0): cset:", structs.Map(cset))
-	for i := range cset.Conts {
-		fmt.Println(*cset.Conts[i])
 	}
 
 	// Merge holes if needed.
