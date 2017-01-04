@@ -1,9 +1,11 @@
 package recast
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/aurelien-rainone/assertgo"
+	"github.com/fatih/structs"
 )
 
 func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
@@ -358,16 +360,15 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 		}
 	}
 
+	fmt.Println("in BuildContours(0): cset:", structs.Map(cset))
+	for i := range cset.Conts {
+		fmt.Println(*cset.Conts[i])
+	}
+
 	// Merge holes if needed.
 	if cset.NConts > 0 {
 		// Calculate winding of all polygons.
-		//rcScopedDelete<char> winding((char*)rcAlloc(sizeof(char)*cset.nconts, RC_ALLOC_TEMP));
 		winding := make([]uint8, cset.NConts)
-		//if (!winding)
-		//{
-		//ctx.log(RC_LOG_ERROR, "rcBuildContours: Out of memory 'hole' (%d).", cset.nconts);
-		//return false;
-		//}
 		var nholes int32
 		for i := int32(0); i < cset.NConts; i++ {
 			cont := cset.Conts[i]
@@ -389,13 +390,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			// We assume that there is one outline and multiple holes.
 			nregions := chf.MaxRegions + 1
 
-			regions := make([]ContourRegion, nregions)
-			//if (!regions)
-			//{
-			//ctx.log(RC_LOG_ERROR, "rcBuildContours: Out of memory 'regions' (%d).", nregions);
-			//return false;
-			//}
-			//memset(regions, 0, sizeof(rcContourRegion)*nregions);
+			regions := make([]*ContourRegion, nregions)
 
 			holes := make([]*ContourHole, cset.NConts)
 			//rcScopedDelete<rcContourHole> holes((rcContourHole*)rcAlloc(sizeof(rcContourHole)*cset.nconts, RC_ALLOC_TEMP));
@@ -427,22 +422,22 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 				}
 			}
 			for i := int32(0); i < cset.NConts; i++ {
-				cont := &cset.Conts[i]
-				reg := &regions[(*cont).reg]
+				cont := cset.Conts[i]
+				reg := regions[(*cont).reg]
 				if winding[i] < 0 {
-					reg.holes[reg.nholes].contour = *cont
+					reg.holes[reg.nholes].contour = cont
 					reg.nholes++
 				}
 			}
 
 			// Finally merge each regions holes into the outline.
 			for i := uint16(0); i < nregions; i++ {
-				reg := &regions[i]
-				if reg.nholes == 0 {
+				reg := regions[i]
+				if (*reg).nholes == 0 {
 					continue
 				}
 
-				if reg.outline != nil {
+				if (*reg).outline != nil {
 					mergeRegionHoles(ctx, reg)
 				} else {
 					// The region does not have an outline.
@@ -789,6 +784,7 @@ func simplifyContour(points, simplified *[]int32,
 		(*simplified)[i*4+3] = ((*points)[ai*4+3] & (RC_CONTOUR_REG_MASK | RC_AREA_BORDER)) | ((*points)[bi*4+3] & RC_BORDER_VERTEX)
 	}
 
+	fmt.Println("SimplifyContour, simplified:", *simplified)
 }
 
 func calcAreaOfPolygon2D(verts []int32, nverts int32) int32 {
