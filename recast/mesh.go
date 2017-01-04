@@ -278,8 +278,7 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 		i1 := next(i, n)
 		i2 := next(i1, n)
 
-		panic("!!!!!TO CONTROL WITH ORIGINAL CODE!!!!!")
-		// ORIGINAL CODE
+		// TODO: control with ORIGINAL CODE
 		//*dst++ = indices[i] & 0x0fffffff;
 		//*dst++ = indices[i1] & 0x0fffffff;
 		//*dst++ = indices[i2] & 0x0fffffff;
@@ -319,8 +318,7 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 	}
 
 	// Append the remaining triangle.
-	panic("!!!!!TO CONTROL WITH ORIGINAL CODE!!!!!")
-	// SAME HERE: ORIGINAL CODE
+	// TODO: control with ORIGINAL CODE
 	//*dst++ = indices[0] & 0x0fffffff;
 	//*dst++ = indices[1] & 0x0fffffff;
 	//*dst++ = indices[2] & 0x0fffffff;
