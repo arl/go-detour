@@ -231,17 +231,9 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	for i := range cset.conts {
 		cset.conts[i] = new(Contour)
 	}
-	//if (!cset.conts) {
-	//return false;
-	//}
 	cset.nconts = 0
 
 	flags := make([]uint8, chf.SpanCount)
-	//if (!flags)
-	//{
-	//ctx.log(RC_LOG_ERROR, "rcBuildContours: Out of memory 'flags' (%d).", chf.spanCount);
-	//return false;
-	//}
 
 	ctx.StartTimer(RC_TIMER_BUILD_CONTOURS_TRACE)
 
@@ -253,7 +245,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
 				s := chf.Spans[i]
-				if (chf.Spans[i].Reg != 0) || ((chf.Spans[i].Reg & RC_BORDER_REG) != 0) {
+				if (chf.Spans[i].Reg == 0) || ((chf.Spans[i].Reg & RC_BORDER_REG) != 0) {
 					flags[i] = 0
 					continue
 				}
