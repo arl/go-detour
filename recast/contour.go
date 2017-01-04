@@ -402,15 +402,15 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			//memset(holes, 0, sizeof(rcContourHole)*cset.nconts);
 
 			for i := int32(0); i < cset.NConts; i++ {
-				cont := &cset.Conts[i]
+				cont := cset.Conts[i]
 				// Positively would contours are outlines, negative holes.
 				if winding[i] > 0 {
-					if regions[(*cont).reg].outline != nil {
-						ctx.Errorf("BuildContours: Multiple outlines for region %d.", (*cont).reg)
+					if regions[cont.reg].outline != nil {
+						ctx.Errorf("BuildContours: Multiple outlines for region %d.", cont.reg)
 					}
-					regions[(*cont).reg].outline = *cont
+					regions[cont.reg].outline = cont
 				} else {
-					regions[(*cont).reg].nholes++
+					regions[cont.reg].nholes++
 				}
 			}
 			index := int32(0)
@@ -423,7 +423,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			}
 			for i := int32(0); i < cset.NConts; i++ {
 				cont := cset.Conts[i]
-				reg := regions[(*cont).reg]
+				reg := regions[cont.reg]
 				if winding[i] < 0 {
 					reg.holes[reg.nholes].contour = cont
 					reg.nholes++
@@ -433,11 +433,11 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			// Finally merge each regions holes into the outline.
 			for i := uint16(0); i < nregions; i++ {
 				reg := regions[i]
-				if (*reg).nholes == 0 {
+				if reg.nholes == 0 {
 					continue
 				}
 
-				if (*reg).outline != nil {
+				if reg.outline != nil {
 					mergeRegionHoles(ctx, reg)
 				} else {
 					// The region does not have an outline.
