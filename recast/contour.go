@@ -280,7 +280,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 					continue
 				}
 				reg := chf.Spans[i].Reg
-				if (reg != 0) || ((reg & RC_BORDER_REG) != 0) {
+				if (reg == 0) || ((reg & RC_BORDER_REG) != 0) {
 					continue
 				}
 				area := chf.Areas[i]
