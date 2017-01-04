@@ -68,12 +68,12 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESH)
 
 	var mesh PolyMesh
-	copy(mesh.BMin[:], cset.bmin[:])
-	copy(mesh.BMax[:], cset.bmax[:])
-	mesh.Cs = cset.cs
-	mesh.Ch = cset.ch
-	mesh.BorderSize = cset.borderSize
-	mesh.MaxEdgeError = cset.maxError
+	copy(mesh.BMin[:], cset.BMin[:])
+	copy(mesh.BMax[:], cset.BMax[:])
+	mesh.Cs = cset.Cs
+	mesh.Ch = cset.Ch
+	mesh.BorderSize = cset.BorderSize
+	mesh.MaxEdgeError = cset.MaxError
 
 	var (
 		maxVertices     int32
@@ -81,14 +81,14 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		maxVertsPerCont int32
 	)
 
-	for i := int32(0); i < cset.nconts; i++ {
+	for i := int32(0); i < cset.NConts; i++ {
 		// Skip null contours.
-		if cset.conts[i].nverts < 3 {
+		if cset.Conts[i].nverts < 3 {
 			continue
 		}
-		maxVertices += cset.conts[i].nverts
-		maxTris += cset.conts[i].nverts - 2
-		maxVertsPerCont = iMax(maxVertsPerCont, cset.conts[i].nverts)
+		maxVertices += cset.Conts[i].nverts
+		maxTris += cset.Conts[i].nverts - 2
+		maxVertsPerCont = iMax(maxVertsPerCont, cset.Conts[i].nverts)
 	}
 
 	if maxVertices >= 0xfffe {
@@ -187,8 +187,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	//}
 	tmpPoly := polys[maxVertsPerCont*nvp:]
 
-	for i := int32(0); i < cset.nconts; i++ {
-		cont := cset.conts[i]
+	for i := int32(0); i < cset.NConts; i++ {
+		cont := cset.Conts[i]
 
 		// Skip null contours.
 		if cont.nverts < 3 {
@@ -343,8 +343,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 
 	// Find portal edges
 	if mesh.BorderSize > 0 {
-		w := cset.width
-		h := cset.height
+		w := cset.Width
+		h := cset.Height
 		for i := int32(0); i < mesh.NPolys; i++ {
 			p := mesh.Polys[i*2*nvp:]
 			for j := int32(0); j < nvp; j++ {

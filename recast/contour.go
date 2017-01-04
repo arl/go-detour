@@ -74,27 +74,26 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 
 /// Represents a simple, non-overlapping contour in field space.
 type Contour struct {
-	verts   []int32 ///< Simplified contour vertex and connection data. [Size: 4 * #nverts]
-	nverts  int32   ///< The number of vertices in the simplified contour.
-	rverts  []int32 ///< Raw contour vertex and connection data. [Size: 4 * #nrverts]
-	nrverts int32   ///< The number of vertices in the raw contour.
-	reg     uint16  ///< The region id of the contour.
-	area    uint8   ///< The area id of the contour.
+	verts   []int32 // Simplified contour vertex and connection data. [Size: 4 * #nverts]
+	nverts  int32   // The number of vertices in the simplified contour.
+	rverts  []int32 // Raw contour vertex and connection data. [Size: 4 * #nrverts]
+	nrverts int32   // The number of vertices in the raw contour.
+	reg     uint16  // The region id of the contour.
+	area    uint8   // The area id of the contour.
 }
 
-/// Represents a group of related contours.
-/// @ingroup recast
+// Represents a group of related contours.
 type ContourSet struct {
-	conts      []*Contour ///< An array of the contours in the set. [Size: #nconts]
-	nconts     int32      ///< The number of contours in the set.
-	bmin       [3]float32 ///< The minimum bounds in world space. [(x, y, z)]
-	bmax       [3]float32 ///< The maximum bounds in world space. [(x, y, z)]
-	cs         float32    ///< The size of each cell. (On the xz-plane.)
-	ch         float32    ///< The height of each cell. (The minimum increment along the y-axis.)
-	width      int32      ///< The width of the set. (Along the x-axis in cell units.)
-	height     int32      ///< The height of the set. (Along the z-axis in cell units.)
-	borderSize int32      ///< The AABB border size used to generate the source data from which the contours were derived.
-	maxError   float32    ///< The max edge error that this contour set was simplified with.
+	Conts      []*Contour // An array of the contours in the set. [Size: #nconts]
+	NConts     int32      // The number of contours in the set.
+	BMin       [3]float32 // The minimum bounds in world space. [(x, y, z)]
+	BMax       [3]float32 // The maximum bounds in world space. [(x, y, z)]
+	Cs         float32    // The size of each cell. (On the xz-plane.)
+	Ch         float32    // The height of each cell. (The minimum increment along the y-axis.)
+	Width      int32      // The width of the set. (Along the x-axis in cell units.)
+	Height     int32      // The height of the set. (Along the z-axis in cell units.)
+	BorderSize int32      // The AABB border size used to generate the source data from which the contours were derived.
+	MaxError   float32    // The max edge error that this contour set was simplified with.
 }
 
 func mergeRegionHoles(ctx *Context, region *ContourRegion) {
@@ -209,29 +208,29 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	ctx.StartTimer(RC_TIMER_BUILD_CONTOURS)
 	defer ctx.StopTimer(RC_TIMER_BUILD_CONTOURS)
 
-	copy(cset.bmin[:], chf.BMin[:])
-	copy(cset.bmax[:], chf.BMax[:])
+	copy(cset.BMin[:], chf.BMin[:])
+	copy(cset.BMax[:], chf.BMax[:])
 	if borderSize > 0 {
 		// If the heightfield was build with bordersize, remove the offset.
 		pad := float32(borderSize) * chf.Cs
-		cset.bmin[0] += pad
-		cset.bmin[2] += pad
-		cset.bmax[0] -= pad
-		cset.bmax[2] -= pad
+		cset.BMin[0] += pad
+		cset.BMin[2] += pad
+		cset.BMax[0] -= pad
+		cset.BMax[2] -= pad
 	}
-	cset.cs = chf.Cs
-	cset.ch = chf.Ch
-	cset.width = chf.Width - chf.BorderSize*2
-	cset.height = chf.Height - chf.BorderSize*2
-	cset.borderSize = chf.BorderSize
-	cset.maxError = maxError
+	cset.Cs = chf.Cs
+	cset.Ch = chf.Ch
+	cset.Width = chf.Width - chf.BorderSize*2
+	cset.Height = chf.Height - chf.BorderSize*2
+	cset.BorderSize = chf.BorderSize
+	cset.MaxError = maxError
 
 	maxContours := iMax(int32(chf.MaxRegions), 8)
-	cset.conts = make([]*Contour, maxContours)
-	for i := range cset.conts {
-		cset.conts[i] = new(Contour)
+	cset.Conts = make([]*Contour, maxContours)
+	for i := range cset.Conts {
+		cset.Conts[i] = new(Contour)
 	}
-	cset.nconts = 0
+	cset.NConts = 0
 
 	flags := make([]uint8, chf.SpanCount)
 
@@ -301,25 +300,25 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 				// Store region.contour remap info.
 				// Create contour.
 				if len(simplified)/4 >= 3 {
-					if cset.nconts >= maxContours {
+					if cset.NConts >= maxContours {
 						// Allocate more contours.
 						// This happens when a region has holes.
 						oldMax := maxContours
 						maxContours *= 2
 						newConts := make([]*Contour, maxContours)
-						for j := int32(0); j < cset.nconts; j++ {
-							newConts[j] = cset.conts[j]
+						for j := int32(0); j < cset.NConts; j++ {
+							newConts[j] = cset.Conts[j]
 							// Reset source pointers to prevent data deletion.
-							cset.conts[j].verts = make([]int32, 0)
-							cset.conts[j].rverts = make([]int32, 0)
+							cset.Conts[j].verts = make([]int32, 0)
+							cset.Conts[j].rverts = make([]int32, 0)
 						}
-						cset.conts = newConts
+						cset.Conts = newConts
 
 						ctx.Warningf("rcBuildContours: Expanding max contours from %d to %d.", oldMax, maxContours)
 					}
 
-					cont := cset.conts[cset.nconts]
-					cset.nconts++
+					cont := cset.Conts[cset.NConts]
+					cset.NConts++
 					cont.nverts = int32(len(simplified) / 4)
 					cont.verts = make([]int32, cont.nverts*4)
 					//if (!cont.verts) {
@@ -360,18 +359,18 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 	}
 
 	// Merge holes if needed.
-	if cset.nconts > 0 {
+	if cset.NConts > 0 {
 		// Calculate winding of all polygons.
 		//rcScopedDelete<char> winding((char*)rcAlloc(sizeof(char)*cset.nconts, RC_ALLOC_TEMP));
-		winding := make([]uint8, cset.nconts)
+		winding := make([]uint8, cset.NConts)
 		//if (!winding)
 		//{
 		//ctx.log(RC_LOG_ERROR, "rcBuildContours: Out of memory 'hole' (%d).", cset.nconts);
 		//return false;
 		//}
 		var nholes int32
-		for i := int32(0); i < cset.nconts; i++ {
-			cont := cset.conts[i]
+		for i := int32(0); i < cset.NConts; i++ {
+			cont := cset.Conts[i]
 			// If the contour is wound backwards, it is a hole.
 			if calcAreaOfPolygon2D(cont.verts, cont.nverts) < 0 {
 				// TODO: check that!
@@ -398,7 +397,7 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			//}
 			//memset(regions, 0, sizeof(rcContourRegion)*nregions);
 
-			holes := make([]*ContourHole, cset.nconts)
+			holes := make([]*ContourHole, cset.NConts)
 			//rcScopedDelete<rcContourHole> holes((rcContourHole*)rcAlloc(sizeof(rcContourHole)*cset.nconts, RC_ALLOC_TEMP));
 			//if (!holes)
 			//{
@@ -407,8 +406,8 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 			//}
 			//memset(holes, 0, sizeof(rcContourHole)*cset.nconts);
 
-			for i := int32(0); i < cset.nconts; i++ {
-				cont := &cset.conts[i]
+			for i := int32(0); i < cset.NConts; i++ {
+				cont := &cset.Conts[i]
 				// Positively would contours are outlines, negative holes.
 				if winding[i] > 0 {
 					if regions[(*cont).reg].outline != nil {
@@ -427,8 +426,8 @@ func BuildContours(ctx *Context, chf *CompactHeightfield,
 					regions[i].nholes = 0
 				}
 			}
-			for i := int32(0); i < cset.nconts; i++ {
-				cont := &cset.conts[i]
+			for i := int32(0); i < cset.NConts; i++ {
+				cont := &cset.Conts[i]
 				reg := &regions[(*cont).reg]
 				if winding[i] < 0 {
 					reg.holes[reg.nholes].contour = *cont
