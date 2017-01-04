@@ -36,27 +36,6 @@ func (pm *PolyMesh) Free() {
 	pm = nil
 }
 
-// PolyMeshDetail contains triangle meshes that represent detailed height data
-// associated with the polygons in its associated polygon mesh object.
-type PolyMeshDetail struct {
-	meshes  []uint32  ///< The sub-mesh data. [Size: 4*#nmeshes]
-	verts   []float32 ///< The mesh vertices. [Size: 3*#nverts]
-	tris    []uint8   ///< The mesh triangles. [Size: 4*#ntris]
-	nmeshes int32     ///< The number of sub-meshes defined by #meshes.
-	nverts  int32     ///< The number of vertices in #verts.
-	ntris   int32     ///< The number of triangles in #tris.
-}
-
-func (pmd *PolyMeshDetail) Free() {
-	if pmd == nil {
-		return
-	}
-	pmd.meshes = make([]uint32, 0)
-	pmd.verts = make([]float32, 0)
-	pmd.tris = make([]uint8, 0)
-	pmd = nil
-}
-
 /// @note If the mesh data is to be used to construct a Detour navigation mesh, then the upper
 /// limit must be retricted to <= #DT_VERTS_PER_POLYGON.
 ///
