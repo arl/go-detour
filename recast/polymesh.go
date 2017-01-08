@@ -117,7 +117,7 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	//memset(mesh.polys, 0xff, sizeof(unsigned short)*maxTris*nvp*2);
 
 	for i := range mesh.Polys {
-		mesh.Polys[i] = 0xff
+		mesh.Polys[i] = 0xffff
 	}
 
 	//memset(mesh.regs, 0, sizeof(unsigned short)*maxTris);
