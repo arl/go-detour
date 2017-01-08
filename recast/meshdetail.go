@@ -352,6 +352,9 @@ func BuildPolyMeshDetail(ctx *Context, mesh *PolyMesh, chf *CompactHeightfield, 
 
 	//rcScopedDelete<int> bounds((int*)rcAlloc(sizeof(int)*mesh.npolys*4, RC_ALLOC_TEMP));
 	bounds := make([]*int32, mesh.NPolys*4)
+	for i := range bounds {
+		bounds[i] = new(int32)
+	}
 	//rcScopedDelete<float> poly((float*)rcAlloc(sizeof(float)*nvp*3, RC_ALLOC_TEMP));
 	poly := make([]float32, nvp*3)
 
@@ -362,6 +365,7 @@ func BuildPolyMeshDetail(ctx *Context, mesh *PolyMesh, chf *CompactHeightfield, 
 		xmax := bounds[i*4+1]
 		ymin := bounds[i*4+2]
 		ymax := bounds[i*4+3]
+
 		*xmin = chf.Width
 		*xmax = 0
 		*ymin = chf.Height
