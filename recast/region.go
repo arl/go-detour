@@ -630,10 +630,10 @@ type Region struct {
 	Floors           []int32
 }
 
-func newRegion(i uint16) *Region {
+func newRegion(i int) *Region {
 	return &Region{
 		SpanCount:        0,
-		ID:               i,
+		ID:               uint16(i),
 		AreaType:         0,
 		Remap:            false,
 		Visited:          false,
@@ -887,17 +887,17 @@ func mergeAndFilterRegions(ctx *Context,
 	regions := make([]*Region, nreg)
 
 	// Construct regions
-	for i := uint16(0); i < nreg; i++ {
-		regions[i] = newRegion(i)
+	for ridx := range regions {
+		regions[ridx] = newRegion(ridx)
 	}
 
 	// Find edge of a region and find connections around the contour.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
 			c := chf.Cells[x+y*w]
-			i := int32(c.Index)
-			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				r := srcReg[i]
+			i2 := int32(c.Index)
+			for ni := int32(c.Index) + int32(c.Count); i2 < ni; i2++ {
+				r := srcReg[i2]
 				if r == 0 || r >= nreg {
 					continue
 				}
@@ -906,11 +906,11 @@ func mergeAndFilterRegions(ctx *Context,
 				reg.SpanCount++
 
 				// Update floors.
-				for j := int32(c.Index); j < ni; j++ {
-					if i == j {
+				for j0 := int32(c.Index); j0 < ni; j0++ {
+					if i2 == j0 {
 						continue
 					}
-					floorId := srcReg[j]
+					floorId := srcReg[j0]
 					if floorId == 0 || floorId >= nreg {
 						continue
 					}
@@ -925,12 +925,12 @@ func mergeAndFilterRegions(ctx *Context,
 					continue
 				}
 
-				reg.AreaType = chf.Areas[i]
+				reg.AreaType = chf.Areas[i2]
 
 				// Check if this cell is next to a border.
 				ndir := int32(-1)
 				for dir := int32(0); dir < 4; dir++ {
-					if isSolidEdge(chf, srcReg, x, y, i, dir) {
+					if isSolidEdge(chf, srcReg, x, y, i2, dir) {
 						ndir = dir
 						break
 					}
@@ -939,7 +939,7 @@ func mergeAndFilterRegions(ctx *Context,
 				if ndir != -1 {
 					// The cell is at border.
 					// Walk around the contour to find all the neighbours.
-					walkContour(x, y, i, ndir, chf, srcReg, &reg.Connections)
+					walkContour(x, y, i2, ndir, chf, srcReg, &reg.Connections)
 				}
 			}
 		}
@@ -948,8 +948,8 @@ func mergeAndFilterRegions(ctx *Context,
 	// Remove too small regions.
 	stack := make([]int32, 32)
 	trace := make([]int32, 32)
-	for i := uint16(0); i < nreg; i++ {
-		reg := regions[i]
+	for i3 := uint16(0); i3 < nreg; i3++ {
+		reg := regions[i3]
 		if reg.ID == 0 || ((reg.ID & RC_BORDER_REG) != 0) {
 			continue
 		}
@@ -968,7 +968,7 @@ func mergeAndFilterRegions(ctx *Context,
 		trace = trace[:0]
 
 		reg.Visited = true
-		stack = append(stack, int32(i))
+		stack = append(stack, int32(i3))
 
 		for len(stack) > 0 {
 
@@ -981,12 +981,12 @@ func mergeAndFilterRegions(ctx *Context,
 			spanCount += creg.SpanCount
 			trace = append(trace, ri)
 
-			for j := 0; j < len(creg.Connections); j++ {
-				if (creg.Connections[j] & int32(RC_BORDER_REG)) != 0 {
+			for j1 := 0; j1 < len(creg.Connections); j1++ {
+				if (creg.Connections[j1] & int32(RC_BORDER_REG)) != 0 {
 					connectsToBorder = true
 					continue
 				}
-				neireg := regions[creg.Connections[j]]
+				neireg := regions[creg.Connections[j1]]
 				if neireg.Visited {
 					continue
 				}
@@ -1005,9 +1005,9 @@ func mergeAndFilterRegions(ctx *Context,
 		// can potentially remove necessary areas.
 		if spanCount < minRegionArea && !connectsToBorder {
 			// Kill all visited regions.
-			for j := 0; j < len(trace); j++ {
-				regions[trace[j]].SpanCount = 0
-				regions[trace[j]].ID = 0
+			for j2 := 0; j2 < len(trace); j2++ {
+				regions[trace[j2]].SpanCount = 0
+				regions[trace[j2]].ID = 0
 			}
 		}
 	}
@@ -1016,8 +1016,8 @@ func mergeAndFilterRegions(ctx *Context,
 	mergeCount := 0
 	for {
 		mergeCount = 0
-		for i := uint16(0); i < nreg; i++ {
-			reg := regions[i]
+		for i4 := uint16(0); i4 < nreg; i4++ {
+			reg := regions[i4]
 			if reg.ID == 0 || ((reg.ID & RC_BORDER_REG) != 0) {
 				continue
 			}
@@ -1038,11 +1038,11 @@ func mergeAndFilterRegions(ctx *Context,
 			// Find smallest neighbour region that connects to this one.
 			smallest := int32(0xfffffff)
 			mergeId := uint16(reg.ID)
-			for j := 0; j < len(reg.Connections); j++ {
-				if (reg.Connections[j] & int32(RC_BORDER_REG)) != 0 {
+			for j3 := 0; j3 < len(reg.Connections); j3++ {
+				if (reg.Connections[j3] & int32(RC_BORDER_REG)) != 0 {
 					continue
 				}
-				mreg := regions[reg.Connections[j]]
+				mreg := regions[reg.Connections[j3]]
 				if mreg.ID == 0 || ((mreg.ID & RC_BORDER_REG) != 0) || mreg.Overlap {
 					continue
 				}
@@ -1062,18 +1062,18 @@ func mergeAndFilterRegions(ctx *Context,
 				if mergeRegions(target, reg) {
 
 					// Fixup regions pointing to current region.
-					for j := uint16(0); j < nreg; j++ {
-						if regions[j].ID == 0 || ((regions[j].ID & RC_BORDER_REG) != 0) {
+					for j4 := uint16(0); j4 < nreg; j4++ {
+						if regions[j4].ID == 0 || ((regions[j4].ID & RC_BORDER_REG) != 0) {
 							continue
 						}
 						// If another region was already merged into current region
 						// change the nid of the previous region too.
-						if regions[j].ID == oldId {
-							regions[j].ID = mergeId
+						if regions[j4].ID == oldId {
+							regions[j4].ID = mergeId
 						}
 						// Replace the current region with the new one if the
 						// current regions is neighbour.
-						regions[j].replaceNeighbour(oldId, mergeId)
+						regions[j4].replaceNeighbour(oldId, mergeId)
 					}
 					mergeCount++
 				}
@@ -1085,50 +1085,50 @@ func mergeAndFilterRegions(ctx *Context,
 	}
 
 	// Compress region Ids.
-	for i := uint16(0); i < nreg; i++ {
-		regions[i].Remap = false
-		if regions[i].ID == 0 {
+	for i5 := uint16(0); i5 < nreg; i5++ {
+		regions[i5].Remap = false
+		if regions[i5].ID == 0 {
 			continue // Skip nil regions.
 		}
-		if (regions[i].ID & RC_BORDER_REG) != 0 {
+		if (regions[i5].ID & RC_BORDER_REG) != 0 {
 			continue // Skip external regions.
 		}
-		regions[i].Remap = true
+		regions[i5].Remap = true
 	}
 
 	var regIdGen uint16
-	for i := uint16(0); i < nreg; i++ {
-		if !regions[i].Remap {
+	for i6 := uint16(0); i6 < nreg; i6++ {
+		if !regions[i6].Remap {
 			continue
 		}
-		oldId := regions[i].ID
+		oldId := regions[i6].ID
 		regIdGen++
 		newId := regIdGen
-		for j := i; j < nreg; j++ {
-			if regions[j].ID == oldId {
-				regions[j].ID = newId
-				regions[j].Remap = false
+		for j5 := i6; j5 < nreg; j5++ {
+			if regions[j5].ID == oldId {
+				regions[j5].ID = newId
+				regions[j5].Remap = false
 			}
 		}
 	}
 	*maxRegionId = regIdGen
 
 	// Remap regions.
-	for i := int32(0); i < chf.SpanCount; i++ {
-		if (srcReg[i] & RC_BORDER_REG) == 0 {
-			srcReg[i] = regions[srcReg[i]].ID
+	for i7 := int32(0); i7 < chf.SpanCount; i7++ {
+		if (srcReg[i7] & RC_BORDER_REG) == 0 {
+			srcReg[i7] = regions[srcReg[i7]].ID
 		}
 	}
 
 	// Return regions that we found to be overlapping.
-	for i := uint16(0); i < nreg; i++ {
-		if regions[i].Overlap {
-			*overlaps = append(*overlaps, int32(regions[i].ID))
+	for i8 := uint16(0); i8 < nreg; i8++ {
+		if regions[i8].Overlap {
+			*overlaps = append(*overlaps, int32(regions[i8].ID))
 		}
 	}
 
-	for i := uint16(0); i < nreg; i++ {
-		regions[i] = nil
+	for i9 := uint16(0); i9 < nreg; i9++ {
+		regions[i9] = nil
 	}
 	return true
 }
