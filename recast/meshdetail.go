@@ -177,12 +177,6 @@ func distToTriMesh(p, verts []float32, nverts int32, tris []int32, ntris int32) 
 }
 
 func push3(queue *[]int32, v1, v2, v3 int32) {
-	panic("CHECK THAT IT'S EQUIVALENT!!")
-	// ORIGINAL CODE:
-	//queue.resize(queue.size() + 3);
-	//queue[queue.size() - 3] = v1;
-	//queue[queue.size() - 2] = v2;
-	//queue[queue.size() - 1] = v3;
 	*queue = append(*queue, v1, v2, v3)
 }
 
@@ -1284,7 +1278,7 @@ func getHeightData(ctx *Context, chf *CompactHeightfield,
 	// Set all heights to RC_UNSET_HEIGHT.
 	//memset(hp.data, 0xff, sizeof(unsigned short)*hp.width*hp.height);
 	for i := int32(0); i < hp.width*hp.height; i++ {
-		hp.data[i] = 0xff
+		hp.data[i] = 0xffff
 	}
 
 	empty := true
