@@ -211,7 +211,7 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		var npolys int32
 		//memset(polys, 0xff, maxVertsPerCont*nvp*sizeof(unsigned short));
 		for i := int32(0); i < maxVertsPerCont*nvp; i++ {
-			polys[i] = 0xff
+			polys[i] = 0xffff
 		}
 
 		for j := int32(0); j < ntris; j++ {
