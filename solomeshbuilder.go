@@ -3,6 +3,7 @@ package recast
 import (
 	"fmt"
 
+	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
 	"github.com/fatih/structs"
 )
@@ -16,24 +17,24 @@ const (
 )
 
 type SoloMesh struct {
-	ctx           *Context
-	buildCtx      BuildContext
-	geom          InputGeom
+	ctx           *recast.Context
+	buildCtx      recast.BuildContext
+	geom          recast.InputGeom
 	meshName      string
-	cfg           Config
+	cfg           recast.Config
 	partitionType SamplePartitionType
 }
 
 func NewSoloMesh() *SoloMesh {
 	sm := &SoloMesh{}
-	sm.ctx = NewContext(true, &sm.buildCtx)
+	sm.ctx = recast.NewContext(true, &sm.buildCtx)
 	sm.partitionType = SAMPLE_PARTITION_MONOTONE
 	return sm
 }
 
 func (sm *SoloMesh) Load(path string) bool {
 	// load geometry
-	if !sm.geom.load(sm.ctx, path) {
+	if !sm.geom.Load(sm.ctx, path) {
 		return false
 	}
 	sm.buildCtx.DumpLog("Geom load log %s:", path)
@@ -107,7 +108,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// area could be specified by an user defined box, etc.
 	sm.cfg.BMin = bmin
 	sm.cfg.BMax = bmax
-	sm.cfg.Width, sm.cfg.Height = CalcGridSize(sm.cfg.BMin, sm.cfg.BMax, sm.cfg.Cs)
+	sm.cfg.Width, sm.cfg.Height = recast.CalcGridSize(sm.cfg.BMin, sm.cfg.BMax, sm.cfg.Cs)
 
 	fmt.Println(structs.Map(sm.cfg))
 
@@ -115,7 +116,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	sm.ctx.ResetTimers()
 
 	// Start the build process.
-	sm.ctx.StartTimer(RC_TIMER_TOTAL)
+	sm.ctx.StartTimer(recast.RC_TIMER_TOTAL)
 
 	sm.ctx.Progressf("Building navigation:")
 	sm.ctx.Progressf(" - %d x %d cells", sm.cfg.Width, sm.cfg.Height)
@@ -126,7 +127,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//
 
 	// Allocate voxel heightfield where we rasterize our input data to.
-	m_solid := NewHeightfield()
+	m_solid := recast.NewHeightfield()
 	if m_solid == nil {
 		sm.ctx.Errorf("buildNavigation: Out of memory 'solid'.")
 		return navData, false
@@ -144,9 +145,9 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// Find triangles which are walkable based on their slope and rasterize them.
 	// If your input data is multiple meshes, you can transform them here, calculate
 	// the are type for each of the meshes and rasterize them.
-	MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, m_triareas)
+	recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, m_triareas)
 
-	if !RasterizeTriangles(sm.ctx, verts, nverts, tris, m_triareas, ntris, m_solid, sm.cfg.WalkableClimb) {
+	if !recast.RasterizeTriangles(sm.ctx, verts, nverts, tris, m_triareas, ntris, m_solid, sm.cfg.WalkableClimb) {
 		sm.ctx.Errorf("buildNavigation: Could not rasterize triangles.")
 		return navData, false
 	}
@@ -158,9 +159,9 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// Once all geoemtry is rasterized, we do initial pass of filtering to
 	// remove unwanted overhangs caused by the conservative rasterization
 	// as well as filter spans where the character cannot possibly stand.
-	FilterLowHangingWalkableObstacles(sm.ctx, sm.cfg.WalkableClimb, m_solid)
-	FilterLedgeSpans(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid)
-	FilterWalkableLowHeightSpans(sm.ctx, sm.cfg.WalkableHeight, m_solid)
+	recast.FilterLowHangingWalkableObstacles(sm.ctx, sm.cfg.WalkableClimb, m_solid)
+	recast.FilterLedgeSpans(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid)
+	recast.FilterWalkableLowHeightSpans(sm.ctx, sm.cfg.WalkableHeight, m_solid)
 
 	// Compact the heightfield so that it is faster to handle from now on.
 	// This will result more cache coherent data as well as the neighbours
@@ -168,14 +169,14 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 
 	// panic("trouver pourquoi chf.maxRegions n'a pas la meme valeur des 2 cotés")
 
-	m_chf := &CompactHeightfield{}
-	if !BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid, m_chf) {
+	m_chf := &recast.CompactHeightfield{}
+	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid, m_chf) {
 		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
 		return navData, false
 	}
 
 	// Erode the walkable area by agent radius.
-	if !ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, m_chf) {
+	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, m_chf) {
 		sm.ctx.Errorf("buildNavigation: Could not erode.")
 		return navData, false
 	}
@@ -185,7 +186,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 
 	// CONTROL: ConvexVOlumnesCount() is also 0 on org library
 	for i := int32(0); i < sm.geom.ConvexVolumesCount(); i++ {
-		MarkConvexPolyArea(sm.ctx, vols[i].verts[:], vols[i].nverts, vols[i].hmin, vols[i].hmax, uint8(vols[i].area), m_chf)
+		recast.MarkConvexPolyArea(sm.ctx, vols[i].Verts[:], vols[i].NVerts, vols[i].HMin, vols[i].HMax, uint8(vols[i].Area), m_chf)
 	}
 
 	// Partition the heightfield so that we can use simple algorithm later to triangulate the walkable areas.
@@ -231,7 +232,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	} else if sm.partitionType == SAMPLE_PARTITION_MONOTONE {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
-		if !BuildRegionsMonotone(sm.ctx, m_chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
+		if !recast.BuildRegionsMonotone(sm.ctx, m_chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
 			sm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
 			return navData, false
 		}
@@ -249,8 +250,8 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//
 
 	// Create contours.
-	m_cset := &ContourSet{}
-	if !BuildContours(sm.ctx, m_chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, m_cset, RC_CONTOUR_TESS_WALL_EDGES) {
+	m_cset := &recast.ContourSet{}
+	if !recast.BuildContours(sm.ctx, m_chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, m_cset, recast.RC_CONTOUR_TESS_WALL_EDGES) {
 		sm.ctx.Errorf("buildNavigation: Could not create contours.")
 		return navData, false
 	}
@@ -262,10 +263,10 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// Build polygon navmesh from the contours.
 	var (
 		ret     bool
-		m_pmesh *PolyMesh
+		m_pmesh *recast.PolyMesh
 	)
 
-	m_pmesh, ret = BuildPolyMesh(sm.ctx, m_cset, sm.cfg.MaxVertsPerPoly)
+	m_pmesh, ret = recast.BuildPolyMesh(sm.ctx, m_cset, sm.cfg.MaxVertsPerPoly)
 	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
 		return navData, false
@@ -278,15 +279,15 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//var m_dmesh *PolyMeshDetail
 
 	//m_dmesh, ret = BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
-	_, ret = BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
+	_, ret = recast.BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
 		return navData, false
 	}
 
-	sm.ctx.StopTimer(RC_TIMER_TOTAL)
+	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
 	// Show performance stats.
-	LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(RC_TIMER_TOTAL))
+	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL))
 	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", m_pmesh.NVerts, m_pmesh.NPolys)
 
 	//m_tileBuildTime := sm.ctx.AccumulatedTime(RC_TIMER_TOTAL) / 1000.0

@@ -12,10 +12,10 @@ const (
 )
 
 type ConvexVolume struct {
-	verts      [MAX_CONVEXVOL_PTS * 3]float32
-	hmin, hmax float32
-	nverts     int32
-	area       int32
+	Verts      [MAX_CONVEXVOL_PTS * 3]float32
+	HMin, HMax float32
+	NVerts     int32
+	Area       int32
 }
 
 type BuildSettings struct {
@@ -63,8 +63,7 @@ type InputGeom struct {
 	m_buildSettings        BuildSettings
 	m_hasBuildSettings     bool
 
-	// @name Off-Mesh connections.
-	//@{
+	// Off-Mesh connections.
 	m_offMeshConVerts [MAX_OFFMESH_CONNECTIONS * 3 * 2]float32
 	m_offMeshConRads  [MAX_OFFMESH_CONNECTIONS]float32
 	m_offMeshConDirs  [MAX_OFFMESH_CONNECTIONS]uint8
@@ -72,16 +71,13 @@ type InputGeom struct {
 	m_offMeshConFlags [MAX_OFFMESH_CONNECTIONS]uint8
 	m_offMeshConId    [MAX_OFFMESH_CONNECTIONS]uint32
 	m_offMeshConCount int32
-	//@}
 
-	// @name Convex Volumes.
-	//@{
+	// Convex Volumes.
 	m_volumes     [MAX_VOLUMES]ConvexVolume
 	m_volumeCount int32
-	//@}
 }
 
-func (ig *InputGeom) load(ctx *Context, path string) bool {
+func (ig *InputGeom) Load(ctx *Context, path string) bool {
 
 	switch filepath.Ext(path) {
 	case ".obj":
