@@ -1223,21 +1223,11 @@ func seedArrayWithPolyCenter(ctx *Context, chf *CompactHeightfield,
 		dirs[directDir], dirs[3] = dirs[3], dirs[directDir]
 	}
 
-	panic("CHECK ALSO THAT")
-	// TODO: AR ORIGINAL CODE
-	//array.resize(0);
-	//// getHeightData seeds are given in coordinates with borders
-	//array.push(cx+bs);
-	//array.push(cy+bs);
-	//array.push(ci);
-
+	// getHeightData seeds are given in coordinates with borders
 	*array = append([]int32{}, cx+bs, cy+bs, ci)
 
-	// TODO: CHECK ALSO THAT
-	// ORIGINAL CODE:
-	//memset(hp.data, 0xff, sizeof(unsigned short)*hp.width*hp.height);
 	for i := int32(0); i < hp.width*hp.height; i++ {
-		hp.data[i] = 0xff
+		hp.data[i] = 0xffff
 	}
 
 	cs := chf.Spans[ci]
@@ -1352,13 +1342,8 @@ func getHeightData(ctx *Context, chf *CompactHeightfield,
 		if head >= RETRACT_SIZE {
 			head = 0
 			if len(*queue) > RETRACT_SIZE*3 {
-				panic("CHECK THAT WITH ORIGINAL CODE")
-				// original code
-				//memmove(&queue[0], &queue[RETRACT_SIZE*3], sizeof(int)*(queue.size()-RETRACT_SIZE*3));
-				copy((*queue)[:], (*queue)[RETRACT_SIZE*3:len(*queue)-RETRACT_SIZE*3])
+				copy((*queue)[:], (*queue)[RETRACT_SIZE*3:(RETRACT_SIZE*3)+len(*queue)-RETRACT_SIZE*3])
 			}
-			// TODO: CHECK ALSO THAT!!
-			//queue.resize(queue.size()-RETRACT_SIZE*3);
 			*queue = (*queue)[:len(*queue)-RETRACT_SIZE*3]
 		}
 
