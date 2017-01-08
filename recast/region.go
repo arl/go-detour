@@ -965,7 +965,7 @@ func mergeAndFilterRegions(ctx *Context,
 		connectsToBorder := false
 		spanCount := int32(0)
 		stack = stack[:0]
-		trace = stack[:0]
+		trace = trace[:0]
 
 		reg.Visited = true
 		stack = append(stack, int32(i))
