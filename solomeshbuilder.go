@@ -146,11 +146,13 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// If your input data is multiple meshes, you can transform them here, calculate
 	// the are type for each of the meshes and rasterize them.
 	recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, m_triareas)
-
 	if !recast.RasterizeTriangles(sm.ctx, verts, nverts, tris, m_triareas, ntris, m_solid, sm.cfg.WalkableClimb) {
 		sm.ctx.Errorf("buildNavigation: Could not rasterize triangles.")
 		return navData, false
 	}
+
+	// free memory as we do not need it anymore
+	m_triareas = nil
 
 	//
 	// Step 3. Filter walkables surfaces.
@@ -174,6 +176,9 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
 		return navData, false
 	}
+
+	// free memory as we do not need it anymore
+	m_solid = nil
 
 	// Erode the walkable area by agent radius.
 	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, m_chf) {
@@ -284,6 +289,10 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
 		return navData, false
 	}
+
+	// free memory as we do not need it anymore
+	m_chf = nil
+	m_cset = nil
 
 	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
 	// Show performance stats.
