@@ -1,8 +1,6 @@
 package recast
 
-import (
-	"github.com/aurelien-rainone/assertgo"
-)
+import "github.com/aurelien-rainone/assertgo"
 
 // PolyMesh represents a polygon mesh suitable for use in building a navigation
 // mesh.
@@ -36,27 +34,6 @@ func (pm *PolyMesh) Free() {
 	pm = nil
 }
 
-// PolyMeshDetail contains triangle meshes that represent detailed height data
-// associated with the polygons in its associated polygon mesh object.
-type PolyMeshDetail struct {
-	meshes  []uint32  ///< The sub-mesh data. [Size: 4*#nmeshes]
-	verts   []float32 ///< The mesh vertices. [Size: 3*#nverts]
-	tris    []uint8   ///< The mesh triangles. [Size: 4*#ntris]
-	nmeshes int32     ///< The number of sub-meshes defined by #meshes.
-	nverts  int32     ///< The number of vertices in #verts.
-	ntris   int32     ///< The number of triangles in #tris.
-}
-
-func (pmd *PolyMeshDetail) Free() {
-	if pmd == nil {
-		return
-	}
-	pmd.meshes = make([]uint32, 0)
-	pmd.verts = make([]float32, 0)
-	pmd.tris = make([]uint8, 0)
-	pmd = nil
-}
-
 /// @note If the mesh data is to be used to construct a Detour navigation mesh, then the upper
 /// limit must be retricted to <= #DT_VERTS_PER_POLYGON.
 ///
@@ -68,12 +45,12 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESH)
 
 	var mesh PolyMesh
-	copy(mesh.BMin[:], cset.bmin[:])
-	copy(mesh.BMax[:], cset.bmax[:])
-	mesh.Cs = cset.cs
-	mesh.Ch = cset.ch
-	mesh.BorderSize = cset.borderSize
-	mesh.MaxEdgeError = cset.maxError
+	copy(mesh.BMin[:], cset.BMin[:])
+	copy(mesh.BMax[:], cset.BMax[:])
+	mesh.Cs = cset.Cs
+	mesh.Ch = cset.Ch
+	mesh.BorderSize = cset.BorderSize
+	mesh.MaxEdgeError = cset.MaxError
 
 	var (
 		maxVertices     int32
@@ -81,14 +58,14 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		maxVertsPerCont int32
 	)
 
-	for i := int32(0); i < cset.nconts; i++ {
+	for i := int32(0); i < cset.NConts; i++ {
 		// Skip null contours.
-		if cset.conts[i].nverts < 3 {
+		if cset.Conts[i].NVerts < 3 {
 			continue
 		}
-		maxVertices += cset.conts[i].nverts
-		maxTris += cset.conts[i].nverts - 2
-		maxVertsPerCont = iMax(maxVertsPerCont, cset.conts[i].nverts)
+		maxVertices += cset.Conts[i].NVerts
+		maxTris += cset.Conts[i].NVerts - 2
+		maxVertsPerCont = iMax(maxVertsPerCont, cset.Conts[i].NVerts)
 	}
 
 	if maxVertices >= 0xfffe {
@@ -138,7 +115,7 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	//memset(mesh.polys, 0xff, sizeof(unsigned short)*maxTris*nvp*2);
 
 	for i := range mesh.Polys {
-		mesh.Polys[i] = 0xff
+		mesh.Polys[i] = 0xffff
 	}
 
 	//memset(mesh.regs, 0, sizeof(unsigned short)*maxTris);
@@ -187,20 +164,20 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	//}
 	tmpPoly := polys[maxVertsPerCont*nvp:]
 
-	for i := int32(0); i < cset.nconts; i++ {
-		cont := cset.conts[i]
+	for i := int32(0); i < cset.NConts; i++ {
+		cont := cset.Conts[i]
 
 		// Skip null contours.
-		if cont.nverts < 3 {
+		if cont.NVerts < 3 {
 			continue
 		}
 
 		// Triangulate contour
-		for j := int32(0); j < cont.nverts; j++ {
+		for j := int32(0); j < cont.NVerts; j++ {
 			indices[j] = int64(j)
 		}
 
-		ntris := triangulate(cont.nverts, cont.verts, indices[:], tris[:])
+		ntris := triangulate(cont.NVerts, cont.Verts, indices[:], tris[:])
 		if ntris <= 0 {
 			// Bad triangulation, should not happen.
 			/*			printf("\tconst float bmin[3] = {%ff,%ff,%ff};\n", cset.bmin[0], cset.bmin[1], cset.bmin[2]);
@@ -218,8 +195,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		}
 
 		// Add and merge vertices.
-		for j := int32(0); j < cont.nverts; j++ {
-			v := cont.verts[j*4:]
+		for j := int32(0); j < cont.NVerts; j++ {
+			v := cont.Verts[j*4:]
 			indices[j] = int64(addVertex(uint16(v[0]), uint16(v[1]), uint16(v[2]),
 				mesh.Verts, firstVert, nextVert, &mesh.NVerts))
 			if (v[3] & RC_BORDER_VERTEX) != 0 {
@@ -232,7 +209,7 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		var npolys int32
 		//memset(polys, 0xff, maxVertsPerCont*nvp*sizeof(unsigned short));
 		for i := int32(0); i < maxVertsPerCont*nvp; i++ {
-			polys[i] = 0xff
+			polys[i] = 0xffff
 		}
 
 		for j := int32(0); j < ntris; j++ {
@@ -280,9 +257,6 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 					mergePolyVerts(pa, pb, bestEa, bestEb, tmpPoly, nvp)
 					lastPoly := polys[(npolys-1)*nvp:]
 
-					//
-					panic("ASSERT: here we should use unsafe package to compare pointer values, there are other solutions, longer to implement though")
-
 					if !compareSlicesUInt16(pb, lastPoly) {
 						//if pb != lastPoly {
 						// TODO: AR take care here!
@@ -304,8 +278,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 			for k := int32(0); k < nvp; k++ {
 				p[k] = q[k]
 			}
-			mesh.Regs[mesh.NPolys] = cont.reg
-			mesh.Areas[mesh.NPolys] = cont.area
+			mesh.Regs[mesh.NPolys] = cont.Reg
+			mesh.Areas[mesh.NPolys] = cont.Area
 			mesh.NPolys++
 			if mesh.NPolys > maxTris {
 				ctx.Errorf("rcBuildPolyMesh: Too many polygons %d (max:%d).", mesh.NPolys, maxTris)
@@ -343,8 +317,8 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 
 	// Find portal edges
 	if mesh.BorderSize > 0 {
-		w := cset.width
-		h := cset.height
+		w := cset.Width
+		h := cset.Height
 		for i := int32(0); i < mesh.NPolys; i++ {
 			p := mesh.Polys[i*2*nvp:]
 			for j := int32(0); j < nvp; j++ {

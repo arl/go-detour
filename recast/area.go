@@ -16,13 +16,13 @@ import (
 func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	w := chf.width
-	h := chf.height
+	w := chf.Width
+	h := chf.Height
 
 	ctx.StartTimer(RC_TIMER_ERODE_AREA)
 	defer ctx.StopTimer(RC_TIMER_ERODE_AREA)
 
-	dist := make([]uint8, chf.spanCount)
+	dist := make([]uint8, chf.SpanCount)
 
 	// Init distance.
 	for i := range dist {
@@ -32,20 +32,20 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 	// Mark boundary cells.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.cells[x+y*w]
-			ni := int32(c.index) + int32(c.count)
-			for i := int32(c.index); i < ni; i++ {
-				if chf.areas[i] == RC_NULL_AREA {
+			c := chf.Cells[x+y*w]
+			ni := int32(c.Index) + int32(c.Count)
+			for i := int32(c.Index); i < ni; i++ {
+				if chf.Areas[i] == RC_NULL_AREA {
 					dist[i] = 0
 				} else {
-					s := &chf.spans[i]
+					s := chf.Spans[i]
 					nc := int32(0)
 					for dir := int32(0); dir < 4; dir++ {
 						if GetCon(s, dir) != RC_NOT_CONNECTED {
 							nx := x + GetDirOffsetX(dir)
 							ny := y + GetDirOffsetY(dir)
-							nidx := int32(chf.cells[nx+ny*w].index) + GetCon(s, dir)
-							if chf.areas[nidx] != RC_NULL_AREA {
+							nidx := int32(chf.Cells[nx+ny*w].Index) + GetCon(s, dir)
+							if chf.Areas[nidx] != RC_NULL_AREA {
 								nc++
 							}
 						}
@@ -64,17 +64,17 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 	// Pass 1
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.cells[x+y*w]
-			ni := int32(c.index) + int32(c.count)
-			for i := int32(c.index); i < ni; i++ {
-				s := &chf.spans[i]
+			c := chf.Cells[x+y*w]
+			ni := int32(c.Index) + int32(c.Count)
+			for i := int32(c.Index); i < ni; i++ {
+				s := chf.Spans[i]
 
 				if GetCon(s, 0) != RC_NOT_CONNECTED {
 					// (-1,0)
 					ax := x + GetDirOffsetX(0)
 					ay := y + GetDirOffsetY(0)
-					ai := int32(chf.cells[ax+ay*w].index) + int32(GetCon(s, 0))
-					as := &chf.spans[ai]
+					ai := int32(chf.Cells[ax+ay*w].Index) + int32(GetCon(s, 0))
+					as := chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -84,7 +84,7 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 					if GetCon(as, 3) != RC_NOT_CONNECTED {
 						aax := ax + GetDirOffsetX(3)
 						aay := ay + GetDirOffsetY(3)
-						aai := int32(chf.cells[aax+aay*w].index) + int32(GetCon(as, 3))
+						aai := int32(chf.Cells[aax+aay*w].Index) + int32(GetCon(as, 3))
 						nd = uint8(iMin(int32(dist[aai]+3), int32(255)))
 						if nd < dist[i] {
 							dist[i] = nd
@@ -96,8 +96,8 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 					// (0,-1)
 					ax := x + GetDirOffsetX(3)
 					ay := y + GetDirOffsetY(3)
-					ai := int32(chf.cells[ax+ay*w].index) + GetCon(s, 3)
-					as := &chf.spans[ai]
+					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 3)
+					as := chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -107,7 +107,7 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 					if GetCon(as, 2) != RC_NOT_CONNECTED {
 						aax := ax + GetDirOffsetX(2)
 						aay := ay + GetDirOffsetY(2)
-						aai := int32(chf.cells[aax+aay*w].index) + GetCon(as, 2)
+						aai := int32(chf.Cells[aax+aay*w].Index) + GetCon(as, 2)
 						nd = uint8(iMin(int32(dist[aai]+3), int32(255)))
 						if nd < dist[i] {
 							dist[i] = nd
@@ -121,17 +121,17 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 	// Pass 2
 	for y := int32(h - 1); y >= 0; y-- {
 		for x := int32(w - 1); x >= 0; x-- {
-			c := chf.cells[x+y*w]
-			i := int32(c.index)
-			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
-				s := &chf.spans[i]
+			c := chf.Cells[x+y*w]
+			i := int32(c.Index)
+			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
+				s := chf.Spans[i]
 
 				if GetCon(s, 2) != RC_NOT_CONNECTED {
 					// (1,0)
 					ax := x + GetDirOffsetX(2)
 					ay := y + GetDirOffsetY(2)
-					ai := int32(chf.cells[ax+ay*w].index) + GetCon(s, 2)
-					as := &chf.spans[ai]
+					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 2)
+					as := chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -141,7 +141,7 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 					if GetCon(as, 1) != RC_NOT_CONNECTED {
 						aax := ax + GetDirOffsetX(1)
 						aay := ay + GetDirOffsetY(1)
-						aai := int32(chf.cells[aax+aay*w].index) + GetCon(as, 1)
+						aai := int32(chf.Cells[aax+aay*w].Index) + GetCon(as, 1)
 						nd = uint8(iMin(int32(dist[aai]+3), int32(255)))
 						if nd < dist[i] {
 							dist[i] = nd
@@ -152,8 +152,8 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 					// (0,1)
 					ax := x + GetDirOffsetX(1)
 					ay := y + GetDirOffsetY(1)
-					ai := int32(chf.cells[ax+ay*w].index) + GetCon(s, 1)
-					as := &chf.spans[ai]
+					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 1)
+					as := chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -163,7 +163,7 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 					if GetCon(as, 0) != RC_NOT_CONNECTED {
 						aax := ax + GetDirOffsetX(0)
 						aay := ay + GetDirOffsetY(0)
-						aai := int32(chf.cells[aax+aay*w].index) + GetCon(as, 0)
+						aai := int32(chf.Cells[aax+aay*w].Index) + GetCon(as, 0)
 						nd = uint8(iMin(int32(dist[aai]+3), int32(255)))
 						if nd < dist[i] {
 							dist[i] = nd
@@ -175,9 +175,9 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 	}
 
 	thr := uint8(radius * 2)
-	for i := int32(0); i < chf.spanCount; i++ {
+	for i := int32(0); i < chf.SpanCount; i++ {
 		if dist[i] < thr {
-			chf.areas[i] = RC_NULL_AREA
+			chf.Areas[i] = RC_NULL_AREA
 		}
 	}
 
@@ -213,57 +213,57 @@ func MarkConvexPolyArea(ctx *Context, verts []float32, nverts int32,
 	bmin[1] = hmin
 	bmax[1] = hmax
 
-	minx := int32(((bmin[0] - chf.bmin[0]) / chf.cs))
-	miny := int32(((bmin[1] - chf.bmin[1]) / chf.ch))
-	minz := int32(((bmin[2] - chf.bmin[2]) / chf.cs))
-	maxx := int32(((bmax[0] - chf.bmin[0]) / chf.cs))
-	maxy := int32(((bmax[1] - chf.bmin[1]) / chf.ch))
-	maxz := int32(((bmax[2] - chf.bmin[2]) / chf.cs))
+	minx := int32(((bmin[0] - chf.BMin[0]) / chf.Cs))
+	miny := int32(((bmin[1] - chf.BMin[1]) / chf.Ch))
+	minz := int32(((bmin[2] - chf.BMin[2]) / chf.Cs))
+	maxx := int32(((bmax[0] - chf.BMin[0]) / chf.Cs))
+	maxy := int32(((bmax[1] - chf.BMin[1]) / chf.Ch))
+	maxz := int32(((bmax[2] - chf.BMin[2]) / chf.Cs))
 
 	if maxx < 0 {
 		return
 	}
-	if minx >= chf.width {
+	if minx >= chf.Width {
 		return
 	}
 	if maxz < 0 {
 		return
 	}
-	if minz >= chf.height {
+	if minz >= chf.Height {
 		return
 	}
 
 	if minx < 0 {
 		minx = 0
 	}
-	if maxx >= chf.width {
-		maxx = chf.width - 1
+	if maxx >= chf.Width {
+		maxx = chf.Width - 1
 	}
 	if minz < 0 {
 		minz = 0
 	}
-	if maxz >= chf.height {
-		maxz = chf.height - 1
+	if maxz >= chf.Height {
+		maxz = chf.Height - 1
 	}
 
 	// TODO: Optimize.
 	for z := minz; z <= maxz; z++ {
 		for x := minx; x <= maxx; x++ {
-			c := chf.cells[x+z*chf.width]
-			i := int32(c.index)
-			for ni := int32(c.index) + int32(c.count); i < ni; i++ {
-				s := &chf.spans[i]
-				if chf.areas[i] == RC_NULL_AREA {
+			c := chf.Cells[x+z*chf.Width]
+			i := int32(c.Index)
+			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
+				s := chf.Spans[i]
+				if chf.Areas[i] == RC_NULL_AREA {
 					continue
 				}
-				if int32(s.y) >= miny && int32(s.y) <= maxy {
+				if int32(s.Y) >= miny && int32(s.Y) <= maxy {
 					var p [3]float32
-					p[0] = chf.bmin[0] + (float32(x)+0.5)*chf.cs
+					p[0] = chf.BMin[0] + (float32(x)+0.5)*chf.Cs
 					p[1] = 0
-					p[2] = chf.bmin[2] + (float32(z)+0.5)*chf.cs
+					p[2] = chf.BMin[2] + (float32(z)+0.5)*chf.Cs
 
 					if pointInPoly(nverts, verts, p[:]) {
-						chf.areas[i] = areaId
+						chf.Areas[i] = areaId
 					}
 				}
 			}

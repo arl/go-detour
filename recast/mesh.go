@@ -21,11 +21,10 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 	var edgeCount int32
 
 	//rcEdge* edges = (rcEdge*)rcAlloc(sizeof(rcEdge)*maxEdgeCount, RC_ALLOC_TEMP);
-	edges := make([]Edge, maxEdgeCount)
-	//if (!edges) {
-	//rcFree(firstEdge);
-	//return false;
-	//}
+	edges := make([]*Edge, maxEdgeCount)
+	for i := range edges {
+		edges[i] = new(Edge)
+	}
 
 	for i := int32(0); i < nverts; i++ {
 		firstEdge[i] = RC_MESH_NULL_IDX
@@ -47,7 +46,7 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 			}
 
 			if v0 < v1 {
-				edge := &edges[edgeCount]
+				edge := edges[edgeCount]
 				edge.vert[0] = v0
 				edge.vert[1] = v1
 				edge.poly[0] = uint16(i)
@@ -77,7 +76,7 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 			}
 			if v0 > v1 {
 				for e := uint16(firstEdge[v1]); e != RC_MESH_NULL_IDX; e = nextEdge[e] {
-					edge := &edges[e]
+					edge := edges[e]
 					if edge.vert[1] == v0 && edge.poly[0] == edge.poly[1] {
 						edge.poly[1] = uint16(i)
 						edge.polyEdge[1] = uint16(j)
@@ -90,7 +89,7 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 
 	// Store adjacency
 	for i := int32(0); i < edgeCount; i++ {
-		e := &edges[i]
+		e := edges[i]
 		if e.poly[0] != e.poly[1] {
 			p0 := polys[int32(e.poly[0])*vertsPerPoly*2:]
 			p1 := polys[int32(e.poly[1])*vertsPerPoly*2:]
@@ -113,8 +112,8 @@ func computeVertexHash(x, y, z int32) int32 {
 		h2       = 0xd8163841 // here arbitrarily chosen primes
 		h3       = 0xcb1ab31f
 	)
-	n := h1*int64(x) + h2*int64(y) + h3*int64(z)
-	return int32(n & int64(VERTEX_BUCKET_COUNT-1))
+	n := uint32(h1*int64(x) + h2*int64(y) + h3*int64(z))
+	return int32(n & uint32(VERTEX_BUCKET_COUNT-1))
 }
 
 func addVertex(x, y, z uint16, verts []uint16, firstVert, nextVert []int32, nv *int32) uint16 {
@@ -279,8 +278,7 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 		i1 := next(i, n)
 		i2 := next(i1, n)
 
-		panic("!!!!!TO CONTROL WITH ORIGINAL CODE!!!!!")
-		// ORIGINAL CODE
+		// TODO: control with ORIGINAL CODE
 		//*dst++ = indices[i] & 0x0fffffff;
 		//*dst++ = indices[i1] & 0x0fffffff;
 		//*dst++ = indices[i2] & 0x0fffffff;
@@ -320,8 +318,7 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 	}
 
 	// Append the remaining triangle.
-	panic("!!!!!TO CONTROL WITH ORIGINAL CODE!!!!!")
-	// SAME HERE: ORIGINAL CODE
+	// TODO: control with ORIGINAL CODE
 	//*dst++ = indices[0] & 0x0fffffff;
 	//*dst++ = indices[1] & 0x0fffffff;
 	//*dst++ = indices[2] & 0x0fffffff;
@@ -448,9 +445,8 @@ func mergePolyVerts(pa, pb []uint16, ea, eb int32,
 	nb := countPolyVerts(pb, nvp)
 
 	// Merge polygons.
-	//memset(tmp, 0xff, sizeof(unsigned short)*nvp);
 	for i := int32(0); i < nvp; i++ {
-		tmp[i] = 0xff
+		tmp[i] = 0xffff
 	}
 	var n int32
 	// Add pa
@@ -464,7 +460,6 @@ func mergePolyVerts(pa, pb []uint16, ea, eb int32,
 		n++
 	}
 
-	//memcpy(pa, tmp, sizeof(unsigned short)*nvp);
 	copy(pa, tmp[:nvp])
 }
 
@@ -518,12 +513,7 @@ func canRemoveVertex(ctx *Context, mesh *PolyMesh, rem uint16) bool {
 	// Find edges which share the removed vertex.
 	maxEdges := numTouchedVerts * 2
 	var nedges int32
-	//rcScopedDelete<int> edges((int*)rcAlloc(sizeof(int)*maxEdges*3, RC_ALLOC_TEMP));
 	edges := make([]int32, maxEdges*3)
-	//if (!edges) {
-	//ctx->log(RC_LOG_WARNING, "canRemoveVertex: Out of memory 'edges' (%d).", maxEdges*3);
-	//return false;
-	//}
 
 	for i := int32(0); i < mesh.NPolys; i++ {
 		p := mesh.Polys[i*nvp*2:]
@@ -594,40 +584,16 @@ func removeVertex(ctx *Context, mesh *PolyMesh, rem uint16, maxTris int32) bool 
 	}
 
 	var nedges int32
-	//rcScopedDelete<int> edges((int*)rcAlloc(sizeof(int)*numRemovedVerts*nvp*4, RC_ALLOC_TEMP));
 	edges := make([]int32, numRemovedVerts*nvp*4)
-	//if (!edges)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'edges' (%d).", numRemovedVerts*nvp*4);
-	//return false;
-	//}
 
 	var nhole int32
-	//rcScopedDelete<int> hole((int*)rcAlloc(sizeof(int)*numRemovedVerts*nvp, RC_ALLOC_TEMP));
 	hole := make([]int32, numRemovedVerts*nvp)
-	//if (!hole)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'hole' (%d).", numRemovedVerts*nvp);
-	//return false;
-	//}
 
 	var nhreg int32
-	//rcScopedDelete<int> hreg((int*)rcAlloc(sizeof(int)*numRemovedVerts*nvp, RC_ALLOC_TEMP));
 	hreg := make([]int32, numRemovedVerts*nvp)
-	//if (!hreg)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'hreg' (%d).", numRemovedVerts*nvp);
-	//return false;
-	//}
 
 	var nharea int32
-	//rcScopedDelete<int> harea((int*)rcAlloc(sizeof(int)*numRemovedVerts*nvp, RC_ALLOC_TEMP));
 	harea := make([]int32, numRemovedVerts*nvp)
-	//if (!harea)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'harea' (%d).", numRemovedVerts*nvp);
-	//return false;
-	//}
 
 	for i := int32(0); i < mesh.NPolys; i++ {
 		p := mesh.Polys[i*nvp*2:]
@@ -655,16 +621,11 @@ func removeVertex(ctx *Context, mesh *PolyMesh, rem uint16, maxTris int32) bool 
 			// Remove the polygon.
 			p2 := mesh.Polys[(mesh.NPolys-1)*nvp*2:]
 			if !compareSlicesUInt16(p, p2) {
-				//if p != p2 {
-				panic("CHECK THAT grneilb")
-				//memcpy(p,p2,sizeof(unsigned short)*nvp);
 				copy(p, p2[:nvp])
 			}
 
-			panic("CHECK ALSO THAT")
-			//memset(p+nvp,0xff,sizeof(unsigned short)*nvp);
 			for idx := int32(nvp); i < nvp; i++ {
-				p[idx] = 0xff
+				p[idx] = 0xffff
 			}
 
 			mesh.Regs[i] = mesh.Regs[mesh.NPolys-1]
@@ -750,29 +711,9 @@ func removeVertex(ctx *Context, mesh *PolyMesh, rem uint16, maxTris int32) bool 
 		}
 	}
 
-	//rcScopedDelete<int> tris((int*)rcAlloc(sizeof(int)*nhole*3, RC_ALLOC_TEMP));
 	tris := make([]int32, nhole*3)
-	//if (!tris)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'tris' (%d).", nhole*3);
-	//return false;
-	//}
-
-	//rcScopedDelete<int> tverts((int*)rcAlloc(sizeof(int)*nhole*4, RC_ALLOC_TEMP));
 	tverts := make([]int32, nhole*4)
-	//if (!tverts)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'tverts' (%d).", nhole*4);
-	//return false;
-	//}
-
-	//rcScopedDelete<int> thole((int*)rcAlloc(sizeof(int)*nhole, RC_ALLOC_TEMP));
 	thole := make([]int64, nhole)
-	//if (!thole)
-	//{
-	//ctx->log(RC_LOG_WARNING, "removeVertex: Out of memory 'thole' (%d).", nhole);
-	//return false;
-	//}
 
 	// Generate temp vertex array for triangulation.
 	for i := int32(0); i < nhole; i++ {
@@ -817,9 +758,8 @@ func removeVertex(ctx *Context, mesh *PolyMesh, rem uint16, maxTris int32) bool 
 
 	// Build initial polygons.
 	var npolys int32
-	//memset(polys, 0xff, ntris*nvp*sizeof(unsigned short));
 	for i := int32(0); i < ntris*nvp; i++ {
-		polys[i] = 0xff
+		polys[i] = 0xffff
 	}
 
 	for j := int32(0); j < ntris; j++ {
@@ -901,9 +841,8 @@ func removeVertex(ctx *Context, mesh *PolyMesh, rem uint16, maxTris int32) bool 
 			break
 		}
 		p := mesh.Polys[mesh.NPolys*nvp*2:]
-		//memset(p,0xff,sizeof(unsigned short)*nvp*2);
 		for idx := int32(0); idx < nvp; idx++ {
-			p[idx] = 0xff
+			p[idx] = 0xffff
 		}
 
 		for j := int32(0); j < nvp; j++ {
