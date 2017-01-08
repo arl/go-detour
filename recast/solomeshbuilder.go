@@ -140,10 +140,6 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// If you have multiple meshes you need to process, allocate
 	// and array which can hold the max number of triangles you need to process.
 	m_triareas := make([]uint8, ntris)
-	if len(m_triareas) == 0 {
-		sm.ctx.Errorf("buildNavigation: Out of memory 'm_triareas' (%d).", ntris)
-		return navData, false
-	}
 
 	// Find triangles which are walkable based on their slope and rasterize them.
 	// If your input data is multiple meshes, you can transform them here, calculate
@@ -279,9 +275,10 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// Step 7. Create detail mesh which allows to access approximate height on each polygon.
 	//
 
-	var m_dmesh *PolyMeshDetail
+	//var m_dmesh *PolyMeshDetail
 
-	m_dmesh, ret = BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
+	//m_dmesh, ret = BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
+	_, ret = BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
 		return navData, false
