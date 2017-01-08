@@ -112,8 +112,8 @@ func computeVertexHash(x, y, z int32) int32 {
 		h2       = 0xd8163841 // here arbitrarily chosen primes
 		h3       = 0xcb1ab31f
 	)
-	n := h1*int64(x) + h2*int64(y) + h3*int64(z)
-	return int32(n & int64(VERTEX_BUCKET_COUNT-1))
+	n := uint32(h1*int64(x) + h2*int64(y) + h3*int64(z))
+	return int32(n & uint32(VERTEX_BUCKET_COUNT-1))
 }
 
 func addVertex(x, y, z uint16, verts []uint16, firstVert, nextVert []int32, nv *int32) uint16 {
