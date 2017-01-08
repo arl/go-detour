@@ -1,8 +1,6 @@
 package recast
 
-import (
-	"github.com/aurelien-rainone/assertgo"
-)
+import "github.com/aurelien-rainone/assertgo"
 
 // PolyMesh represents a polygon mesh suitable for use in building a navigation
 // mesh.
@@ -258,9 +256,6 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 					pb := polys[bestPb*nvp:]
 					mergePolyVerts(pa, pb, bestEa, bestEb, tmpPoly, nvp)
 					lastPoly := polys[(npolys-1)*nvp:]
-
-					//
-					panic("ASSERT: here we should use unsafe package to compare pointer values, there are other solutions, longer to implement though")
 
 					if !compareSlicesUInt16(pb, lastPoly) {
 						//if pb != lastPoly {
