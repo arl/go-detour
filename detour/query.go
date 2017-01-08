@@ -1201,9 +1201,9 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 	pd := &tile.DetailMeshes[ip]
 
 	// Clamp point to be inside the polygon.
-	verts := make([]float32, vertsPerPolygon*3)
-	edged := make([]float32, vertsPerPolygon)
-	edget := make([]float32, vertsPerPolygon)
+	verts := make([]float32, VertsPerPolygon*3)
+	edged := make([]float32, VertsPerPolygon)
+	edget := make([]float32, VertsPerPolygon)
 	nv := poly.VertCount
 	var i uint8
 	for i = 0; i < nv; i++ {
@@ -1285,9 +1285,9 @@ func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 
 	// Collect vertices.
 	var (
-		verts [vertsPerPolygon * 3]float32
-		edged [vertsPerPolygon]float32
-		edget [vertsPerPolygon]float32
+		verts [VertsPerPolygon * 3]float32
+		edged [VertsPerPolygon]float32
+		edget [VertsPerPolygon]float32
 		nv    int32
 	)
 	for i := uint8(0); i < poly.VertCount; i++ {

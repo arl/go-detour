@@ -10,11 +10,11 @@ type Poly struct {
 
 	// Verts are the indices of the polygon's vertices.
 	// The actual vertices are located in MeshTile.Verts.
-	Verts [vertsPerPolygon]uint16
+	Verts [VertsPerPolygon]uint16
 
 	// Neis is packed data representing neighbor polygons
 	// references and flags for each edge.
-	Neis [vertsPerPolygon]uint16
+	Neis [VertsPerPolygon]uint16
 
 	// Flags is an user-defined polygon flags.
 	Flags uint16
