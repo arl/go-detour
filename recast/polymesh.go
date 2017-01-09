@@ -107,10 +107,6 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	//}
 
 	mesh.NVerts = 0
-	mesh.NPolys = 0
-	mesh.Nvp = nvp
-	mesh.MaxPolys = maxTris
-
 	//memset(mesh.verts, 0, sizeof(unsigned short)*maxVertices*3);
 	//memset(mesh.polys, 0xff, sizeof(unsigned short)*maxTris*nvp*2);
 
