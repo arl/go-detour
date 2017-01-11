@@ -44,18 +44,11 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	ctx.StartTimer(RC_TIMER_BUILD_POLYMESH)
 	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESH)
 
-	var mesh PolyMesh
-	copy(mesh.BMin[:], cset.BMin[:])
-	copy(mesh.BMax[:], cset.BMax[:])
-	mesh.Cs = cset.Cs
-	mesh.Ch = cset.Ch
-	mesh.BorderSize = cset.BorderSize
-	mesh.MaxEdgeError = cset.MaxError
-
 	var (
 		maxVertices     int32
 		maxTris         int32
 		maxVertsPerCont int32
+		mesh            *PolyMesh
 	)
 
 	for i := int32(0); i < cset.NConts; i++ {
@@ -69,99 +62,44 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	}
 
 	if maxVertices >= 0xfffe {
-		ctx.Errorf("rcBuildPolyMesh: Too many vertices %d.", maxVertices)
+		ctx.Errorf("BuildPolyMesh: Too many vertices %d.", maxVertices)
 		return nil, false
 	}
 
+	mesh = &PolyMesh{
+		Cs:           cset.Cs,
+		Ch:           cset.Ch,
+		BorderSize:   cset.BorderSize,
+		MaxEdgeError: cset.MaxError,
+		Verts:        make([]uint16, maxVertices*3),
+		Polys:        make([]uint16, maxTris*nvp*2),
+		Regs:         make([]uint16, maxTris),
+		Areas:        make([]uint8, maxTris),
+		NVerts:       0,
+		NPolys:       0,
+		Nvp:          nvp,
+		MaxPolys:     maxTris,
+	}
+
+	copy(mesh.BMin[:], cset.BMin[:])
+	copy(mesh.BMax[:], cset.BMax[:])
+
 	vflags := make([]uint8, maxVertices)
-	//if (!vflags)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'vflags' (%d).", maxVertices);
-	//return false;
-	//}
-	//memset(vflags, 0, maxVertices);
-
-	mesh.Verts = make([]uint16, maxVertices*3)
-	//if (!mesh.verts)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'mesh.verts' (%d).", maxVertices);
-	//return false;
-	//}
-	mesh.Polys = make([]uint16, maxTris*nvp*2)
-	//if (!mesh.polys)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'mesh.polys' (%d).", maxTris*nvp*2);
-	//return false;
-	//}
-	mesh.Regs = make([]uint16, maxTris)
-	//if (!mesh.regs)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'mesh.regs' (%d).", maxTris);
-	//return false;
-	//}
-	mesh.Areas = make([]uint8, maxTris)
-	//if (!mesh.areas)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'mesh.areas' (%d).", maxTris);
-	//return false;
-	//}
-
-	mesh.NVerts = 0
-	mesh.NPolys = 0
-	mesh.Nvp = nvp
-	mesh.MaxPolys = maxTris
-
-	//memset(mesh.verts, 0, sizeof(unsigned short)*maxVertices*3);
-	//memset(mesh.polys, 0xff, sizeof(unsigned short)*maxTris*nvp*2);
 
 	for i := range mesh.Polys {
 		mesh.Polys[i] = 0xffff
 	}
 
-	//memset(mesh.regs, 0, sizeof(unsigned short)*maxTris);
-	//memset(mesh.areas, 0, sizeof(unsigned char)*maxTris);
-
-	//rcScopedDelete<int> nextVert((int*)rcAlloc(sizeof(int)*maxVertices, RC_ALLOC_TEMP));
 	nextVert := make([]int32, maxVertices)
-	//if (!nextVert)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'nextVert' (%d).", maxVertices);
-	//return false;
-	//}
-	//memset(nextVert, 0, sizeof(int)*maxVertices);
-
-	//rcScopedDelete<int> firstVert((int*)rcAlloc(sizeof(int)*VERTEX_BUCKET_COUNT, RC_ALLOC_TEMP));
 	firstVert := make([]int32, VERTEX_BUCKET_COUNT)
-	//if (!firstVert)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'firstVert' (%d).", VERTEX_BUCKET_COUNT);
-	//return false;
-	//}
+
 	for i := range firstVert {
 		firstVert[i] = -1
 	}
 
-	//rcScopedDelete<int> indices((int*)rcAlloc(sizeof(int)*maxVertsPerCont, RC_ALLOC_TEMP));
 	indices := make([]int64, maxVertsPerCont)
-	//if (!indices)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'indices' (%d).", maxVertsPerCont);
-	//return false;
-	//}
-	//rcScopedDelete<int> tris((int*)rcAlloc(sizeof(int)*maxVertsPerCont*3, RC_ALLOC_TEMP));
 	tris := make([]int32, maxVertsPerCont*3)
-	//if (!tris)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'tris' (%d).", maxVertsPerCont*3);
-	//return false;
-	//}
-	//rcScopedDelete<unsigned short> polys((unsigned short*)rcAlloc(sizeof(unsigned short)*(maxVertsPerCont+1)*nvp, RC_ALLOC_TEMP));
 	polys := make([]uint16, (maxVertsPerCont+1)*nvp)
-	//if (!polys)
-	//{
-	//ctx->log(RC_LOG_ERROR, "rcBuildPolyMesh: Out of memory 'polys' (%d).", maxVertsPerCont*nvp);
-	//return false;
-	//}
 	tmpPoly := polys[maxVertsPerCont*nvp:]
 
 	for i := int32(0); i < cset.NConts; i++ {
@@ -291,10 +229,10 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 	// Remove edge vertices.
 	for i := int32(0); i < mesh.NVerts; i++ {
 		if vflags[i] != 0 {
-			if !canRemoveVertex(ctx, &mesh, uint16(i)) {
+			if !canRemoveVertex(ctx, mesh, uint16(i)) {
 				continue
 			}
-			if !removeVertex(ctx, &mesh, uint16(i), maxTris) {
+			if !removeVertex(ctx, mesh, uint16(i), maxTris) {
 				// Failed to remove vertex
 				ctx.Errorf("rcBuildPolyMesh: Failed to remove edge vertex %d.", i)
 				return nil, false
@@ -364,5 +302,5 @@ func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) 
 		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many polygons %d (max %d). Data can be corrupted.", mesh.NPolys, 0xffff)
 	}
 
-	return &mesh, true
+	return mesh, true
 }
