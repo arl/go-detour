@@ -68,7 +68,7 @@ type InputGeom struct {
 	m_offMeshConRads  [MAX_OFFMESH_CONNECTIONS]float32
 	m_offMeshConDirs  [MAX_OFFMESH_CONNECTIONS]uint8
 	m_offMeshConAreas [MAX_OFFMESH_CONNECTIONS]uint8
-	m_offMeshConFlags [MAX_OFFMESH_CONNECTIONS]uint8
+	m_offMeshConFlags [MAX_OFFMESH_CONNECTIONS]uint16
 	m_offMeshConId    [MAX_OFFMESH_CONNECTIONS]uint32
 	m_offMeshConCount int32
 
@@ -86,6 +86,7 @@ func (ig *InputGeom) Load(ctx *Context, path string) bool {
 		//return loadGeomSet(ctx, filepath);
 		log.Printf("gset input geometry not implemented")
 	}
+	// TODO: better error handling in Load
 	return false
 }
 
@@ -122,7 +123,7 @@ func (ig *InputGeom) loadMesh(ctx *Context, path string) bool {
 	return true
 }
 
-/// Method to return static mesh data.
+// Method to return static mesh data.
 func (ig *InputGeom) Mesh() *MeshLoaderObj {
 	return ig.m_mesh
 }
@@ -168,4 +169,32 @@ func (ig *InputGeom) ConvexVolumes() []ConvexVolume {
 
 func (ig *InputGeom) ConvexVolumesCount() int32 {
 	return ig.m_volumeCount
+}
+
+func (ig *InputGeom) OffMeshConnectionVerts() []float32 {
+	return ig.m_offMeshConVerts[:]
+}
+
+func (ig *InputGeom) OffMeshConnectionRads() []float32 {
+	return ig.m_offMeshConRads[:]
+}
+
+func (ig *InputGeom) OffMeshConnectionAreas() []uint8 {
+	return ig.m_offMeshConAreas[:]
+}
+
+func (ig *InputGeom) OffMeshConnectionFlags() []uint16 {
+	return ig.m_offMeshConFlags[:]
+}
+
+func (ig *InputGeom) OffMeshConnectionId() []uint32 {
+	return ig.m_offMeshConId[:]
+}
+
+func (ig *InputGeom) OffMeshConnectionDirs() []uint8 {
+	return ig.m_offMeshConDirs[:]
+}
+
+func (ig *InputGeom) OffMeshConnectionCount() int32 {
+	return ig.m_offMeshConCount
 }
