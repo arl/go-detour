@@ -78,21 +78,21 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	return &mesh, nil
 }
 
-// alignedReader performs aligned reading operations. It ensures that after a
+func AlignN(x, a uint) uint {
+	r := x % a
+	if r == 0 {
+		return x
+	}
+	return x + (a - r)
+}
+
+// alignedReader performs aligned read operations. It ensures that after a
 // successfull Read operation, the file offset has been moved by a multiple of
 // the specified alignment. It is useful to read binary packed arrays or
 // structures.
 type alignedReader struct {
 	r     io.ReadSeeker // ReadSeeker to which calls are forwarded
 	align uint          // byte alignment
-}
-
-func align(x, a uint) uint {
-	r := x % a
-	if r == 0 {
-		return x
-	}
-	return x + (a - r)
 }
 
 // newAlignedReader returns an alignedReader, performing read operations aligned
@@ -103,7 +103,7 @@ func newAlignedReader(r io.ReadSeeker, align uint) *alignedReader {
 
 func (ar *alignedReader) Read(b []byte) (n int, err error) {
 	n, err = ar.r.Read(b)
-	pad := align(uint(n), ar.align) - uint(n)
+	pad := AlignN(uint(n), ar.align) - uint(n)
 	if pad != 0 {
 		_, err = ar.r.Seek(int64(pad), io.SeekCurrent)
 		if err != nil {
@@ -123,6 +123,51 @@ func (ar *alignedReader) readSlice(data interface{}, order binary.ByteOrder) err
 	}
 	for idx := 0; idx < rv.Elem().Len(); idx++ {
 		err = binary.Read(ar, order, rv.Elem().Index(idx).Addr().Interface())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// alignedWriter performs aligned write operations. It ensures that after a
+// successfull Write operation, the file offset has been moved by a multiple of
+// the specified alignment. It is useful to write binary packed arrays or
+// structures.
+type alignedWriter struct {
+	w     io.Writer // Writer to which calls are forwarded
+	align uint      // byte alignment
+}
+
+// newAlignedWriter returns an alignedWriter, performing write operations aligned
+// on align bytes.
+func newAlignedWriter(w io.Writer, align uint) *alignedWriter {
+	return &alignedWriter{w: w, align: align}
+}
+
+func (aw *alignedWriter) Write(b []byte) (n int, err error) {
+	n, err = aw.w.Write(b)
+	pad := AlignN(uint(n), aw.align) - uint(n)
+	if pad != 0 {
+		// write padding byte(s)
+		_, err = aw.w.Write(make([]byte, pad))
+		if err != nil {
+			return n, fmt.Errorf("couldn't write %d padding bytes", pad)
+		}
+	}
+	return n + int(pad), nil
+}
+
+func (aw *alignedWriter) writeSlice(data interface{}, order binary.ByteOrder) error {
+	var err error
+	rt := reflect.TypeOf(data)
+	rv := reflect.ValueOf(data)
+
+	if rt.Kind() != reflect.Ptr || rv.Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("data must be a pointer to slice")
+	}
+	for idx := 0; idx < rv.Elem().Len(); idx++ {
+		err = binary.Write(aw, order, rv.Elem().Index(idx).Addr().Interface())
 		if err != nil {
 			return err
 		}
