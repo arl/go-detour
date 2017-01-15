@@ -3,6 +3,7 @@ package recast
 import (
 	"fmt"
 
+	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
 	"github.com/fatih/structs"
@@ -42,8 +43,6 @@ func (sm *SoloMesh) Load(path string) bool {
 }
 
 func (sm *SoloMesh) Build() ([]uint8, bool) {
-	var navData []uint8
-
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
 	verts := sm.geom.Mesh().Verts()
@@ -130,11 +129,11 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	m_solid := recast.NewHeightfield()
 	if m_solid == nil {
 		sm.ctx.Errorf("buildNavigation: Out of memory 'solid'.")
-		return navData, false
+		return nil, false
 	}
 	if !m_solid.Create(sm.ctx, sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch) {
 		sm.ctx.Errorf("buildNavigation: Could not create solid heightfield.")
-		return navData, false
+		return nil, false
 	}
 
 	// Allocate array that can hold triangle area types.
@@ -148,7 +147,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, m_triareas)
 	if !recast.RasterizeTriangles(sm.ctx, verts, nverts, tris, m_triareas, ntris, m_solid, sm.cfg.WalkableClimb) {
 		sm.ctx.Errorf("buildNavigation: Could not rasterize triangles.")
-		return navData, false
+		return nil, false
 	}
 
 	// free memory as we do not need it anymore
@@ -174,7 +173,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	m_chf := &recast.CompactHeightfield{}
 	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, m_solid, m_chf) {
 		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
-		return navData, false
+		return nil, false
 	}
 
 	// free memory as we do not need it anymore
@@ -183,7 +182,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	// Erode the walkable area by agent radius.
 	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, m_chf) {
 		sm.ctx.Errorf("buildNavigation: Could not erode.")
-		return navData, false
+		return nil, false
 	}
 
 	//// (Optional) Mark areas.
@@ -239,7 +238,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		// Monotone partitioning does not need distancefield.
 		if !recast.BuildRegionsMonotone(sm.ctx, m_chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
 			sm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
-			return navData, false
+			return nil, false
 		}
 	} else {
 		// SAMPLE_PARTITION_LAYERS
@@ -258,7 +257,7 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	m_cset := &recast.ContourSet{}
 	if !recast.BuildContours(sm.ctx, m_chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, m_cset, recast.RC_CONTOUR_TESS_WALL_EDGES) {
 		sm.ctx.Errorf("buildNavigation: Could not create contours.")
-		return navData, false
+		return nil, false
 	}
 
 	//
@@ -274,25 +273,118 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	m_pmesh, ret = recast.BuildPolyMesh(sm.ctx, m_cset, sm.cfg.MaxVertsPerPoly)
 	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
-		return navData, false
+		return nil, false
 	}
 
 	//
 	// Step 7. Create detail mesh which allows to access approximate height on each polygon.
 	//
 
-	//var m_dmesh *PolyMeshDetail
+	var m_dmesh *recast.PolyMeshDetail
 
-	//m_dmesh, ret = BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
+	m_dmesh, ret = recast.BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	_, ret = recast.BuildPolyMeshDetail(sm.ctx, m_pmesh, m_chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
-		return navData, false
+		return nil, false
 	}
 
 	// free memory as we do not need it anymore
 	m_chf = nil
 	m_cset = nil
+
+	// At this point the navigation mesh data is ready, you can access it from m_pmesh.
+	// See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
+
+	//
+	// (Optional) Step 8. Create Detour data from Recast poly mesh.
+	//
+
+	// The GUI may allow more max points per polygon than Detour can handle.
+	// Only build the detour navmesh if we do not exceed the limit.
+	if sm.cfg.MaxVertsPerPoly > int32(detour.VertsPerPolygon) {
+		sm.ctx.Errorf("detour doesn't handle so many vertices per polygon. should be <= %v", detour.VertsPerPolygon)
+		return nil, false
+	}
+	var (
+		navData []uint8
+		//navDataSize int32
+		err error
+	)
+
+	// Update poly flags from areas.
+	for i := int32(0); i < m_pmesh.NPolys; i++ {
+		if m_pmesh.Areas[i] == recast.RC_WALKABLE_AREA {
+			m_pmesh.Areas[i] = SAMPLE_POLYAREA_GROUND
+		}
+
+		if m_pmesh.Areas[i] == SAMPLE_POLYAREA_GROUND ||
+			m_pmesh.Areas[i] == SAMPLE_POLYAREA_GRASS ||
+			m_pmesh.Areas[i] == SAMPLE_POLYAREA_ROAD {
+			m_pmesh.Flags[i] = SAMPLE_POLYFLAGS_WALK
+		} else if m_pmesh.Areas[i] == SAMPLE_POLYAREA_WATER {
+			m_pmesh.Flags[i] = SAMPLE_POLYFLAGS_SWIM
+		} else if m_pmesh.Areas[i] == SAMPLE_POLYAREA_DOOR {
+			m_pmesh.Flags[i] = SAMPLE_POLYFLAGS_WALK | SAMPLE_POLYFLAGS_DOOR
+		}
+	}
+
+	var params detour.NavMeshCreateParams
+	//memset(&params, 0, sizeof(params));
+	params.Verts = m_pmesh.Verts
+	params.VertCount = m_pmesh.NVerts
+	params.Polys = m_pmesh.Polys
+	params.PolyAreas = m_pmesh.Areas
+	params.PolyFlags = m_pmesh.Flags
+	params.PolyCount = m_pmesh.NPolys
+	params.Nvp = m_pmesh.Nvp
+	params.DetailMeshes = m_dmesh.Meshes
+	params.DetailVerts = m_dmesh.Verts
+	params.DetailVertsCount = m_dmesh.NVerts
+	params.DetailTris = m_dmesh.Tris
+	params.DetailTriCount = m_dmesh.NTris
+	params.OffMeshConVerts = sm.geom.OffMeshConnectionVerts()
+	params.OffMeshConRad = sm.geom.OffMeshConnectionRads()
+	params.OffMeshConDir = sm.geom.OffMeshConnectionDirs()
+	params.OffMeshConAreas = sm.geom.OffMeshConnectionAreas()
+	params.OffMeshConFlags = sm.geom.OffMeshConnectionFlags()
+	params.OffMeshConUserID = sm.geom.OffMeshConnectionId()
+	params.OffMeshConCount = sm.geom.OffMeshConnectionCount()
+	params.WalkableHeight = m_agentHeight
+	params.WalkableRadius = m_agentRadius
+	params.WalkableClimb = m_agentMaxClimb
+	copy(params.BMin[:], m_pmesh.BMin[:])
+	copy(params.BMax[:], m_pmesh.BMax[:])
+	params.Cs = sm.cfg.Cs
+	params.Ch = sm.cfg.Ch
+	params.BuildBvTree = true
+
+	if navData, err = detour.CreateNavMeshData(&params); err != nil {
+		sm.ctx.Errorf("Could not build Detour navmesh: %v", err)
+		return nil, false
+	}
+
+	//navMesh = detour.AllocNavMesh()
+	//if !navMesh {
+	//navData = nil
+	//sm.ctx.Errorf("Could not create Detour navmesh")
+	//return nil, false
+	//}
+
+	//var status detour.Status
+
+	//status = navMesh.Init(navData, navDataSize, DT_TILE_FREE_DATA)
+	//if dtStatusFailed(status) {
+	//navData = nil
+	//sm.ctx.Errorf("Could not init Detour navmesh")
+	//return nil, false
+	//}
+
+	//status = m_navQuery.Init(m_navMesh, 2048)
+	//if detour.dtStatusFailed(status) {
+	//sm.ctx.Errorf("Could not init Detour navmesh query")
+	//return nil, false
+	//}
 
 	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
 	// Show performance stats.
