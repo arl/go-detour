@@ -7,6 +7,7 @@ import (
 	"log"
 	"unsafe"
 
+	"github.com/aurelien-rainone/aligned"
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
@@ -99,8 +100,9 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	var hdr MeshHeader
 
 	// prepare a reader on the received data
-	r := newAlignedReader(bytes.NewReader(data), 4)
-	binary.Read(r, binary.LittleEndian, &hdr)
+	r := aligned.NewReader(bytes.NewReader(data), 4, binary.LittleEndian)
+	r.ReadVal(&hdr)
+	//binary.Read(r, binary.LittleEndian, &hdr)
 
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {
@@ -169,27 +171,28 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	// Read header from binary data
 	tile.Verts = make([]float32, 3*hdr.VertCount)
 	var err error
-	if err = r.readSlice(&tile.Verts, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.Verts); err != nil {
 		log.Fatalln("couldn't read tile.Verts:", err)
 	}
 
 	tile.Polys = make([]Poly, hdr.PolyCount)
-	if err = r.readSlice(&tile.Polys, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.Polys); err != nil {
 		log.Fatalln("couldn't read tile.Polys:", err)
 	}
+	log.Printf("tile.Polys has %v polys, each of %v bytes\n", hdr.PolyCount, unsafe.Sizeof(Poly{}))
 
 	tile.Links = make([]link, hdr.MaxLinkCount)
-	if err = r.readSlice(&tile.Links, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.Links); err != nil {
 		log.Fatalln("couldn't read tile.Links:", err)
 	}
 
 	tile.DetailMeshes = make([]polyDetail, hdr.DetailMeshCount)
-	if err = r.readSlice(&tile.DetailMeshes, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.DetailMeshes); err != nil {
 		log.Fatalln("couldn't read tile.DetailMeshes:", err)
 	}
 
 	tile.DetailVerts = make([]float32, 3*hdr.DetailVertCount)
-	if err = r.readSlice(&tile.DetailVerts, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.DetailVerts); err != nil {
 		log.Fatalln("couldn't read tile.DetailVerts:", err)
 	}
 
@@ -214,13 +217,14 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 		// this second method keep all, we just have to adjust when indexing the
 		// DetailTris slice for usage
 		tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
+		// TODO: chan ge to aligned.ReadVal
 		if err = binary.Read(r, binary.LittleEndian, &tile.DetailTris); err != nil {
 			log.Fatalln("couldn't read tile.DetailTris:", err)
 		}
 	}
 
 	tile.BvTree = make([]bvNode, hdr.BvNodeCount)
-	if err = r.readSlice(&tile.BvTree, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.BvTree); err != nil {
 		log.Fatalln("couldn't read tile.BvTree:", err)
 	}
 
@@ -231,7 +235,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	}
 
 	tile.OffMeshCons = make([]OffMeshConnection, hdr.OffMeshConCount)
-	if err = r.readSlice(&tile.OffMeshCons, binary.LittleEndian); err != nil {
+	if err = r.ReadSlice(&tile.OffMeshCons); err != nil {
 		log.Println("hdr.OffMeshConCount:", hdr.OffMeshConCount)
 		log.Fatalln("couldn't read tile.OffMeshCons:", err)
 	}
