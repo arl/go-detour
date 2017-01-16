@@ -37,7 +37,7 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	}
 
 	var mesh NavMesh
-	status := mesh.init(&hdr.Params)
+	status := mesh.Init(&hdr.Params)
 	if StatusFailed(status) {
 		return nil, fmt.Errorf("status failed 0x%x", status)
 	}

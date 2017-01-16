@@ -364,21 +364,14 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		return nil, false
 	}
 
-	//navMesh = detour.AllocNavMesh()
-	//if !navMesh {
-	//navData = nil
-	//sm.ctx.Errorf("Could not create Detour navmesh")
-	//return nil, false
-	//}
+	var navMesh detour.NavMesh
+	var status detour.Status
 
-	//var status detour.Status
-
-	//status = navMesh.Init(navData, navDataSize, DT_TILE_FREE_DATA)
-	//if dtStatusFailed(status) {
-	//navData = nil
-	//sm.ctx.Errorf("Could not init Detour navmesh")
-	//return nil, false
-	//}
+	status = navMesh.InitForSingleTile(navData, 0)
+	if detour.StatusFailed(status) {
+		sm.ctx.Errorf("Could not init Detour navmesh")
+		return nil, false
+	}
 
 	//status = m_navQuery.Init(m_navMesh, 2048)
 	//if detour.dtStatusFailed(status) {

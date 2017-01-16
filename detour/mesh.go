@@ -30,7 +30,41 @@ type NavMesh struct {
 	polyBits              uint32        // Number of poly bits in the tile ID.
 }
 
-func (m *NavMesh) init(params *NavMeshParams) Status {
+/// Initializes the navigation mesh for single tile use.
+///  @param[in]	data		Data of the new tile. (See: #dtCreateNavMeshData)
+///  @param[in]	dataSize	The data size of the new tile.
+///  @param[in]	flags		The tile flags. (See: #dtTileFlags)
+/// @return The status flags for the operation.
+///  @see dtCreateNavMeshData
+func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
+	var header MeshHeader
+	buf := bytes.NewBuffer(data)
+	binary.Read(buf, binary.LittleEndian, &header)
+
+	// Make sure the data is in right format.
+	if header.Magic != navMeshMagic {
+		return Failure | WrongMagic
+	}
+	if header.Version != navMeshVersion {
+		return Failure | WrongVersion
+	}
+
+	//var params NavMeshParams
+	//dtVcopy(params.orig, header->bmin);
+	//params.tileWidth = header->bmax[0] - header->bmin[0];
+	//params.tileHeight = header->bmax[2] - header->bmin[2];
+	//params.maxTiles = 1;
+	//params.maxPolys = header->polyCount;
+
+	//dtStatus status = init(&params);
+	//if (dtStatusFailed(status))
+	//return status;
+
+	//return addTile(data, dataSize, flags, 0, 0);
+	return Success
+}
+
+func (m *NavMesh) Init(params *NavMeshParams) Status {
 	m.Params = *params
 	m.Orig = d3.NewVec3From(params.Orig[0:3])
 	m.TileWidth = params.TileWidth
