@@ -73,24 +73,42 @@ func (ar *Reader) Read(b []byte) (n int, err error) {
 // into s.
 //
 // s must be an allocated slice. It returns an error if the slice can't be
-// filled entirely. The number of bytes of data consumed for each element of
-// the slice is equal to the size of one element plus the padding required to
-// have each element alignment on the specified wordsize.
+// filled entirely. The number of bytes of data consumed is the normal size of
+// the slice plus eventual an amount of padding bytes equal to the padding
+// required to keep the whole slice aligned.
 func (ar *Reader) ReadSlice(s interface{}) error {
-	var elem reflect.Value
+	var slice reflect.Value
 	rv := reflect.ValueOf(s)
 	if rv.Kind() == reflect.Slice {
-		elem = rv
+		slice = rv
 	} else if rv.Kind() == reflect.Ptr {
-		elem = rv.Elem()
+		slice = rv.Elem()
 	}
-	// elem := reflect.ValueOf(s).Elem()
-	for idx := 0; idx < elem.Len(); idx++ {
-		err := binary.Read(ar, ar.order, elem.Index(idx).Addr().Interface())
-		if err != nil {
+
+	// get element size and number of elements
+	length := slice.Len()
+	if length != 0 {
+		// read the whole slice with the embedded reader
+		if err := binary.Read(ar.r, ar.order, slice.Interface()); err != nil {
 			return err
 		}
+		// compute the padding
+		total := int(slice.Index(0).Type().Size()) * length
+		if pad := AlignN(total, ar.align) - total; pad != 0 {
+			// move the reader forward of 'pad' bytes
+			npad, err := ar.r.Read(ar.padbuf[:pad])
+			switch {
+			case err == io.EOF:
+				return io.ErrUnexpectedEOF
+			case err != nil:
+				return err
+			case npad < pad:
+				// not enough padding to keep the data stream aligned
+				return io.ErrUnexpectedEOF
+			}
+		}
 	}
+
 	return nil
 }
 

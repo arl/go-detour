@@ -2,7 +2,6 @@ package aligned
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"reflect"
 )
@@ -60,16 +59,38 @@ func (aw *Writer) Write(b []byte) (n int, err error) {
 //
 // s must be a slice.
 func (aw *Writer) WriteSlice(s interface{}) error {
-	rt, rv := reflect.TypeOf(s), reflect.ValueOf(s)
-	if rt.Kind() == reflect.Ptr || rv.Kind() != reflect.Slice {
-		return fmt.Errorf("data must be a slice")
+	var slice reflect.Value
+	rv := reflect.ValueOf(s)
+	if rv.Kind() == reflect.Slice {
+		slice = rv
+	} else if rv.Kind() == reflect.Ptr {
+		slice = rv.Elem()
 	}
-	for idx := 0; idx < rv.Len(); idx++ {
-		err := binary.Write(aw, aw.order, rv.Index(idx).Interface())
-		if err != nil {
+
+	// get element size and number of elements
+	length := slice.Len()
+	if length != 0 {
+		// write the whole slice with the embedded reader
+		if err := binary.Write(aw.w, aw.order, slice.Interface()); err != nil {
 			return err
 		}
+		// compute the padding
+		total := int(slice.Index(0).Type().Size()) * length
+		if pad := AlignN(total, aw.align) - total; pad != 0 {
+			// move the write forward of 'pad' bytes
+			npad, err := aw.w.Write(aw.padbuf[:pad])
+			switch {
+			case err == io.EOF:
+				return io.ErrUnexpectedEOF
+			case err != nil:
+				return err
+			case npad < pad:
+				// not enough padding to keep the data stream aligned
+				return io.ErrUnexpectedEOF
+			}
+		}
 	}
+
 	return nil
 }
 
