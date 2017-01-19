@@ -1,5 +1,13 @@
 package detour
 
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
+	"unsafe"
+)
+
 type navMeshSetHeader struct {
 	Magic    int32
 	Version  int32
@@ -45,6 +53,62 @@ type MeshHeader struct {
 	BvQuantFactor   float32    // The bounding volume quantization factor.
 }
 
+// TODO: should probably remove this useless function
+func (s *MeshHeader) WriteTo(w io.Writer) (n int64, err error) {
+	// write each field as little endian
+	binary.Write(w, binary.LittleEndian, s.Magic)
+	binary.Write(w, binary.LittleEndian, s.Version)
+	binary.Write(w, binary.LittleEndian, s.X)
+	binary.Write(w, binary.LittleEndian, s.Y)
+	binary.Write(w, binary.LittleEndian, s.Layer)
+	binary.Write(w, binary.LittleEndian, s.UserID)
+	binary.Write(w, binary.LittleEndian, s.PolyCount)
+	binary.Write(w, binary.LittleEndian, s.VertCount)
+	binary.Write(w, binary.LittleEndian, s.MaxLinkCount)
+	binary.Write(w, binary.LittleEndian, s.DetailMeshCount)
+	binary.Write(w, binary.LittleEndian, s.DetailVertCount)
+	binary.Write(w, binary.LittleEndian, s.DetailTriCount)
+	binary.Write(w, binary.LittleEndian, s.BvNodeCount)
+	binary.Write(w, binary.LittleEndian, s.OffMeshConCount)
+	binary.Write(w, binary.LittleEndian, s.OffMeshBase)
+	binary.Write(w, binary.LittleEndian, s.WalkableHeight)
+	binary.Write(w, binary.LittleEndian, s.WalkableRadius)
+	binary.Write(w, binary.LittleEndian, s.WalkableClimb)
+	binary.Write(w, binary.LittleEndian, s.Bmin)
+	binary.Write(w, binary.LittleEndian, s.Bmax)
+	binary.Write(w, binary.LittleEndian, s.BvQuantFactor)
+	// TODO: do not hard-code this
+	return 100, nil
+}
+
+// TODO: should probably remove this useless function
+func (s *MeshHeader) ReadFrom(r io.Reader) (n int64, err error) {
+	// read each field as little endian
+	binary.Read(r, binary.LittleEndian, &s.Magic)
+	binary.Read(r, binary.LittleEndian, &s.Version)
+	binary.Read(r, binary.LittleEndian, &s.X)
+	binary.Read(r, binary.LittleEndian, &s.Y)
+	binary.Read(r, binary.LittleEndian, &s.Layer)
+	binary.Read(r, binary.LittleEndian, &s.UserID)
+	binary.Read(r, binary.LittleEndian, &s.PolyCount)
+	binary.Read(r, binary.LittleEndian, &s.VertCount)
+	binary.Read(r, binary.LittleEndian, &s.MaxLinkCount)
+	binary.Read(r, binary.LittleEndian, &s.DetailMeshCount)
+	binary.Read(r, binary.LittleEndian, &s.DetailVertCount)
+	binary.Read(r, binary.LittleEndian, &s.DetailTriCount)
+	binary.Read(r, binary.LittleEndian, &s.BvNodeCount)
+	binary.Read(r, binary.LittleEndian, &s.OffMeshConCount)
+	binary.Read(r, binary.LittleEndian, &s.OffMeshBase)
+	binary.Read(r, binary.LittleEndian, &s.WalkableHeight)
+	binary.Read(r, binary.LittleEndian, &s.WalkableRadius)
+	binary.Read(r, binary.LittleEndian, &s.WalkableClimb)
+	binary.Read(r, binary.LittleEndian, &s.Bmin)
+	binary.Read(r, binary.LittleEndian, &s.Bmax)
+	binary.Read(r, binary.LittleEndian, &s.BvQuantFactor)
+	// TODO: do not hard-code this
+	return 100, nil
+}
+
 // MeshTile defines a navigation mesh tile.
 type MeshTile struct {
 	Salt          uint32       // Counter describing modifications to the tile.
@@ -52,8 +116,8 @@ type MeshTile struct {
 	Header        *MeshHeader  // The tile header.
 	Polys         []Poly       // The tile polygons. [Size: MeshHeader.polyCount]
 	Verts         []float32    // The tile vertices. [Size: MeshHeader.vertCount]
-	Links         []link       // The tile links. [Size: MeshHeader.maxLinkCount]
-	DetailMeshes  []polyDetail // The tile's detail sub-meshes. [Size: MeshHeader.detailMeshCount]
+	Links         []Link       // The tile links. [Size: MeshHeader.maxLinkCount]
+	DetailMeshes  []PolyDetail // The tile's detail sub-meshes. [Size: MeshHeader.detailMeshCount]
 	DetailVerts   []float32    // The detail mesh's unique vertices. [(x, y, z) * MeshHeader.detailVertCount]
 	// The detail mesh's triangles. [(vertA, vertB, vertC) * MeshHeader.detailTriCount]
 	DetailTris []uint8
@@ -68,4 +132,36 @@ type MeshTile struct {
 	DataSize int32     // Size of the tile data.
 	Flags    int32     // Tile flags. (See: tileFlags)
 	Next     *MeshTile // The next free tile, or the next tile in the spatial grid.
+}
+
+// UpdateData updates the Data field with the actual content of the tile
+// for later serialization.
+
+//we are doing exactly the same thing in navmeshcreate ligne 783,
+//factorize this
+func (s *MeshTile) UpdateData() error {
+	var buf bytes.Buffer
+	expected := int(s.DataSize) - int(unsafe.Sizeof(*s.Header))
+	buf.Grow(expected)
+
+	// write each field as little endian
+	binary.Write(&buf, binary.LittleEndian, s.Verts)
+	binary.Write(&buf, binary.LittleEndian, s.Polys)
+	binary.Write(&buf, binary.LittleEndian, s.Links)
+	for i := range s.DetailMeshes {
+		s.DetailMeshes[i].WriteTo(&buf)
+		//binary.Write(&buf, binary.LittleEndian, s.DetailMeshes)
+	}
+	binary.Write(&buf, binary.LittleEndian, s.DetailVerts)
+	binary.Write(&buf, binary.LittleEndian, s.DetailTris)
+	binary.Write(&buf, binary.LittleEndian, s.BvTree)
+	binary.Write(&buf, binary.LittleEndian, s.OffMeshCons)
+
+	// buffer should not be larger than DataSize
+	if buf.Len() != expected {
+		return fmt.Errorf("couldn't update MeshTile.Data(buf:%v, DataSize:%v)\n", buf.Len(), expected)
+	}
+
+	s.Data = buf.Bytes()
+	return nil
 }

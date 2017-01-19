@@ -1030,7 +1030,7 @@ func (q *NavMeshQuery) getPortalPoints8(
 	left, right d3.Vec3) Status {
 
 	// Find the link that points to the 'to' polygon.
-	var link *link
+	var link *Link
 	for i := fromPoly.FirstLink; i != nullLink; i = fromTile.Links[i].Next {
 		if fromTile.Links[i].Ref == to {
 			link = &fromTile.Links[i]

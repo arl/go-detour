@@ -76,3 +76,40 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	}
 	return &mesh, nil
 }
+
+func SerializeTile(dst []byte,
+	verts []float32, polys []Poly, links []Link, dmeshes []PolyDetail,
+	dverts []float32,
+	dtris []uint8,
+	bvtree []bvNode,
+	offMeshCons []OffMeshConnection,
+) error {
+
+	bufw := NewBufWriter(dst)
+	for i := range verts {
+		binary.Write(bufw, binary.LittleEndian, verts[i])
+	}
+	for i := range polys {
+		binary.Write(bufw, binary.LittleEndian, polys[i])
+	}
+	for i := range links {
+		binary.Write(bufw, binary.LittleEndian, links[i])
+	}
+	for i := range dmeshes {
+		binary.Write(bufw, binary.LittleEndian, dmeshes[i])
+		bufw.GoForward(2)
+	}
+	for i := range dverts {
+		binary.Write(bufw, binary.LittleEndian, dverts[i])
+	}
+	for i := range dtris {
+		binary.Write(bufw, binary.LittleEndian, dtris[i])
+	}
+	for i := range bvtree {
+		binary.Write(bufw, binary.LittleEndian, bvtree[i])
+	}
+	for i := range offMeshCons {
+		binary.Write(bufw, binary.LittleEndian, offMeshCons[i])
+	}
+	return nil
+}

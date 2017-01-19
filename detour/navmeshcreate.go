@@ -1,8 +1,6 @@
 package detour
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"sort"
@@ -555,8 +553,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	headerSize := aligned.AlignN(int(unsafe.Sizeof(MeshHeader{})), 4)
 	vertsSize := aligned.AlignN(int(4*3*totVertCount), 4)
 	polysSize := aligned.AlignN(int(unsafe.Sizeof(Poly{})*uintptr(totPolyCount)), 4)
-	linksSize := aligned.AlignN(int(unsafe.Sizeof(link{})*uintptr(maxLinkCount)), 4)
-	detailMeshesSize := aligned.AlignN(int(unsafe.Sizeof(polyDetail{})*uintptr(params.PolyCount)), 4)
+	linksSize := aligned.AlignN(int(unsafe.Sizeof(Link{})*uintptr(maxLinkCount)), 4)
+	detailMeshesSize := aligned.AlignN(int(unsafe.Sizeof(PolyDetail{})*uintptr(params.PolyCount)), 4)
 	detailVertsSize := aligned.AlignN(int(4*3*uintptr(uniqueDetailVertCount)), 4)
 	detailTrisSize := aligned.AlignN(int(1*4*uintptr(detailTriCount)), 4)
 	var bvTreeSize int
@@ -571,16 +569,12 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		detailMeshesSize + detailVertsSize + detailTrisSize +
 		bvTreeSize + offMeshConsSize
 
-	// create a buffer of the total required size
-	var data []uint8
-	data = make([]uint8, dataSize)
-
 	// create the variable that will hold the values to serialize
 	var hdr MeshHeader
 	navVerts := make([]float32, 3*totVertCount)
-	navPolys := make([]Poly, 3*totVertCount)
+	navPolys := make([]Poly, totPolyCount)
 
-	navDMeshes := make([]polyDetail, params.PolyCount)
+	navDMeshes := make([]PolyDetail, params.PolyCount)
 	navDVerts := make([]float32, 3*uniqueDetailVertCount)
 	navDTris := make([]uint8, 4*detailTriCount)
 	navBvtree := make([]bvNode, params.PolyCount*2)
@@ -703,8 +697,6 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		}
 	}
 
-	//d += linksSize; // Ignore links; just leave enough space for them. They'll be created on load.
-
 	// Store detail meshes and vertices.
 	// The nav polygon vertices are stored as the first vertices on each mesh.
 	// We compress the mesh data by skipping them and using the navmesh coordinates.
@@ -721,7 +713,6 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 			dtl.TriCount = uint8(params.DetailMeshes[i*4+3])
 			// Copy vertices except the first 'nv' verts which are equal to nav poly verts.
 			if ndv-nv != 0 {
-				//memcpy(&navDVerts[vbase*3], &params.detailVerts[(vb+nv)*3], sizeof(float)*3*(ndv-nv));
 				start, length := (vb+nv)*3, 3*(ndv-nv)
 				copy(navDVerts[vbase*3:], params.DetailVerts[start:start+length])
 				vbase += uint16(ndv - nv)
@@ -788,25 +779,25 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		}
 	}
 
-	buf := bytes.NewBuffer(data)
-	w := aligned.NewWriter(buf, 4, binary.LittleEndian)
-	w.WriteVal(hdr)
-	w.WriteSlice(navVerts)
-	w.WriteSlice(navPolys)
-	// TODO: could use a function like Truncate in bytes.Buffer instead of creating an empty buffer
-	w.WriteSlice(make([]uint8, linksSize)) // Ignore links; just leave enough space for them. They'll be created on load.
+	var total int
+	buf := make([]byte, dataSize)
+	bufw := NewBufWriter(buf)
 
-	w.WriteSlice(navDMeshes)
-	w.WriteSlice(navDVerts)
-	w.WriteSlice(navDTris)
-	w.WriteSlice(navBvtree)
-	w.WriteSlice(offMeshCons)
+	hdr.WriteTo(bufw)
+	total += headerSize
+	if bufw.Current() > total {
+		log.Fatalf("shouldn't be past %v, but we are at %v\n", total, bufw.Current())
+	}
 
-	//dtFree(offMeshConClass);
+	err := SerializeTile(bufw.Next(dataSize-headerSize),
+		navVerts, vertsSize,
+		navPolys, polysSize,
+		[]Link{}, linksSize,
+		navDMeshes, detailMeshesSize,
+		navDVerts, detailVertsSize,
+		navDTris, detailTrisSize,
+		navBvtree, bvTreeSize,
+		offMeshCons, offMeshConsSize)
 
-	//*outData = data;
-	//*outDataSize = dataSize;
-
-	fmt.Println("data bytes", len(buf.Bytes()))
-	return buf.Bytes(), nil
+	return buf, err
 }
