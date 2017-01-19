@@ -364,20 +364,22 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 		return nil, false
 	}
 
-	var navMesh detour.NavMesh
-	var status detour.Status
-
+	var (
+		navMesh detour.NavMesh
+		// navQuery *detour.NavMeshQuery
+		status detour.Status
+	)
 	status = navMesh.InitForSingleTile(navData, 0)
 	if detour.StatusFailed(status) {
 		sm.ctx.Errorf("Could not init Detour navmesh")
 		return nil, false
 	}
 
-	//status = m_navQuery.Init(m_navMesh, 2048)
-	//if detour.dtStatusFailed(status) {
-	//sm.ctx.Errorf("Could not init Detour navmesh query")
-	//return nil, false
-	//}
+	status, _ = detour.NewNavMeshQuery(&navMesh, 2048)
+	if detour.StatusFailed(status) {
+		sm.ctx.Errorf("Could not init Detour navmesh query")
+		return nil, false
+	}
 
 	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
 	// Show performance stats.
@@ -387,5 +389,8 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//m_tileBuildTime := sm.ctx.AccumulatedTime(RC_TIMER_TOTAL) / 1000.0
 	//dataSize = navDataSize
 	sm.buildCtx.DumpLog("Navmesh Build log")
+
+	navMesh.SaveToFile("out.bin")
+
 	return navData, true
 }
