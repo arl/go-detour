@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"unsafe"
 
 	"github.com/aurelien-rainone/aligned"
@@ -30,6 +32,54 @@ type NavMesh struct {
 	polyBits              uint32        // Number of poly bits in the tile ID.
 }
 
+func (m *NavMesh) SaveToFile(fn string) error {
+	f, err := os.Create(fn)
+	if err != nil {
+		return err
+	}
+
+	// Store header.
+	var header navMeshSetHeader
+	header.Magic = navMeshSetMagic
+	header.Version = navMeshSetVersion
+	header.NumTiles = 0
+	for i := int32(0); i < m.MaxTiles; i++ {
+		if m.Tiles[i].DataSize == 0 {
+			continue
+		}
+		header.NumTiles++
+	}
+	header.Params = m.Params
+	if err = binary.Write(f, binary.LittleEndian, header); err != nil {
+		return err
+	}
+
+	// Store tiles.
+	for i := int32(0); i < m.MaxTiles; i++ {
+		tile := &m.Tiles[i]
+		if tile.DataSize == 0 {
+			continue
+		}
+
+		var tileHeader navMeshTileHeader
+		tileHeader.TileRef = m.TileRef(tile)
+		tileHeader.DataSize = tile.DataSize
+		if err = binary.Write(f, binary.LittleEndian, tileHeader); err != nil {
+			return err
+		}
+
+		//panic("ICI, on sauve tile.data mais on a modifié le tile et pas tile.Data! voir exactement qu'est ce qui est mis dans tile.Data dans la version c++")
+		if err = binary.Write(f, binary.LittleEndian, tile.Data); err != nil {
+			return err
+		}
+
+		//if _, err = tile.WriteTo(f); err != nil {
+		//return err
+		//}
+	}
+	return nil
+}
+
 /// Initializes the navigation mesh for single tile use.
 ///  @param[in]	data		Data of the new tile. (See: #dtCreateNavMeshData)
 ///  @param[in]	dataSize	The data size of the new tile.
@@ -41,6 +91,8 @@ func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	buf := bytes.NewBuffer(data)
 	binary.Read(buf, binary.LittleEndian, &header)
 
+	fmt.Println("header", header)
+
 	// Make sure the data is in right format.
 	if header.Magic != navMeshMagic {
 		return Failure | WrongMagic
@@ -49,19 +101,20 @@ func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 		return Failure | WrongVersion
 	}
 
-	//var params NavMeshParams
-	//dtVcopy(params.orig, header->bmin);
-	//params.tileWidth = header->bmax[0] - header->bmin[0];
-	//params.tileHeight = header->bmax[2] - header->bmin[2];
-	//params.maxTiles = 1;
-	//params.maxPolys = header->polyCount;
+	var params NavMeshParams
+	copy(params.Orig[:], header.Bmin[:])
+	params.TileWidth = header.Bmax[0] - header.Bmin[0]
+	params.TileHeight = header.Bmax[2] - header.Bmin[2]
+	params.MaxTiles = 1
+	params.MaxPolys = uint32(header.PolyCount)
 
-	//dtStatus status = init(&params);
-	//if (dtStatusFailed(status))
-	//return status;
+	status := m.Init(&params)
+	if StatusFailed(status) {
+		return status
+	}
 
-	//return addTile(data, dataSize, flags, 0, 0);
-	return Success
+	status, _ = m.addTile(data, int32(len(data)), TileRef(flags))
+	return status
 }
 
 func (m *NavMesh) Init(params *NavMeshParams) Status {
@@ -73,7 +126,7 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 	// Init tiles
 	m.MaxTiles = int32(params.MaxTiles)
 	m.TileLUTSize = int32(math32.NextPow2(uint32(params.MaxTiles / 4)))
-	if !(m.TileLUTSize == 0) {
+	if m.TileLUTSize == 0 {
 		m.TileLUTSize = 1
 	}
 	m.TileLUTMask = m.TileLUTSize - 1
@@ -215,12 +268,12 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	}
 	log.Printf("tile.Polys has %v polys, each of %v bytes\n", hdr.PolyCount, unsafe.Sizeof(Poly{}))
 
-	tile.Links = make([]link, hdr.MaxLinkCount)
+	tile.Links = make([]Link, hdr.MaxLinkCount)
 	if err = r.ReadSlice(&tile.Links); err != nil {
 		log.Fatalln("couldn't read tile.Links:", err)
 	}
 
-	tile.DetailMeshes = make([]polyDetail, hdr.DetailMeshCount)
+	tile.DetailMeshes = make([]PolyDetail, hdr.DetailMeshCount)
 	if err = r.ReadSlice(&tile.DetailMeshes); err != nil {
 		log.Fatalln("couldn't read tile.DetailMeshes:", err)
 	}
@@ -328,6 +381,22 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 			m.connectExtOffMeshLinks(tile, neis[j], i)
 			m.connectExtOffMeshLinks(neis[j], tile, oppositeTile(i))
 		}
+	}
+
+	// rewrite the modified tile into the data pointer
+	err = SerializeTile(tile.Data,
+		tile.Verts,
+		tile.Polys,
+		tile.Links,
+		tile.DetailMeshes,
+		tile.DetailVerts,
+		tile.DetailTris,
+		tile.BvTree,
+		tile.OffMeshCons)
+
+	if err = tile.UpdateData(); err != nil {
+		log.Fatalln("UpdateData failed:", err)
+		return Failure, 0
 	}
 
 	return Success, m.TileRef(tile)
@@ -464,11 +533,11 @@ func (m *NavMesh) encodePolyID(salt, it, ip uint32) PolyRef {
 // PolyRef is a polygon reference.
 type PolyRef uint32
 
-// link defines a link between polygons.
+// Link defines a Link between polygons.
 //
 // Note: This structure is rarely if ever used by the end user.
 // see MeshTile
-type link struct {
+type Link struct {
 	Ref  PolyRef // Neighbour reference. (The neighbor that is linked to.)
 	Next uint32  // Index of the next link.
 	Edge uint8   // Index of the polygon edge that owns this link.
@@ -478,11 +547,31 @@ type link struct {
 }
 
 // Defines the location of detail sub-mesh data within a MeshTile.
-type polyDetail struct {
+type PolyDetail struct {
 	VertBase  uint32 // The offset of the vertices in the MeshTile.DetailVerts slice.
 	TriBase   uint32 // The offset of the triangles in the MeshTile.DetailTris slice.
 	VertCount uint8  // The number of vertices in the sub-mesh.
 	TriCount  uint8  // The number of triangles in the sub-mesh.
+}
+
+func (s *PolyDetail) WriteTo(w io.Writer) (n int64, err error) {
+	// write each field as little endian
+	binary.Write(w, binary.LittleEndian, s.VertBase)
+	binary.Write(w, binary.LittleEndian, s.TriBase)
+	binary.Write(w, binary.LittleEndian, s.VertCount)
+	binary.Write(w, binary.LittleEndian, s.TriCount)
+	// TODO: do not hard-code this
+	return 12, nil
+}
+
+func (s *PolyDetail) ReadFrom(r io.Reader) (n int64, err error) {
+	// read each field as little endian
+	binary.Read(r, binary.LittleEndian, &s.VertBase)
+	binary.Read(r, binary.LittleEndian, &s.TriBase)
+	binary.Read(r, binary.LittleEndian, &s.VertCount)
+	binary.Read(r, binary.LittleEndian, &s.TriCount)
+	// TODO: do not hard-code this
+	return 12, nil
 }
 
 // Bounding volume node.
