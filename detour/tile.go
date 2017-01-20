@@ -78,7 +78,10 @@ func Decode(r io.Reader) (*NavMesh, error) {
 }
 
 func SerializeTile(dst []byte,
-	verts []float32, polys []Poly, links []Link, dmeshes []PolyDetail,
+	verts []float32,
+	polys []Poly,
+	links []Link,
+	dmeshes []PolyDetail,
 	dverts []float32,
 	dtris []uint8,
 	bvtree []bvNode,
@@ -93,6 +96,7 @@ func SerializeTile(dst []byte,
 		binary.Write(bufw, binary.LittleEndian, polys[i])
 	}
 	for i := range links {
+		fmt.Printf("links[%v]: %v\n", i, links[i])
 		binary.Write(bufw, binary.LittleEndian, links[i])
 	}
 	for i := range dmeshes {
