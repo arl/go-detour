@@ -1043,7 +1043,6 @@ func (q *NavMeshQuery) getPortalPoints8(
 
 	// Handle off-mesh connections.
 	if fromPoly.Type() == polyTypeOffMeshConnection {
-		log.Println("fromPoly is an offMeshConnection")
 		// Find link that points to first vertex.
 		for i := fromPoly.FirstLink; i != nullLink; i = fromTile.Links[i].Next {
 			if fromTile.Links[i].Ref == to {
@@ -1055,16 +1054,11 @@ func (q *NavMeshQuery) getPortalPoints8(
 				return Success
 			}
 		}
-		log.Println("failure 1")
 		return Failure | InvalidParam
 	}
 
 	if toPoly.Type() == polyTypeOffMeshConnection {
-		log.Println("toPoly is an offMeshConnection")
-		log.Printf("toPoly := %#v\n", toPoly)
-		log.Printf("toPoly.FirstLink %#v\n", toPoly.FirstLink)
 		for i := toPoly.FirstLink; i != nullLink; i = toTile.Links[i].Next {
-			log.Printf("link %d\n", i)
 			if toTile.Links[i].Ref == from {
 				// TODO: AR, repass here and test
 				v := toTile.Links[i].Edge
@@ -1074,7 +1068,6 @@ func (q *NavMeshQuery) getPortalPoints8(
 				return Success
 			}
 		}
-		log.Println("failure 2, toPoly:", toPoly)
 		return Failure | InvalidParam
 	}
 

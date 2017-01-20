@@ -266,16 +266,10 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	if err = r.ReadSlice(&tile.Polys); err != nil {
 		log.Fatalln("couldn't read tile.Polys:", err)
 	}
-	log.Printf("tile.Polys has %v polys, each of %v bytes\n", hdr.PolyCount, unsafe.Sizeof(Poly{}))
 
 	tile.Links = make([]Link, hdr.MaxLinkCount)
 	if err = r.ReadSlice(&tile.Links); err != nil {
 		log.Fatalln("couldn't read tile.Links:", err)
-	}
-
-	// TODO: debug code
-	for i := range tile.Links {
-		fmt.Printf("addTile() ->b links[%v]: %v\n", i, tile.Links[i])
 	}
 
 	tile.DetailMeshes = make([]PolyDetail, hdr.DetailMeshCount)
