@@ -42,7 +42,8 @@ func (sm *SoloMesh) Load(path string) bool {
 	return true
 }
 
-func (sm *SoloMesh) Build() ([]uint8, bool) {
+//func (sm *SoloMesh) Build() ([]uint8, bool) {
+func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
 	verts := sm.geom.Mesh().Verts()
@@ -389,8 +390,5 @@ func (sm *SoloMesh) Build() ([]uint8, bool) {
 	//m_tileBuildTime := sm.ctx.AccumulatedTime(RC_TIMER_TOTAL) / 1000.0
 	//dataSize = navDataSize
 	sm.buildCtx.DumpLog("Navmesh Build log")
-
-	navMesh.SaveToFile("out.bin")
-
-	return navData, true
+	return &navMesh, true
 }
