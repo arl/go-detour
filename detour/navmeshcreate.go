@@ -158,7 +158,8 @@ func subdivide(items []BVItem, nitems, imin, imax int32, curNode *int32, nodes [
 		// Split
 		calcExtends(items, imin, imax, node.Bmin[:], node.Bmax[:])
 
-		axis := longestAxis(node.Bmax[0]-node.Bmin[0],
+		axis := longestAxis(
+			node.Bmax[0]-node.Bmin[0],
 			node.Bmax[1]-node.Bmin[1],
 			node.Bmax[2]-node.Bmin[2])
 
@@ -216,7 +217,7 @@ func createBVTree(params *NavMeshCreateParams, nodes []bvNode) int32 {
 
 			for j := int32(1); j < ndv; j++ {
 				d3.Vec3Min(bmin[:], dv[j*3:])
-				d3.Vec3Min(bmax[:], dv[j*3:])
+				d3.Vec3Max(bmax[:], dv[j*3:])
 			}
 
 			// BV-tree uses cs for all dimensions
