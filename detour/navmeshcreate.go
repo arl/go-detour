@@ -606,7 +606,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		hdr.BvNodeCount = params.PolyCount * 2
 	}
 
-	log.Println("header", structs.Map(hdr))
+	fmt.Println("header:", structs.Map(hdr))
 
 	offMeshVertsBase := params.VertCount
 	offMeshPolyBase := params.PolyCount
@@ -790,14 +790,15 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	}
 
 	err := SerializeTile(bufw.Next(dataSize-headerSize),
-		navVerts, vertsSize,
-		navPolys, polysSize,
-		[]Link{}, linksSize,
-		navDMeshes, detailMeshesSize,
-		navDVerts, detailVertsSize,
-		navDTris, detailTrisSize,
-		navBvtree, bvTreeSize,
-		offMeshCons, offMeshConsSize)
+		//err := SerializeTile(buf[headerSize:],
+		navVerts,
+		navPolys,
+		make([]Link, maxLinkCount),
+		navDMeshes,
+		navDVerts,
+		navDTris,
+		navBvtree,
+		offMeshCons)
 
 	return buf, err
 }
