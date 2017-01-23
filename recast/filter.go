@@ -11,7 +11,7 @@ import "github.com/aurelien-rainone/assertgo"
 // #rcFilterLedgeSpans after calling this filter.
 //
 // @see rcHeightfield, rcConfig
-func FilterLowHangingWalkableObstacles(ctx *Context, walkableClimb int32, solid *Heightfield) {
+func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
 	ctx.StartTimer(RC_TIMER_FILTER_LOW_OBSTACLES)
 
@@ -51,7 +51,7 @@ func FilterLowHangingWalkableObstacles(ctx *Context, walkableClimb int32, solid 
 // A span is a ledge if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) > walkableClimb</tt>
 //
 // @see rcHeightfield, rcConfig
-func FilterLedgeSpans(ctx *Context, walkableHeight, walkableClimb int32, solid *Heightfield) {
+func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
 	ctx.StartTimer(RC_TIMER_FILTER_BORDER)
 
@@ -151,7 +151,7 @@ func FilterLedgeSpans(ctx *Context, walkableHeight, walkableClimb int32, solid *
 /// maximum to the next higher span's minimum. (Same grid column.)
 ///
 /// @see rcHeightfield, rcConfig
-func FilterWalkableLowHeightSpans(ctx *Context, walkableHeight int32, solid *Heightfield) {
+func FilterWalkableLowHeightSpans(ctx *BuildContext, walkableHeight int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
 	ctx.StartTimer(RC_TIMER_FILTER_WALKABLE)
 

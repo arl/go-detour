@@ -96,7 +96,7 @@ type ContourSet struct {
 	MaxError   float32    // The max edge error that this contour set was simplified with.
 }
 
-func mergeRegionHoles(ctx *Context, region *ContourRegion) {
+func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	// Sort holes from left to right.
 	for i := int32(0); i < region.nholes; i++ {
 
@@ -196,7 +196,7 @@ func mergeRegionHoles(ctx *Context, region *ContourRegion) {
 /// See the #rcConfig documentation for more information on the configuration parameters.
 ///
 /// @see rcAllocContourSet, rcCompactHeightfield, rcContourSet, rcConfig
-func BuildContours(ctx *Context, chf *CompactHeightfield,
+func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	maxError float32, maxEdgeLen int32,
 	cset *ContourSet, buildFlags int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")

@@ -2,7 +2,7 @@ package recast
 
 import "time"
 
-func logLine(ctx *Context, label TimerLabel, name string, pc float64) {
+func logLine(ctx *BuildContext, label TimerLabel, name string, pc float64) {
 	t := ctx.AccumulatedTime(label)
 	if t < 0 {
 		return
@@ -10,7 +10,7 @@ func logLine(ctx *Context, label TimerLabel, name string, pc float64) {
 	ctx.Progressf("%s:\t%.2fms\t(%.1f%%)", name, float64(t)/float64(time.Millisecond), float64(t)*pc)
 }
 
-func LogBuildTimes(ctx *Context, totalTime time.Duration) {
+func LogBuildTimes(ctx *BuildContext, totalTime time.Duration) {
 	pc := 100.0 / float64(totalTime)
 	ctx.Progressf("Build Times")
 	logLine(ctx, RC_TIMER_RASTERIZE_TRIANGLES, "- Rasterize\t\t", pc)

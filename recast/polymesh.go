@@ -38,7 +38,7 @@ func (pm *PolyMesh) Free() {
 /// limit must be retricted to <= #DT_VERTS_PER_POLYGON.
 ///
 /// @see rcAllocPolyMesh, rcContourSet, rcPolyMesh, rcConfig
-func BuildPolyMesh(ctx *Context, cset *ContourSet, nvp int32) (*PolyMesh, bool) {
+func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
 	ctx.StartTimer(RC_TIMER_BUILD_POLYMESH)

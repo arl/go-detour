@@ -77,7 +77,7 @@ type InputGeom struct {
 	m_volumeCount int32
 }
 
-func (ig *InputGeom) Load(ctx *Context, path string) bool {
+func (ig *InputGeom) Load(ctx *BuildContext, path string) bool {
 
 	switch filepath.Ext(path) {
 	case ".obj":
@@ -90,7 +90,7 @@ func (ig *InputGeom) Load(ctx *Context, path string) bool {
 	return false
 }
 
-func (ig *InputGeom) loadMesh(ctx *Context, path string) bool {
+func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) bool {
 	if ig.m_mesh != nil {
 		ig.m_chunkyMesh = nil
 		ig.m_mesh = nil

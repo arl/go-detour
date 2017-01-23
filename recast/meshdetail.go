@@ -271,7 +271,7 @@ func findEdge(edges []int32, nedges int32, s, t int32) int32 {
 	return EV_UNDEF
 }
 
-func addEdge(ctx *Context, edges []int32, nedges *int32, maxEdges, s, t, l, r int32) int32 {
+func addEdge(ctx *BuildContext, edges []int32, nedges *int32, maxEdges, s, t, l, r int32) int32 {
 	if *nedges >= maxEdges {
 		ctx.Errorf("addEdge: Too many edges (%d/%d).", *nedges, maxEdges)
 		return EV_UNDEF
@@ -319,7 +319,7 @@ func getTriFlags(va, vb, vc, vpoly []float32, npoly int32) uint8 {
 /// See the #rcConfig documentation for more information on the configuration parameters.
 ///
 /// @see rcAllocPolyMeshDetail, rcPolyMesh, rcCompactHeightfield, rcPolyMeshDetail, rcConfig
-func BuildPolyMeshDetail(ctx *Context, mesh *PolyMesh, chf *CompactHeightfield, sampleDist, sampleMaxError float32) (*PolyMeshDetail, bool) {
+func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfield, sampleDist, sampleMaxError float32) (*PolyMeshDetail, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
 	ctx.StartTimer(RC_TIMER_BUILD_POLYMESHDETAIL)
@@ -540,7 +540,7 @@ func overlapEdges(pts []float32, edges []int32, nedges, s1, t1 int32) bool {
 	return false
 }
 
-func completeFacet(ctx *Context, pts []float32, npts int32, edges []int32, nedges *int32, maxEdges int32, nfaces *int32, e int32) {
+func completeFacet(ctx *BuildContext, pts []float32, npts int32, edges []int32, nedges *int32, maxEdges int32, nfaces *int32, e int32) {
 	const EPS float32 = 1e-5
 
 	edge := edges[e*4:]
@@ -625,7 +625,7 @@ func completeFacet(ctx *Context, pts []float32, npts int32, edges []int32, nedge
 	}
 }
 
-func delaunayHull(ctx *Context, npts int32, pts []float32,
+func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 	nhull int32, hull []int32,
 	tris, edges *[]int32) {
 	var (
@@ -811,7 +811,7 @@ func getJitterY(i int64) float32 {
 	return float32(((i*0xd8163841)&0xffff)/65535.0*2.0) - 1.0
 }
 
-func buildPolyDetail(ctx *Context, in []float32, nin int32,
+func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 	sampleDist, sampleMaxError float32,
 	heightSearchRadius int32, chf *CompactHeightfield,
 	hp *HeightPatch, verts []float32, nverts *int32,
@@ -1067,7 +1067,7 @@ func init() {
 	bsOffset = [9 * 2]int32{0, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1, 0, 1, -1, 1, -1, 0}
 }
 
-func seedArrayWithPolyCenter(ctx *Context, chf *CompactHeightfield,
+func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	poly []uint16, npoly int32,
 	verts []uint16, bs int32,
 	hp *HeightPatch, array *[]int32) {
@@ -1260,7 +1260,7 @@ func distToPoly(nvert int32, verts, p []float32) float32 {
 	return dmin
 }
 
-func getHeightData(ctx *Context, chf *CompactHeightfield,
+func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 	poly []uint16, npoly int32,
 	verts []uint16, bs int32,
 	hp *HeightPatch, queue *[]int32,

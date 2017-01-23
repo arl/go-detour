@@ -476,7 +476,7 @@ func pushBack(v int32, arr []int32, an *int32) {
 	(*an)++
 }
 
-func canRemoveVertex(ctx *Context, mesh *PolyMesh, rem uint16) bool {
+func canRemoveVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16) bool {
 	nvp := mesh.Nvp
 
 	// Count number of polygons to remove.
@@ -568,7 +568,7 @@ func canRemoveVertex(ctx *Context, mesh *PolyMesh, rem uint16) bool {
 	return true
 }
 
-func removeVertex(ctx *Context, mesh *PolyMesh, rem uint16, maxTris int32) bool {
+func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) bool {
 	nvp := mesh.Nvp
 
 	// Count number of polygons to remove.

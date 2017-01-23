@@ -21,7 +21,7 @@ import "github.com/aurelien-rainone/assertgo"
 /// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
 ///
 /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
-func BuildRegionsMonotone(ctx *Context, chf *CompactHeightfield,
+func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
@@ -176,7 +176,7 @@ func BuildRegionsMonotone(ctx *Context, chf *CompactHeightfield,
 /// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
 ///
 /// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
-func BuildRegions(ctx *Context, chf *CompactHeightfield,
+func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
 
 	assert.True(ctx != nil, "ctx should not be nil")
@@ -873,7 +873,7 @@ func walkContour(x, y, i, dir int32,
 	}
 }
 
-func mergeAndFilterRegions(ctx *Context,
+func mergeAndFilterRegions(ctx *BuildContext,
 	minRegionArea, mergeRegionSize int32,
 	maxRegionId *uint16,
 	chf *CompactHeightfield,
