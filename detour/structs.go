@@ -122,9 +122,9 @@ type MeshTile struct {
 	// The detail mesh's triangles. [(vertA, vertB, vertC) * MeshHeader.detailTriCount]
 	DetailTris []uint8
 
-	// The tile bounding volume nodes. [Size: MeshHeader.bvNodeCount]
+	// The tile bounding volume nodes. [Size: MeshHeader.BvNodeCount]
 	// (Will be null if bounding volumes are disabled.)
-	BvTree []bvNode
+	BvTree []BvNode
 	// The tile off-mesh connections. [Size: MeshHeader.offMeshConCount]
 	OffMeshCons []OffMeshConnection
 

@@ -79,10 +79,9 @@ func SerializeTile(dst []byte,
 	dmeshes []PolyDetail,
 	dverts []float32,
 	dtris []uint8,
-	bvtree []bvNode,
+	bvtree []BvNode,
 	offMeshCons []OffMeshConnection,
 ) error {
-
 	bufw := NewBufWriter(dst)
 	for i := range verts {
 		binary.Write(bufw, binary.LittleEndian, verts[i])

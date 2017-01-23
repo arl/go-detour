@@ -309,7 +309,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 		}
 	}
 
-	tile.BvTree = make([]bvNode, hdr.BvNodeCount)
+	tile.BvTree = make([]BvNode, hdr.BvNodeCount)
 	if err = r.ReadSlice(&tile.BvTree); err != nil {
 		log.Fatalln("couldn't read tile.BvTree:", err)
 	}
@@ -577,7 +577,7 @@ func (s *PolyDetail) ReadFrom(r io.Reader) (n int64, err error) {
 // Bounding volume node.
 // Note: This structure is rarely if ever used by the end user.
 // see MeshTile
-type bvNode struct {
+type BvNode struct {
 	Bmin [3]uint16 // Minimum bounds of the node's AABB. [(x, y, z)]
 	Bmax [3]uint16 // Maximum bounds of the node's AABB. [(x, y, z)]
 	I    int32     // The node's index. (Negative for escape sequence.)
@@ -791,7 +791,7 @@ func (m *NavMesh) queryPolygonsInTile(
 
 	if tile.BvTree != nil {
 		var (
-			node            *bvNode
+			node            *BvNode
 			nodeIdx, endIdx int32
 			tbmin, tbmax    d3.Vec3
 			qfac            float32

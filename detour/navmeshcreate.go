@@ -136,7 +136,7 @@ func longestAxis(x, y, z uint16) int {
 	return axis
 }
 
-func subdivide(items []BVItem, nitems, imin, imax int32, curNode *int32, nodes []bvNode) {
+func subdivide(items []BVItem, nitems, imin, imax int32, curNode *int32, nodes []BvNode) {
 	inum := imax - imin
 	icur := *curNode
 
@@ -198,7 +198,7 @@ func int32Clamp(a, low, high int32) int32 {
 	return a
 }
 
-func createBVTree(params *NavMeshCreateParams, nodes []bvNode) int32 {
+func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 	// Build tree
 	quantFactor := 1.0 / params.Cs
 	items := make([]BVItem, params.PolyCount)
@@ -560,7 +560,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	detailTrisSize := aligned.AlignN(int(1*4*uintptr(detailTriCount)), 4)
 	var bvTreeSize int
 	if params.BuildBvTree {
-		bvTreeSize = aligned.AlignN(int(unsafe.Sizeof(bvNode{})*uintptr(params.PolyCount*2)), 4)
+		bvTreeSize = aligned.AlignN(int(unsafe.Sizeof(BvNode{})*uintptr(params.PolyCount*2)), 4)
 	}
 	offMeshConsSize := aligned.AlignN(int(unsafe.Sizeof(OffMeshConnection{})*uintptr(storedOffMeshConCount)), 4)
 
@@ -578,7 +578,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	navDMeshes := make([]PolyDetail, params.PolyCount)
 	navDVerts := make([]float32, 3*uniqueDetailVertCount)
 	navDTris := make([]uint8, 4*detailTriCount)
-	navBvtree := make([]bvNode, params.PolyCount*2)
+	navBvtree := make([]BvNode, params.PolyCount*2)
 	offMeshCons := make([]OffMeshConnection, storedOffMeshConCount)
 
 	// Fill header

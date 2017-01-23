@@ -1453,7 +1453,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 	if len(tile.BvTree) > 0 {
 
 		var (
-			node            *bvNode
+			node            *BvNode
 			nodeIdx, endIdx int32
 			tbmin, tbmax    d3.Vec3
 			qfac            float32
