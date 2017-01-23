@@ -28,6 +28,14 @@ func (bf *BufWriter) GoForward(n int) error {
 	panic("going past buffer end")
 }
 
+func (bf *BufWriter) GoBackward(n int) error {
+	if bf.off-n >= 0 {
+		bf.off -= n
+		return nil
+	}
+	panic("going past buffer start")
+}
+
 func (bf *BufWriter) Current() int {
 	return bf.off
 }
