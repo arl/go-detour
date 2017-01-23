@@ -1030,7 +1030,7 @@ func (q *NavMeshQuery) getPortalPoints8(
 	left, right d3.Vec3) Status {
 
 	// Find the link that points to the 'to' polygon.
-	var link *link
+	var link *Link
 	for i := fromPoly.FirstLink; i != nullLink; i = fromTile.Links[i].Next {
 		if fromTile.Links[i].Ref == to {
 			link = &fromTile.Links[i]
@@ -1043,7 +1043,6 @@ func (q *NavMeshQuery) getPortalPoints8(
 
 	// Handle off-mesh connections.
 	if fromPoly.Type() == polyTypeOffMeshConnection {
-		log.Println("fromPoly is an offMeshConnection")
 		// Find link that points to first vertex.
 		for i := fromPoly.FirstLink; i != nullLink; i = fromTile.Links[i].Next {
 			if fromTile.Links[i].Ref == to {
@@ -1055,16 +1054,11 @@ func (q *NavMeshQuery) getPortalPoints8(
 				return Success
 			}
 		}
-		log.Println("failure 1")
 		return Failure | InvalidParam
 	}
 
 	if toPoly.Type() == polyTypeOffMeshConnection {
-		log.Println("toPoly is an offMeshConnection")
-		log.Printf("toPoly := %#v\n", toPoly)
-		log.Printf("toPoly.FirstLink %#v\n", toPoly.FirstLink)
 		for i := toPoly.FirstLink; i != nullLink; i = toTile.Links[i].Next {
-			log.Printf("link %d\n", i)
 			if toTile.Links[i].Ref == from {
 				// TODO: AR, repass here and test
 				v := toTile.Links[i].Edge
@@ -1074,7 +1068,6 @@ func (q *NavMeshQuery) getPortalPoints8(
 				return Success
 			}
 		}
-		log.Println("failure 2, toPoly:", toPoly)
 		return Failure | InvalidParam
 	}
 
@@ -1201,9 +1194,9 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 	pd := &tile.DetailMeshes[ip]
 
 	// Clamp point to be inside the polygon.
-	verts := make([]float32, vertsPerPolygon*3)
-	edged := make([]float32, vertsPerPolygon)
-	edget := make([]float32, vertsPerPolygon)
+	verts := make([]float32, VertsPerPolygon*3)
+	edged := make([]float32, VertsPerPolygon)
+	edget := make([]float32, VertsPerPolygon)
 	nv := poly.VertCount
 	var i uint8
 	for i = 0; i < nv; i++ {
@@ -1285,9 +1278,9 @@ func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 
 	// Collect vertices.
 	var (
-		verts [vertsPerPolygon * 3]float32
-		edged [vertsPerPolygon]float32
-		edget [vertsPerPolygon]float32
+		verts [VertsPerPolygon * 3]float32
+		edged [VertsPerPolygon]float32
+		edget [VertsPerPolygon]float32
 		nv    int32
 	)
 	for i := uint8(0); i < poly.VertCount; i++ {
@@ -1460,7 +1453,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 	if len(tile.BvTree) > 0 {
 
 		var (
-			node            *bvNode
+			node            *BvNode
 			nodeIdx, endIdx int32
 			tbmin, tbmax    d3.Vec3
 			qfac            float32

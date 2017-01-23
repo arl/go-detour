@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "f2HpsxW9tkCumVyLgSY5ox+cgto=",
+			"path": "github.com/aurelien-rainone/aligned",
+			"revision": "43f8842bcfc8cbbedb62854d108594c532d3a038",
+			"revisionTime": "2017-01-22T21:34:39Z"
+		},
+		{
 			"checksumSHA1": "sx2BzP/s5moPSDjdH376nXgDDI8=",
 			"path": "github.com/aurelien-rainone/assertgo",
 			"revision": "f5c43014071ffdc0e7470a34b858f877c2691d5e",

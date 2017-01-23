@@ -21,7 +21,7 @@ func loadTestNavMesh(fname string) (*NavMesh, error) {
 		err error
 	)
 
-	f, err = os.Open(filepath.Join("testdata", fname))
+	f, err = os.Open(filepath.Join("..", "testdata", fname))
 	if err != nil {
 		return nil, err
 	}

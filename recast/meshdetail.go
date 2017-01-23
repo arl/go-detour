@@ -10,21 +10,21 @@ import (
 // with the polygons in its associated polygon mesh object.
 // @ingroup recast
 type PolyMeshDetail struct {
-	meshes  []int32   // The sub-mesh data. [Size: 4*#nmeshes]
-	verts   []float32 // The mesh vertices. [Size: 3*#nverts]
-	tris    []uint8   // The mesh triangles. [Size: 4*#ntris]
-	nmeshes int32     // The number of sub-meshes defined by #meshes.
-	nverts  int32     // The number of vertices in #verts.
-	ntris   int32     // The number of triangles in #tris.
+	Meshes  []int32   // The sub-mesh data. [Size: 4*#nmeshes]
+	Verts   []float32 // The mesh vertices. [Size: 3*#nverts]
+	Tris    []uint8   // The mesh triangles. [Size: 4*#ntris]
+	NMeshes int32     // The number of sub-meshes defined by #meshes.
+	NVerts  int32     // The number of vertices in #verts.
+	NTris   int32     // The number of triangles in #tris.
 }
 
 func (pmd *PolyMeshDetail) Free() {
 	if pmd == nil {
 		return
 	}
-	pmd.meshes = make([]int32, 0)
-	pmd.verts = make([]float32, 0)
-	pmd.tris = make([]uint8, 0)
+	pmd.Meshes = make([]int32, 0)
+	pmd.Verts = make([]float32, 0)
+	pmd.Tris = make([]uint8, 0)
 	pmd = nil
 }
 
@@ -394,17 +394,17 @@ func BuildPolyMeshDetail(ctx *Context, mesh *PolyMesh, chf *CompactHeightfield, 
 
 	hp.data = make([]uint16, maxhw*maxhh)
 
-	dmesh.nmeshes = mesh.NPolys
-	dmesh.nverts = 0
-	dmesh.ntris = 0
-	dmesh.meshes = make([]int32, dmesh.nmeshes*4)
+	dmesh.NMeshes = mesh.NPolys
+	dmesh.NVerts = 0
+	dmesh.NTris = 0
+	dmesh.Meshes = make([]int32, dmesh.NMeshes*4)
 
 	vcap := nPolyVerts + nPolyVerts/2
 	tcap := vcap * 2
 
-	dmesh.nverts = 0
-	dmesh.verts = make([]float32, vcap*3)
-	dmesh.tris = make([]uint8, tcap*4)
+	dmesh.NVerts = 0
+	dmesh.Verts = make([]float32, vcap*3)
+	dmesh.Tris = make([]uint8, tcap*4)
 
 	for i := int32(0); i < mesh.NPolys; i++ {
 		p := mesh.Polys[i*nvp*2:]
@@ -455,50 +455,49 @@ func BuildPolyMeshDetail(ctx *Context, mesh *PolyMesh, chf *CompactHeightfield, 
 		// Store detail submesh.
 		ntris := int32(len(tris) / 4)
 
-		dmesh.meshes[i*4+0] = dmesh.nverts
-		dmesh.meshes[i*4+1] = nverts
-		dmesh.meshes[i*4+2] = dmesh.ntris
-		dmesh.meshes[i*4+3] = ntris
+		dmesh.Meshes[i*4+0] = dmesh.NVerts
+		dmesh.Meshes[i*4+1] = nverts
+		dmesh.Meshes[i*4+2] = dmesh.NTris
+		dmesh.Meshes[i*4+3] = ntris
 
 		// Store vertices, allocate more memory if necessary.
-		if dmesh.nverts+nverts > vcap {
-			for dmesh.nverts+nverts > vcap {
+		if dmesh.NVerts+nverts > vcap {
+			for dmesh.NVerts+nverts > vcap {
 				vcap += 256
 			}
 
 			newv := make([]float32, vcap*3)
-			if dmesh.nverts != 0 {
-				copy(newv, dmesh.verts[:3*dmesh.nverts])
+			if dmesh.NVerts != 0 {
+				copy(newv, dmesh.Verts[:3*dmesh.NVerts])
 			}
-			dmesh.verts = make([]float32, 0)
-			dmesh.verts = newv
+			dmesh.Verts = make([]float32, 0)
+			dmesh.Verts = newv
 		}
 		for j := int32(0); j < nverts; j++ {
-			dmesh.verts[dmesh.nverts*3+0] = verts[j*3+0]
-			dmesh.verts[dmesh.nverts*3+1] = verts[j*3+1]
-			dmesh.verts[dmesh.nverts*3+2] = verts[j*3+2]
-			dmesh.nverts++
+			dmesh.Verts[dmesh.NVerts*3+0] = verts[j*3+0]
+			dmesh.Verts[dmesh.NVerts*3+1] = verts[j*3+1]
+			dmesh.Verts[dmesh.NVerts*3+2] = verts[j*3+2]
+			dmesh.NVerts++
 		}
 
 		// Store triangles, allocate more memory if necessary.
-		if dmesh.ntris+ntris > tcap {
-			for dmesh.ntris+ntris > tcap {
+		if dmesh.NTris+ntris > tcap {
+			for dmesh.NTris+ntris > tcap {
 				tcap += 256
 			}
 			newt := make([]uint8, tcap*4)
-			if dmesh.ntris != 0 {
-				copy(newt, dmesh.tris[:4*dmesh.ntris])
+			if dmesh.NTris != 0 {
+				copy(newt, dmesh.Tris[:4*dmesh.NTris])
 			}
-			//rcFree(dmesh.tris);
-			dmesh.tris = newt
+			dmesh.Tris = newt
 		}
 		for j := int32(0); j < ntris; j++ {
 			t := tris[j*4:]
-			dmesh.tris[dmesh.ntris*4+0] = uint8(t[0])
-			dmesh.tris[dmesh.ntris*4+1] = uint8(t[1])
-			dmesh.tris[dmesh.ntris*4+2] = uint8(t[2])
-			dmesh.tris[dmesh.ntris*4+3] = getTriFlags(verts[t[0]*3:], verts[t[1]*3:], verts[t[2]*3:], poly, npoly)
-			dmesh.ntris++
+			dmesh.Tris[dmesh.NTris*4+0] = uint8(t[0])
+			dmesh.Tris[dmesh.NTris*4+1] = uint8(t[1])
+			dmesh.Tris[dmesh.NTris*4+2] = uint8(t[2])
+			dmesh.Tris[dmesh.NTris*4+3] = getTriFlags(verts[t[0]*3:], verts[t[1]*3:], verts[t[2]*3:], poly, npoly)
+			dmesh.NTris++
 		}
 	}
 
