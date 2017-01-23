@@ -1399,7 +1399,7 @@ func (m *NavMesh) TileRef(tile *MeshTile) TileRef {
 		return 0
 	}
 
-	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles)))
+	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0])))
 	return TileRef(m.encodePolyID(tile.Salt, it, 0))
 }
 
