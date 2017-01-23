@@ -68,14 +68,9 @@ func (m *NavMesh) SaveToFile(fn string) error {
 			return err
 		}
 
-		//panic("ICI, on sauve tile.data mais on a modifié le tile et pas tile.Data! voir exactement qu'est ce qui est mis dans tile.Data dans la version c++")
 		if err = binary.Write(f, binary.LittleEndian, tile.Data); err != nil {
 			return err
 		}
-
-		//if _, err = tile.WriteTo(f); err != nil {
-		//return err
-		//}
 	}
 	return nil
 }
