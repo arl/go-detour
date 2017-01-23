@@ -309,8 +309,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	}
 	var (
 		navData []uint8
-		//navDataSize int32
-		err error
+		err     error
 	)
 
 	// Update poly flags from areas.
@@ -331,7 +330,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	}
 
 	var params detour.NavMeshCreateParams
-	//memset(&params, 0, sizeof(params));
 	params.Verts = m_pmesh.Verts
 	params.VertCount = m_pmesh.NVerts
 	params.Polys = m_pmesh.Polys
