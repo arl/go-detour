@@ -10,7 +10,6 @@ import (
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
-	"github.com/fatih/structs"
 )
 
 type BVItem struct {
@@ -606,8 +605,6 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	if params.BuildBvTree {
 		hdr.BvNodeCount = params.PolyCount * 2
 	}
-
-	fmt.Println("header:", structs.Map(hdr))
 
 	offMeshVertsBase := params.VertCount
 	offMeshPolyBase := params.PolyCount

@@ -1,7 +1,6 @@
 package recast
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/aurelien-rainone/assertgo"
@@ -761,8 +760,6 @@ func simplifyContour(points, simplified *[]int32,
 		bi := (*simplified)[i*4+3]
 		(*simplified)[i*4+3] = ((*points)[ai*4+3] & (RC_CONTOUR_REG_MASK | RC_AREA_BORDER)) | ((*points)[bi*4+3] & RC_BORDER_VERTEX)
 	}
-
-	fmt.Println("SimplifyContour, simplified:", *simplified)
 }
 
 func calcAreaOfPolygon2D(verts []int32, nverts int32) int32 {

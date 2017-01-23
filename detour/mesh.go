@@ -75,18 +75,16 @@ func (m *NavMesh) SaveToFile(fn string) error {
 	return nil
 }
 
-/// Initializes the navigation mesh for single tile use.
-///  @param[in]	data		Data of the new tile. (See: #dtCreateNavMeshData)
-///  @param[in]	dataSize	The data size of the new tile.
-///  @param[in]	flags		The tile flags. (See: #dtTileFlags)
-/// @return The status flags for the operation.
-///  @see dtCreateNavMeshData
+// Initializes the navigation mesh for single tile use.
+//  @param[in]	data		Data of the new tile. (See: #dtCreateNavMeshData)
+//  @param[in]	dataSize	The data size of the new tile.
+//  @param[in]	flags		The tile flags. (See: #dtTileFlags)
+// @return The status flags for the operation.
+//  @see dtCreateNavMeshData
 func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	var header MeshHeader
 	buf := bytes.NewBuffer(data)
 	binary.Read(buf, binary.LittleEndian, &header)
-
-	fmt.Println("header", header)
 
 	// Make sure the data is in right format.
 	if header.Magic != navMeshMagic {

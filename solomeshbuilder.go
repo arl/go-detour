@@ -1,12 +1,9 @@
 package recast
 
 import (
-	"fmt"
-
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
-	"github.com/fatih/structs"
 )
 
 type SamplePartitionType int
@@ -42,7 +39,6 @@ func (sm *SoloMesh) Load(path string) bool {
 	return true
 }
 
-//func (sm *SoloMesh) Build() ([]uint8, bool) {
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
@@ -109,8 +105,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	sm.cfg.BMin = bmin
 	sm.cfg.BMax = bmax
 	sm.cfg.Width, sm.cfg.Height = recast.CalcGridSize(sm.cfg.BMin, sm.cfg.BMax, sm.cfg.Cs)
-
-	fmt.Println(structs.Map(sm.cfg))
 
 	// Reset build times gathering.
 	sm.ctx.ResetTimers()
