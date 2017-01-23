@@ -44,12 +44,19 @@ func (ar *Reader) Read(b []byte) (n int, err error) {
 	//
 	// read the significative part of the underlying stream
 	n, err = ar.r.Read(b)
-	switch {
-	case err != nil:
-		return 0, err
-	case n < len(b):
-		// not enough data to fill b entirely
+	if err == nil && n < len(b) {
+		// couldn't read all the contents from b
+		err = io.ErrUnexpectedEOF
+	}
+	switch err {
+	case nil:
+		break
+	case io.EOF:
+		fallthrough
+	case io.ErrUnexpectedEOF:
 		return 0, io.ErrUnexpectedEOF
+	default:
+		return n, err
 	}
 
 	// compute the number of padding bytes we need
@@ -58,12 +65,19 @@ func (ar *Reader) Read(b []byte) (n int, err error) {
 	if pad != 0 {
 		// consumes (and discard) the padding bytes
 		npad, err = ar.r.Read(ar.padbuf[:pad])
-		switch {
-		case err != nil:
-			return 0, err
-		case npad < pad:
+		if err == nil && npad < pad {
 			// not enough padding to keep the data stream aligned
+			err = io.ErrUnexpectedEOF
+		}
+		switch err {
+		case nil:
+			break
+		case io.EOF:
+			fallthrough
+		case io.ErrUnexpectedEOF:
 			return 0, io.ErrUnexpectedEOF
+		default:
+			return npad, err
 		}
 	}
 	return n + pad, nil
@@ -77,7 +91,10 @@ func (ar *Reader) Read(b []byte) (n int, err error) {
 // the slice plus eventual an amount of padding bytes equal to the padding
 // required to keep the whole slice aligned.
 func (ar *Reader) ReadSlice(s interface{}) error {
-	var slice reflect.Value
+	var (
+		slice reflect.Value
+		err   error
+	)
 	rv := reflect.ValueOf(s)
 	if rv.Kind() == reflect.Slice {
 		slice = rv
@@ -88,23 +105,10 @@ func (ar *Reader) ReadSlice(s interface{}) error {
 	// get element size and number of elements
 	length := slice.Len()
 	if length != 0 {
-		// read the whole slice with the embedded reader
-		if err := binary.Read(ar.r, ar.order, slice.Interface()); err != nil {
-			return err
-		}
-		// compute the padding
-		total := int(slice.Index(0).Type().Size()) * length
-		if pad := AlignN(total, ar.align) - total; pad != 0 {
-			// move the reader forward of 'pad' bytes
-			npad, err := ar.r.Read(ar.padbuf[:pad])
-			switch {
-			case err == io.EOF:
-				return io.ErrUnexpectedEOF
-			case err != nil:
+		for i := 0; i < length; i++ {
+			err = binary.Read(ar, ar.order, slice.Index(i).Addr().Interface())
+			if err != nil {
 				return err
-			case npad < pad:
-				// not enough padding to keep the data stream aligned
-				return io.ErrUnexpectedEOF
 			}
 		}
 	}

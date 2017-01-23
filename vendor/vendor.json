@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "HykrdvSmd1SCuP+FMtpRl2tYzxU=",
+			"checksumSHA1": "f2HpsxW9tkCumVyLgSY5ox+cgto=",
 			"path": "github.com/aurelien-rainone/aligned",
-			"revision": "a16198a39e0ea0e0884eb176bd65da215b156dc6",
-			"revisionTime": "2017-01-16T15:29:22Z"
+			"revision": "43f8842bcfc8cbbedb62854d108594c532d3a038",
+			"revisionTime": "2017-01-22T21:34:39Z"
 		},
 		{
 			"checksumSHA1": "sx2BzP/s5moPSDjdH376nXgDDI8=",

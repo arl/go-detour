@@ -29,11 +29,18 @@ func NewWriter(w io.Writer, align int, order binary.ByteOrder) *Writer {
 // Write writes len(b) bytes from b to the underlying data stream.
 func (aw *Writer) Write(b []byte) (n int, err error) {
 	n, err = aw.w.Write(b)
-	switch {
-	case err != nil:
-		fallthrough
-	case n < len(b):
+	if err == nil && n < len(b) {
 		// couldn't write all the contents of b
+		err = io.ErrUnexpectedEOF
+	}
+	switch err {
+	case nil:
+		break
+	case io.EOF:
+		fallthrough
+	case io.ErrUnexpectedEOF:
+		return 0, io.ErrUnexpectedEOF
+	default:
 		return n, err
 	}
 
@@ -43,12 +50,19 @@ func (aw *Writer) Write(b []byte) (n int, err error) {
 	if pad != 0 {
 		// write padding byte(s)
 		npad, err = aw.w.Write(aw.padbuf[:pad])
-		switch {
-		case err != nil:
+		if err == nil && npad < pad {
+			// not enough padding to keep the data stream aligned
+			err = io.ErrUnexpectedEOF
+		}
+		switch err {
+		case nil:
+			break
+		case io.EOF:
 			fallthrough
-		case npad < pad:
-			// couldn't write all the required padding
-			return n, err
+		case io.ErrUnexpectedEOF:
+			return 0, io.ErrUnexpectedEOF
+		default:
+			return npad, err
 		}
 	}
 	return n + pad, nil
@@ -59,7 +73,10 @@ func (aw *Writer) Write(b []byte) (n int, err error) {
 //
 // s must be a slice.
 func (aw *Writer) WriteSlice(s interface{}) error {
-	var slice reflect.Value
+	var (
+		slice reflect.Value
+		err   error
+	)
 	rv := reflect.ValueOf(s)
 	if rv.Kind() == reflect.Slice {
 		slice = rv
@@ -70,23 +87,10 @@ func (aw *Writer) WriteSlice(s interface{}) error {
 	// get element size and number of elements
 	length := slice.Len()
 	if length != 0 {
-		// write the whole slice with the embedded reader
-		if err := binary.Write(aw.w, aw.order, slice.Interface()); err != nil {
-			return err
-		}
-		// compute the padding
-		total := int(slice.Index(0).Type().Size()) * length
-		if pad := AlignN(total, aw.align) - total; pad != 0 {
-			// move the write forward of 'pad' bytes
-			npad, err := aw.w.Write(aw.padbuf[:pad])
-			switch {
-			case err == io.EOF:
-				return io.ErrUnexpectedEOF
-			case err != nil:
+		for i := 0; i < length; i++ {
+			err = binary.Write(aw, aw.order, slice.Index(i).Interface())
+			if err != nil {
 				return err
-			case npad < pad:
-				// not enough padding to keep the data stream aligned
-				return io.ErrUnexpectedEOF
 			}
 		}
 	}
