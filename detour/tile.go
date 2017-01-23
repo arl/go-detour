@@ -92,6 +92,7 @@ func SerializeTile(dst []byte,
 	for i := range links {
 		binary.Write(bufw, binary.LittleEndian, links[i])
 	}
+
 	for i := range dmeshes {
 		binary.Write(bufw, binary.LittleEndian, dmeshes[i])
 		bufw.GoForward(2)
