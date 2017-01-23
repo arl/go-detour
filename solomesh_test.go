@@ -1,23 +1,62 @@
 package recast
 
-import "testing"
+import (
+	"bytes"
+	"io/ioutil"
+	"testing"
+)
 
-func TestCreateNavMesh(t *testing.T) {
-	var meshName string
+func compareFiles(fn1, fn2 string) (bool, error) {
+	// per comment, better to not read an entire file into memory
+	// this is simply a trivial example.
+	var (
+		f1, f2 []byte
+		err    error
+	)
+	f1, err = ioutil.ReadFile(fn1)
+	if err != nil {
+		return false, err
+	}
 
-	meshName = "testdata/cube.obj"
-	//meshName = "testdata/wallfloors.obj"
-	//meshName = "testdata/dungeon.obj"
-	// meshName = "testdata/nav_test.obj"
+	f2, err = ioutil.ReadFile(fn2)
+	if err != nil {
+		return false, err
+	}
+
+	return bytes.Equal(f1, f2), nil
+}
+
+func testCreateSoloNavMesh(t *testing.T, meshname string) {
+	var meshName, orgNavMeshName, tmpBin string
+
+	meshName = "testdata/" + meshname + ".obj"
+	orgNavMeshName = "testdata/" + meshname + ".org.bin"
+	tmpBin = "out.bin"
+
 	soloMesh := NewSoloMesh()
 	if !soloMesh.Load(meshName) {
 		t.Fatalf("couldn't load mesh %v", meshName)
 	}
 	navMesh, ok := soloMesh.Build()
 	if !ok {
-		t.Fatalf("solomesh.Build failed")
+		t.Fatalf("couldn't build navmesh for %v", meshname)
 	}
 
-	navMesh.SaveToFile("out.bin")
-	t.Logf("solomesh.Build success")
+	navMesh.SaveToFile(tmpBin)
+	t.Logf("%v navmesh successfully built", meshname)
+	ok, err := compareFiles(tmpBin, orgNavMeshName)
+	if err != nil {
+		t.Fatalf("couldn't compare %v and %v, %v", tmpBin, orgNavMeshName, err)
+	}
+	if !ok {
+		t.Fatalf("%v and %v are different", tmpBin, orgNavMeshName)
+	}
+}
+
+func TestCreateDungeonNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "dungeon")
+}
+
+func TestCreateCubeNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "cube")
 }
