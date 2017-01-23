@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io/ioutil"
 	"testing"
+
+	"github.com/aurelien-rainone/go-detour/recast"
 )
 
 func compareFiles(fn1, fn2 string) (bool, error) {
@@ -27,13 +29,18 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 }
 
 func testCreateSoloNavMesh(t *testing.T, meshname string) {
-	var meshName, orgNavMeshName, tmpBin string
+	var (
+		meshName, orgNavMeshName, tmpBin string
+		ctx                              *recast.BuildContext
+		soloMesh                         *SoloMesh
+	)
 
 	meshName = "testdata/" + meshname + ".obj"
 	orgNavMeshName = "testdata/" + meshname + ".org.bin"
 	tmpBin = "out.bin"
 
-	soloMesh := NewSoloMesh()
+	ctx = recast.NewBuildContext(false)
+	soloMesh = NewSoloMesh(ctx)
 	if !soloMesh.Load(meshName) {
 		t.Fatalf("couldn't load mesh %v", meshName)
 	}
@@ -51,6 +58,7 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	if !ok {
 		t.Fatalf("%v and %v are different", tmpBin, orgNavMeshName)
 	}
+	ctx.DumpLog("Navmesh Build log")
 }
 
 func TestCreateDungeonNavMesh(t *testing.T) {
@@ -64,7 +72,7 @@ func TestCreateCubeNavMesh(t *testing.T) {
 func benchmarkCreateNavMesh(b *testing.B, meshname string) {
 	meshName := "testdata/" + meshname + ".obj"
 
-	soloMesh := NewSoloMesh()
+	soloMesh := NewSoloMesh(recast.NewBuildContext(false))
 	if !soloMesh.Load(meshName) {
 		b.Fatalf("couldn't load mesh %v", meshName)
 	}

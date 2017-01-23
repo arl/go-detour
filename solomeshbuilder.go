@@ -15,17 +15,16 @@ const (
 )
 
 type SoloMesh struct {
-	ctx           *recast.Context
-	buildCtx      recast.BuildContext
+	ctx           *recast.BuildContext
 	geom          recast.InputGeom
 	meshName      string
 	cfg           recast.Config
 	partitionType SamplePartitionType
 }
 
-func NewSoloMesh() *SoloMesh {
+func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
 	sm := &SoloMesh{}
-	sm.ctx = recast.NewContext(true, &sm.buildCtx)
+	sm.ctx = ctx
 	sm.partitionType = SAMPLE_PARTITION_MONOTONE
 	return sm
 }
@@ -35,7 +34,7 @@ func (sm *SoloMesh) Load(path string) bool {
 	if !sm.geom.Load(sm.ctx, path) {
 		return false
 	}
-	sm.buildCtx.DumpLog("Geom load log %s:", path)
+	sm.ctx.Progressf("Geom load log %s:", path)
 	return true
 }
 
@@ -381,6 +380,5 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 
 	//m_tileBuildTime := sm.ctx.AccumulatedTime(RC_TIMER_TOTAL) / 1000.0
 	//dataSize = navDataSize
-	sm.buildCtx.DumpLog("Navmesh Build log")
 	return &navMesh, true
 }
