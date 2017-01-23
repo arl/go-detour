@@ -60,3 +60,23 @@ func TestCreateDungeonNavMesh(t *testing.T) {
 func TestCreateCubeNavMesh(t *testing.T) {
 	testCreateSoloNavMesh(t, "cube")
 }
+
+func benchmarkCreateNavMesh(b *testing.B, meshname string) {
+	meshName := "testdata/" + meshname + ".obj"
+
+	soloMesh := NewSoloMesh()
+	if !soloMesh.Load(meshName) {
+		b.Fatalf("couldn't load mesh %v", meshName)
+	}
+
+	for n := 0; n < b.N; n++ {
+		_, ok := soloMesh.Build()
+		if !ok {
+			b.Fatalf("couldn't build navmesh for %v", meshname)
+		}
+	}
+}
+
+func BenchmarkCreateCubeNavMesh(b *testing.B) {
+	benchmarkCreateNavMesh(b, "cube")
+}
