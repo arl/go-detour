@@ -178,10 +178,6 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	var hdr MeshHeader
 	hdr.Unserialize(data)
 
-	// prepare a reader on the received data
-	//r := aligned.NewReader(bytes.NewReader(data), 4, binary.LittleEndian)
-	//r.ReadVal(&hdr)
-
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {
 		return Failure | WrongMagic, 0
