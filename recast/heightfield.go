@@ -2,7 +2,7 @@ package recast
 
 import "github.com/aurelien-rainone/assertgo"
 
-/// Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
+// Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
 const (
 	RC_SPAN_HEIGHT_BITS uint = 16
 	/// Defines the maximum value for rcSpan::smin and rcSpan::smax.
@@ -11,24 +11,25 @@ const (
 	RC_SPANS_PER_POOL int32 = 2048
 )
 
-/// Represents a span in a heightfield.
-/// @see rcHeightfield
+// Represents a span in a heightfield.
+// see Heightfield
 type rcSpan struct {
 	//unsigned int smin : RC_SPAN_HEIGHT_BITS; ///< The lower limit of the span. [Limit: < #smax]
 	//unsigned int smax : RC_SPAN_HEIGHT_BITS; ///< The upper limit of the span. [Limit: <= #RC_SPAN_MAX_HEIGHT]
 	//unsigned int area : 6;                   ///< The area id assigned to the span.
 
-	smin uint16  ///< The lower limit of the span. [Limit: < #smax]
-	smax uint16  ///< The upper limit of the span. [Limit: <= #RC_SPAN_MAX_HEIGHT]
-	area uint8   ///< The area id assigned to the span.
-	next *rcSpan ///< The next span higher up in column.
+	smin uint16  // The lower limit of the span. [Limit: < #smax]
+	smax uint16  // The upper limit of the span. [Limit: <= #RC_SPAN_MAX_HEIGHT]
+	area uint8   // The area id assigned to the span.
+	next *rcSpan // The next span higher up in column.
 }
 
-/// A memory pool used for quick allocation of spans within a heightfield.
-/// @see rcHeightfield
+// A memory pool used for quick allocation of spans within a heightfield.
+//
+// see Heightfield
 type rcSpanPool struct {
-	next  *rcSpanPool               ///< The next span pool.
-	items [RC_SPANS_PER_POOL]rcSpan ///< Array of spans in the pool.
+	next  *rcSpanPool               // The next span pool.
+	items [RC_SPANS_PER_POOL]rcSpan // Array of spans in the pool.
 }
 
 // A dynamic heightfield representing obstructed space.
