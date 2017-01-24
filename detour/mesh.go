@@ -275,31 +275,11 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 		log.Fatalln("couldn't read tile.DetailVerts:", err)
 	}
 
-	// TODO: check the code that use detailTris, in the original c/c++ code, the
-	// 4th, and unused byte if kept in memory for alignment reasons. We keep
-	// here for reference both methods, the first just keeps the first 3 bytes,
-	// nothing is wasted
-	if false {
-		tile.DetailTris = make([]uint8, 3*hdr.DetailTriCount)
-		for i := int32(0); i < hdr.DetailTriCount; i++ {
-			// one Detail Tri takes actually 4 bytes (for alignment) even if only
-			// the first 3 are significant. So we read them 4 by 4 and just keep the
-			// first 3.
-			tmp := make([]uint8, 4)
-			if err = binary.Read(r, binary.LittleEndian, &tmp); err != nil {
-				log.Fatalln("couldn't read tile.DetailTris:", err)
-			}
-			copy(tile.DetailTris[i*3:i*3+3], tmp[0:3])
-		}
-
-	} else {
-		// this second method keep all, we just have to adjust when indexing the
-		// DetailTris slice for usage
-		tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
-		// TODO: chan ge to aligned.ReadVal
-		if err = binary.Read(r, binary.LittleEndian, &tile.DetailTris); err != nil {
-			log.Fatalln("couldn't read tile.DetailTris:", err)
-		}
+	// this second method keep all, we just have to adjust when indexing the
+	// DetailTris slice for usage
+	tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
+	if err = binary.Read(r, binary.LittleEndian, &tile.DetailTris); err != nil {
+		log.Fatalln("couldn't read tile.DetailTris:", err)
 	}
 
 	tile.BvTree = make([]BvNode, hdr.BvNodeCount)
