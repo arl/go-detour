@@ -120,15 +120,8 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	//
 
 	// Allocate voxel heightfield where we rasterize our input data to.
-	m_solid := recast.NewHeightfield()
-	if m_solid == nil {
-		sm.ctx.Errorf("buildNavigation: Out of memory 'solid'.")
-		return nil, false
-	}
-	if !m_solid.Create(sm.ctx, sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch) {
-		sm.ctx.Errorf("buildNavigation: Could not create solid heightfield.")
-		return nil, false
-	}
+	var m_solid *recast.Heightfield
+	m_solid = recast.NewHeightfield(sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch)
 
 	// Allocate array that can hold triangle area types.
 	// If you have multiple meshes you need to process, allocate
@@ -179,7 +172,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		return nil, false
 	}
 
-	//// (Optional) Mark areas.
+	// (Optional) Mark areas.
 	vols := sm.geom.ConvexVolumes()
 
 	// CONTROL: ConvexVOlumnesCount() is also 0 on org library

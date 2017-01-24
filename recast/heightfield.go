@@ -45,30 +45,18 @@ type Heightfield struct {
 	Freelist *rcSpan     // The next free span.
 }
 
-func NewHeightfield() *Heightfield {
-	return &Heightfield{}
-}
-
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocHeightfield, rcHeightfield
-func (hf *Heightfield) Create(ctx *BuildContext, width, height int32,
-	bmin, bmax []float32, cs, ch float32) bool {
-	hf.Width = width
-	hf.Height = height
+// See the #rcConfig documentation for more information on the configuration parameters.
+func NewHeightfield(width, height int32, bmin, bmax []float32, cs, ch float32) *Heightfield {
+	hf := &Heightfield{
+		Width:  width,
+		Height: height,
+		Cs:     cs,
+		Ch:     ch,
+		Spans:  make([]*rcSpan, width*height),
+	}
 	copy(hf.BMin[:], bmin)
 	copy(hf.BMax[:], bmax)
-	hf.Cs = cs
-	hf.Ch = ch
-	hf.Spans = make([]*rcSpan, hf.Width*hf.Height)
-	//if len(hf.Spans) == 0 {
-	// NOTE: since in Go, we don't have (for now) any way to check that we
-	// are out of memory, this check doesn't have any sense, but for
-	// completeness with the originla C code, I'll let it, hopefully it will
-	// be replaced one day by a proper "allocation done check"
-	//return false
-	//}
-	return true
+	return hf
 }
 
 func (hf *Heightfield) Free() {
