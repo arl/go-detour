@@ -77,6 +77,7 @@ func benchmarkCreateNavMesh(b *testing.B, meshname string) {
 		b.Fatalf("couldn't load mesh %v", meshName)
 	}
 
+	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		_, ok := soloMesh.Build()
 		if !ok {
