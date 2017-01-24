@@ -102,7 +102,11 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	return &mesh, nil
 }
 
-func SerializeTile(dst []byte,
+func (s *MeshTile) Serialize(dst []byte) {
+	SerializeTileData(dst, s.Verts, s.Polys, s.Links, s.DetailMeshes, s.DetailVerts, s.DetailTris, s.BvTree, s.OffMeshCons)
+}
+
+func SerializeTileData(dst []byte,
 	verts []float32,
 	polys []Poly,
 	links []Link,

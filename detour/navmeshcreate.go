@@ -774,7 +774,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 
 	buf := make([]byte, dataSize)
 	hdr.Serialize(buf)
-	err := SerializeTile(buf[hdr.Size():],
+	err := SerializeTileData(buf[hdr.Size():],
 		navVerts,
 		navPolys,
 		make([]Link, maxLinkCount),

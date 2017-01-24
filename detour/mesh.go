@@ -356,17 +356,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	}
 
 	// rewrite the modified tile into the data pointer
-	headerSize := unsafe.Sizeof(*tile.Header)
-	err = SerializeTile(data[headerSize:],
-		tile.Verts,
-		tile.Polys,
-		tile.Links,
-		tile.DetailMeshes,
-		tile.DetailVerts,
-		tile.DetailTris,
-		tile.BvTree,
-		tile.OffMeshCons)
-
+	tile.Serialize(data[tile.Header.Size():])
 	return Success, m.TileRef(tile)
 }
 
