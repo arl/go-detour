@@ -106,6 +106,102 @@ func (s *MeshTile) Serialize(dst []byte) {
 	SerializeTileData(dst, s.Verts, s.Polys, s.Links, s.DetailMeshes, s.DetailVerts, s.DetailTris, s.BvTree, s.OffMeshCons)
 }
 
+func (s *MeshTile) Unserialize(hdr *MeshHeader, src []byte) {
+	var (
+		little = binary.LittleEndian
+		i, off int
+	)
+
+	s.Verts = make([]float32, 3*hdr.VertCount)
+	for i = range s.Verts {
+		s.Verts[i] = math.Float32frombits(little.Uint32(src[off+0:]))
+		off += 4
+	}
+	s.Polys = make([]Poly, hdr.PolyCount)
+	for i := range s.Polys {
+		p := &s.Polys[i]
+		p.FirstLink = little.Uint32(src[off:])
+		off += 4
+
+		for j := uint32(0); j < VertsPerPolygon; j++ {
+			p.Verts[j] = little.Uint16(src[off:])
+			off += 2
+		}
+
+		for j := uint32(0); j < VertsPerPolygon; j++ {
+			p.Neis[j] = little.Uint16(src[off:])
+			off += 2
+		}
+
+		p.Flags = little.Uint16(src[off:])
+		p.VertCount = src[off+2]
+		p.AreaAndType = src[off+3]
+		off += 4
+	}
+	s.Links = make([]Link, hdr.MaxLinkCount)
+	for i := range s.Links {
+		l := &s.Links[i]
+
+		l.Ref = PolyRef(little.Uint32(src[off:]))
+		l.Next = little.Uint32(src[off+4:])
+
+		l.Edge = src[off+8]
+		l.Side = src[off+9]
+		l.Bmin = src[off+10]
+		l.Bmax = src[off+11]
+		off += 12
+	}
+
+	s.DetailMeshes = make([]PolyDetail, hdr.DetailMeshCount)
+	for i := range s.DetailMeshes {
+		m := &s.DetailMeshes[i]
+
+		m.VertBase = little.Uint32(src[off:])
+		m.TriBase = little.Uint32(src[off+4:])
+		m.VertCount = src[off+8]
+		m.TriCount = src[off+9]
+		off += 12
+	}
+	s.DetailVerts = make([]float32, 3*hdr.DetailVertCount)
+	for i := range s.DetailVerts {
+		s.DetailVerts[i] = math.Float32frombits(little.Uint32(src[off:]))
+		off += 4
+	}
+
+	s.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
+	copy(s.DetailTris, src[off:])
+	off += len(s.DetailTris)
+
+	s.BvTree = make([]BvNode, hdr.BvNodeCount)
+	for i := range s.BvTree {
+		t := &s.BvTree[i]
+		t.Bmin[0] = little.Uint16(src[off:])
+		t.Bmin[1] = little.Uint16(src[off+2:])
+		t.Bmin[2] = little.Uint16(src[off+4:])
+		t.Bmax[0] = little.Uint16(src[off+6:])
+		t.Bmax[1] = little.Uint16(src[off+8:])
+		t.Bmax[2] = little.Uint16(src[off+10:])
+		t.I = int32(little.Uint32(src[off+12:]))
+		off += 16
+	}
+	s.OffMeshCons = make([]OffMeshConnection, hdr.OffMeshConCount)
+	for i := range s.OffMeshCons {
+		o := &s.OffMeshCons[i]
+		o.Pos[0] = math.Float32frombits(little.Uint32(src[off:]))
+		o.Pos[1] = math.Float32frombits(little.Uint32(src[off+4:]))
+		o.Pos[2] = math.Float32frombits(little.Uint32(src[off+8:]))
+		o.Pos[3] = math.Float32frombits(little.Uint32(src[off+12:]))
+		o.Pos[4] = math.Float32frombits(little.Uint32(src[off+16:]))
+		o.Pos[5] = math.Float32frombits(little.Uint32(src[off+20:]))
+		o.Rad = math.Float32frombits(little.Uint32(src[off+24:]))
+		o.Poly = little.Uint16(src[off+28:])
+		o.Flags = src[30]
+		o.Side = src[31]
+		o.UserID = little.Uint32(src[off+32:])
+		off += 36
+	}
+}
+
 func SerializeTileData(dst []byte,
 	verts []float32,
 	polys []Poly,

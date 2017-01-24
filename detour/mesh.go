@@ -1,14 +1,11 @@
 package detour
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
 	"unsafe"
 
-	"github.com/aurelien-rainone/aligned"
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
@@ -179,10 +176,11 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 // see CreateNavMeshData, removeTileBvTree
 func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status, TileRef) {
 	var hdr MeshHeader
+	hdr.Unserialize(data)
 
 	// prepare a reader on the received data
-	r := aligned.NewReader(bytes.NewReader(data), 4, binary.LittleEndian)
-	r.ReadVal(&hdr)
+	//r := aligned.NewReader(bytes.NewReader(data), 4, binary.LittleEndian)
+	//r.ReadVal(&hdr)
 
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {
@@ -248,56 +246,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	tile.Next = m.posLookup[h]
 	m.posLookup[h] = tile
 
-	// Read header from binary data
-	tile.Verts = make([]float32, 3*hdr.VertCount)
-	var err error
-	if err = r.ReadSlice(&tile.Verts); err != nil {
-		log.Fatalln("couldn't read tile.Verts:", err)
-	}
-
-	tile.Polys = make([]Poly, hdr.PolyCount)
-	if err = r.ReadSlice(&tile.Polys); err != nil {
-		log.Fatalln("couldn't read tile.Polys:", err)
-	}
-
-	tile.Links = make([]Link, hdr.MaxLinkCount)
-	if err = r.ReadSlice(&tile.Links); err != nil {
-		log.Fatalln("couldn't read tile.Links:", err)
-	}
-
-	tile.DetailMeshes = make([]PolyDetail, hdr.DetailMeshCount)
-	if err = r.ReadSlice(&tile.DetailMeshes); err != nil {
-		log.Fatalln("couldn't read tile.DetailMeshes:", err)
-	}
-
-	tile.DetailVerts = make([]float32, 3*hdr.DetailVertCount)
-	if err = r.ReadSlice(&tile.DetailVerts); err != nil {
-		log.Fatalln("couldn't read tile.DetailVerts:", err)
-	}
-
-	// this second method keep all, we just have to adjust when indexing the
-	// DetailTris slice for usage
-	tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
-	if err = binary.Read(r, binary.LittleEndian, &tile.DetailTris); err != nil {
-		log.Fatalln("couldn't read tile.DetailTris:", err)
-	}
-
-	tile.BvTree = make([]BvNode, hdr.BvNodeCount)
-	if err = r.ReadSlice(&tile.BvTree); err != nil {
-		log.Fatalln("couldn't read tile.BvTree:", err)
-	}
-
-	for _, node := range tile.BvTree {
-		if node.I > hdr.BvNodeCount {
-			assert.True(false, "node.I > hdr.BvNodeCount: 0x%x 0x%x\n", node.I, hdr.BvNodeCount)
-		}
-	}
-
-	tile.OffMeshCons = make([]OffMeshConnection, hdr.OffMeshConCount)
-	if err = r.ReadSlice(&tile.OffMeshCons); err != nil {
-		log.Println("hdr.OffMeshConCount:", hdr.OffMeshConCount)
-		log.Fatalln("couldn't read tile.OffMeshCons:", err)
-	}
+	tile.Unserialize(&hdr, data[hdr.Size():])
 
 	// If there are no items in the bvtree, reset the tree pointer.
 	if len(tile.BvTree) == 0 {
