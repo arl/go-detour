@@ -74,16 +74,16 @@ func (m *NavMesh) SaveToFile(fn string) error {
 	return nil
 }
 
-// Initializes the navigation mesh for single tile use.
-//  @param[in]	data		Data of the new tile. (See: #dtCreateNavMeshData)
-//  @param[in]	dataSize	The data size of the new tile.
-//  @param[in]	flags		The tile flags. (See: #dtTileFlags)
-// @return The status flags for the operation.
-//  @see dtCreateNavMeshData
+// InitForSingleTile set up the navigation mesh for single tile use.
+//
+//  param[in]	data		Data of the new tile. (See: #CreateNavMeshData)
+//  param[in]	dataSize	The data size of the new tile.
+//  param[in]	flags		The tile flags. (See: #TileFlags)
+// return The status flags for the operation.
+//  see CreateNavMeshData
 func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	var header MeshHeader
-	buf := bytes.NewBuffer(data)
-	binary.Read(buf, binary.LittleEndian, &header)
+	header.Unserialize(data)
 
 	// Make sure the data is in right format.
 	if header.Magic != navMeshMagic {
@@ -181,7 +181,6 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	// prepare a reader on the received data
 	r := aligned.NewReader(bytes.NewReader(data), 4, binary.LittleEndian)
 	r.ReadVal(&hdr)
-	//binary.Read(r, binary.LittleEndian, &hdr)
 
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {

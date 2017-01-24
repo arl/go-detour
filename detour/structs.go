@@ -125,6 +125,44 @@ func (s *MeshHeader) Serialize(dst []byte) int {
 	return 100
 }
 
+func (s *MeshHeader) Unserialize(src []byte) int {
+	if len(src) < 100 {
+		panic("undersized buffer for MeshHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	s.Magic = int32(little.Uint32(src[off:]))
+	s.Version = int32(little.Uint32(src[off+4:]))
+	s.X = int32(little.Uint32(src[off+8:]))
+	s.Y = int32(little.Uint32(src[off+12:]))
+	s.Layer = int32(little.Uint32(src[off+16:]))
+	s.UserID = little.Uint32(src[off+20:])
+	s.PolyCount = int32(little.Uint32(src[off+24:]))
+	s.VertCount = int32(little.Uint32(src[off+28:]))
+	s.MaxLinkCount = int32(little.Uint32(src[off+32:]))
+	s.DetailMeshCount = int32(little.Uint32(src[off+36:]))
+	s.DetailVertCount = int32(little.Uint32(src[off+40:]))
+	s.DetailTriCount = int32(little.Uint32(src[off+44:]))
+	s.BvNodeCount = int32(little.Uint32(src[off+48:]))
+	s.OffMeshConCount = int32(little.Uint32(src[off+52:]))
+	s.OffMeshBase = int32(little.Uint32(src[off+56:]))
+	s.WalkableHeight = math.Float32frombits(little.Uint32(src[off+60:]))
+	s.WalkableRadius = math.Float32frombits(little.Uint32(src[off+64:]))
+	s.WalkableClimb = math.Float32frombits(little.Uint32(src[off+68:]))
+	s.Bmin[0] = math.Float32frombits(little.Uint32(src[off+72:]))
+	s.Bmin[1] = math.Float32frombits(little.Uint32(src[off+76:]))
+	s.Bmin[2] = math.Float32frombits(little.Uint32(src[off+80:]))
+	s.Bmax[0] = math.Float32frombits(little.Uint32(src[off+84:]))
+	s.Bmax[1] = math.Float32frombits(little.Uint32(src[off+88:]))
+	s.Bmax[2] = math.Float32frombits(little.Uint32(src[off+92:]))
+	s.BvQuantFactor = math.Float32frombits(little.Uint32(src[off+96:]))
+	return 100
+}
+
 // MeshTile defines a navigation mesh tile.
 type MeshTile struct {
 	Salt          uint32       // Counter describing modifications to the tile.
