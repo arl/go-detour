@@ -47,7 +47,10 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	var i int32
 	for i = 0; i < hdr.NumTiles; i++ {
 
-		var tileHdr navMeshTileHeader
+		var (
+			tileHdr navMeshTileHeader
+			err     error
+		)
 		err = binary.Read(r, binary.LittleEndian, &tileHdr)
 		if err != nil {
 			return nil, err
@@ -61,7 +64,7 @@ func Decode(r io.Reader) (*NavMesh, error) {
 		if data == nil {
 			break
 		}
-		err = binary.Read(r, binary.LittleEndian, &data)
+		_, err = r.Read(data)
 		if err != nil {
 			return nil, err
 		}
