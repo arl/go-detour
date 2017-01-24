@@ -2,7 +2,6 @@ package detour
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"unsafe"
 
@@ -773,17 +772,9 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		}
 	}
 
-	var total int
 	buf := make([]byte, dataSize)
-	bufw := NewBufWriter(buf)
-
-	hdr.WriteTo(bufw)
-	total += headerSize
-	if bufw.Current() > total {
-		log.Fatalf("shouldn't be past %v, but we are at %v\n", total, bufw.Current())
-	}
-
-	err := SerializeTile(bufw.Next(dataSize-headerSize),
+	off := hdr.Serialize(buf)
+	err := SerializeTile(buf[off:],
 		navVerts,
 		navPolys,
 		make([]Link, maxLinkCount),

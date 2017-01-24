@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"unsafe"
 )
 
@@ -53,32 +54,42 @@ type MeshHeader struct {
 	BvQuantFactor   float32    // The bounding volume quantization factor.
 }
 
-// TODO: should probably remove this useless function
-func (s *MeshHeader) WriteTo(w io.Writer) (n int64, err error) {
+func (s *MeshHeader) Serialize(dst []byte) int {
+	if len(dst) < 100 {
+		panic("undersized buffer for MeshHeader")
+	}
+	var (
+		little littleEndian
+		off    int
+	)
+
 	// write each field as little endian
-	binary.Write(w, binary.LittleEndian, s.Magic)
-	binary.Write(w, binary.LittleEndian, s.Version)
-	binary.Write(w, binary.LittleEndian, s.X)
-	binary.Write(w, binary.LittleEndian, s.Y)
-	binary.Write(w, binary.LittleEndian, s.Layer)
-	binary.Write(w, binary.LittleEndian, s.UserID)
-	binary.Write(w, binary.LittleEndian, s.PolyCount)
-	binary.Write(w, binary.LittleEndian, s.VertCount)
-	binary.Write(w, binary.LittleEndian, s.MaxLinkCount)
-	binary.Write(w, binary.LittleEndian, s.DetailMeshCount)
-	binary.Write(w, binary.LittleEndian, s.DetailVertCount)
-	binary.Write(w, binary.LittleEndian, s.DetailTriCount)
-	binary.Write(w, binary.LittleEndian, s.BvNodeCount)
-	binary.Write(w, binary.LittleEndian, s.OffMeshConCount)
-	binary.Write(w, binary.LittleEndian, s.OffMeshBase)
-	binary.Write(w, binary.LittleEndian, s.WalkableHeight)
-	binary.Write(w, binary.LittleEndian, s.WalkableRadius)
-	binary.Write(w, binary.LittleEndian, s.WalkableClimb)
-	binary.Write(w, binary.LittleEndian, s.Bmin)
-	binary.Write(w, binary.LittleEndian, s.Bmax)
-	binary.Write(w, binary.LittleEndian, s.BvQuantFactor)
-	// TODO: do not hard-code this
-	return 100, nil
+	little.PutUint32(dst[off:], uint32(s.Magic))
+	little.PutUint32(dst[off+4:], uint32(s.Version))
+	little.PutUint32(dst[off+8:], uint32(s.X))
+	little.PutUint32(dst[off+12:], uint32(s.Y))
+	little.PutUint32(dst[off+16:], uint32(s.Layer))
+	little.PutUint32(dst[off+20:], uint32(s.UserID))
+	little.PutUint32(dst[off+24:], uint32(s.PolyCount))
+	little.PutUint32(dst[off+28:], uint32(s.VertCount))
+	little.PutUint32(dst[off+32:], uint32(s.MaxLinkCount))
+	little.PutUint32(dst[off+36:], uint32(s.DetailMeshCount))
+	little.PutUint32(dst[off+40:], uint32(s.DetailVertCount))
+	little.PutUint32(dst[off+44:], uint32(s.DetailTriCount))
+	little.PutUint32(dst[off+48:], uint32(s.BvNodeCount))
+	little.PutUint32(dst[off+52:], uint32(s.OffMeshConCount))
+	little.PutUint32(dst[off+56:], uint32(s.OffMeshBase))
+	little.PutUint32(dst[off+60:], uint32(math.Float32bits(s.WalkableHeight)))
+	little.PutUint32(dst[off+64:], uint32(math.Float32bits(s.WalkableRadius)))
+	little.PutUint32(dst[off+68:], uint32(math.Float32bits(s.WalkableClimb)))
+	little.PutUint32(dst[off+72:], uint32(math.Float32bits(s.Bmin[0])))
+	little.PutUint32(dst[off+76:], uint32(math.Float32bits(s.Bmin[1])))
+	little.PutUint32(dst[off+80:], uint32(math.Float32bits(s.Bmin[2])))
+	little.PutUint32(dst[off+84:], uint32(math.Float32bits(s.Bmax[0])))
+	little.PutUint32(dst[off+88:], uint32(math.Float32bits(s.Bmax[1])))
+	little.PutUint32(dst[off+92:], uint32(math.Float32bits(s.Bmax[2])))
+	little.PutUint32(dst[off+96:], uint32(math.Float32bits(s.BvQuantFactor)))
+	return 100
 }
 
 // TODO: should probably remove this useless function
