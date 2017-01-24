@@ -1,15 +1,11 @@
 package detour
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"unsafe"
 
-	"github.com/aurelien-rainone/aligned"
 	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
@@ -50,7 +46,9 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		header.NumTiles++
 	}
 	header.Params = m.Params
-	if err = binary.Write(f, binary.LittleEndian, header); err != nil {
+
+	if _, err = header.WriteTo(f); err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -64,34 +62,27 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		var tileHeader navMeshTileHeader
 		tileHeader.TileRef = m.TileRef(tile)
 		tileHeader.DataSize = tile.DataSize
-		if err = binary.Write(f, binary.LittleEndian, tileHeader); err != nil {
+		if _, err = tileHeader.WriteTo(f); err != nil {
 			return err
 		}
 
-		//panic("ICI, on sauve tile.data mais on a modifié le tile et pas tile.Data! voir exactement qu'est ce qui est mis dans tile.Data dans la version c++")
-		if err = binary.Write(f, binary.LittleEndian, tile.Data); err != nil {
+		if _, err = f.Write(tile.Data); err != nil {
 			return err
 		}
-
-		//if _, err = tile.WriteTo(f); err != nil {
-		//return err
-		//}
 	}
 	return nil
 }
 
-/// Initializes the navigation mesh for single tile use.
-///  @param[in]	data		Data of the new tile. (See: #dtCreateNavMeshData)
-///  @param[in]	dataSize	The data size of the new tile.
-///  @param[in]	flags		The tile flags. (See: #dtTileFlags)
-/// @return The status flags for the operation.
-///  @see dtCreateNavMeshData
+// InitForSingleTile set up the navigation mesh for single tile use.
+//
+//  param[in]	data		Data of the new tile. (See: #CreateNavMeshData)
+//  param[in]	dataSize	The data size of the new tile.
+//  param[in]	flags		The tile flags. (See: #TileFlags)
+// return The status flags for the operation.
+//  see CreateNavMeshData
 func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	var header MeshHeader
-	buf := bytes.NewBuffer(data)
-	binary.Read(buf, binary.LittleEndian, &header)
-
-	fmt.Println("header", header)
+	header.Unserialize(data)
 
 	// Make sure the data is in right format.
 	if header.Magic != navMeshMagic {
@@ -185,11 +176,7 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 // see CreateNavMeshData, removeTileBvTree
 func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status, TileRef) {
 	var hdr MeshHeader
-
-	// prepare a reader on the received data
-	r := aligned.NewReader(bytes.NewReader(data), 4, binary.LittleEndian)
-	r.ReadVal(&hdr)
-	//binary.Read(r, binary.LittleEndian, &hdr)
+	hdr.Unserialize(data)
 
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {
@@ -255,76 +242,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	tile.Next = m.posLookup[h]
 	m.posLookup[h] = tile
 
-	// Read header from binary data
-	tile.Verts = make([]float32, 3*hdr.VertCount)
-	var err error
-	if err = r.ReadSlice(&tile.Verts); err != nil {
-		log.Fatalln("couldn't read tile.Verts:", err)
-	}
-
-	tile.Polys = make([]Poly, hdr.PolyCount)
-	if err = r.ReadSlice(&tile.Polys); err != nil {
-		log.Fatalln("couldn't read tile.Polys:", err)
-	}
-
-	tile.Links = make([]Link, hdr.MaxLinkCount)
-	if err = r.ReadSlice(&tile.Links); err != nil {
-		log.Fatalln("couldn't read tile.Links:", err)
-	}
-
-	tile.DetailMeshes = make([]PolyDetail, hdr.DetailMeshCount)
-	if err = r.ReadSlice(&tile.DetailMeshes); err != nil {
-		log.Fatalln("couldn't read tile.DetailMeshes:", err)
-	}
-
-	tile.DetailVerts = make([]float32, 3*hdr.DetailVertCount)
-	if err = r.ReadSlice(&tile.DetailVerts); err != nil {
-		log.Fatalln("couldn't read tile.DetailVerts:", err)
-	}
-
-	// TODO: check the code that use detailTris, in the original c/c++ code, the
-	// 4th, and unused byte if kept in memory for alignment reasons. We keep
-	// here for reference both methods, the first just keeps the first 3 bytes,
-	// nothing is wasted
-	if false {
-		tile.DetailTris = make([]uint8, 3*hdr.DetailTriCount)
-		for i := int32(0); i < hdr.DetailTriCount; i++ {
-			// one Detail Tri takes actually 4 bytes (for alignment) even if only
-			// the first 3 are significant. So we read them 4 by 4 and just keep the
-			// first 3.
-			tmp := make([]uint8, 4)
-			if err = binary.Read(r, binary.LittleEndian, &tmp); err != nil {
-				log.Fatalln("couldn't read tile.DetailTris:", err)
-			}
-			copy(tile.DetailTris[i*3:i*3+3], tmp[0:3])
-		}
-
-	} else {
-		// this second method keep all, we just have to adjust when indexing the
-		// DetailTris slice for usage
-		tile.DetailTris = make([]uint8, 4*hdr.DetailTriCount)
-		// TODO: chan ge to aligned.ReadVal
-		if err = binary.Read(r, binary.LittleEndian, &tile.DetailTris); err != nil {
-			log.Fatalln("couldn't read tile.DetailTris:", err)
-		}
-	}
-
-	tile.BvTree = make([]BvNode, hdr.BvNodeCount)
-	if err = r.ReadSlice(&tile.BvTree); err != nil {
-		log.Fatalln("couldn't read tile.BvTree:", err)
-	}
-
-	for _, node := range tile.BvTree {
-		if node.I > hdr.BvNodeCount {
-			assert.True(false, "node.I > hdr.BvNodeCount: 0x%x 0x%x\n", node.I, hdr.BvNodeCount)
-		}
-	}
-
-	tile.OffMeshCons = make([]OffMeshConnection, hdr.OffMeshConCount)
-	if err = r.ReadSlice(&tile.OffMeshCons); err != nil {
-		log.Println("hdr.OffMeshConCount:", hdr.OffMeshConCount)
-		log.Fatalln("couldn't read tile.OffMeshCons:", err)
-	}
+	tile.Unserialize(&hdr, data[hdr.Size():])
 
 	// If there are no items in the bvtree, reset the tree pointer.
 	if len(tile.BvTree) == 0 {
@@ -383,17 +301,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	}
 
 	// rewrite the modified tile into the data pointer
-	headerSize := unsafe.Sizeof(*tile.Header)
-	err = SerializeTile(data[headerSize:],
-		tile.Verts,
-		tile.Polys,
-		tile.Links,
-		tile.DetailMeshes,
-		tile.DetailVerts,
-		tile.DetailTris,
-		tile.BvTree,
-		tile.OffMeshCons)
-
+	tile.Serialize(data[tile.Header.Size():])
 	return Success, m.TileRef(tile)
 }
 
@@ -434,7 +342,7 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 		i    int32
 		base PolyRef
 	)
-	base = m.getPolyRefBase(tile)
+	base = m.polyRefBase(tile)
 
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		poly := &tile.Polys[i]
@@ -468,18 +376,18 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 	}
 }
 
-// getPolyRefBase returns the polygon reference for the base polygon in the
+// polyRefBase returns the polygon reference for the base polygon in the
 // specified tile.
 //
 // Example use case:
-//  base := navmesh.GetPolyRefBase(tile);
+//  base := navmesh.polyRefBase(tile);
 //  for i = 0; i < tile.Header.PolyCount; i++ {
 //      poly = &tile.polys[i]
 //      ref := base | PolyRef(i)
 //
 //      // Use the reference to access the polygon data.
 //  }
-func (m *NavMesh) getPolyRefBase(tile *MeshTile) PolyRef {
+func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 	if tile == nil {
 		return 0
 	}
@@ -547,26 +455,6 @@ type PolyDetail struct {
 	TriBase   uint32 // The offset of the triangles in the MeshTile.DetailTris slice.
 	VertCount uint8  // The number of vertices in the sub-mesh.
 	TriCount  uint8  // The number of triangles in the sub-mesh.
-}
-
-func (s *PolyDetail) WriteTo(w io.Writer) (n int64, err error) {
-	// write each field as little endian
-	binary.Write(w, binary.LittleEndian, s.VertBase)
-	binary.Write(w, binary.LittleEndian, s.TriBase)
-	binary.Write(w, binary.LittleEndian, s.VertCount)
-	binary.Write(w, binary.LittleEndian, s.TriCount)
-	// TODO: do not hard-code this
-	return 12, nil
-}
-
-func (s *PolyDetail) ReadFrom(r io.Reader) (n int64, err error) {
-	// read each field as little endian
-	binary.Read(r, binary.LittleEndian, &s.VertBase)
-	binary.Read(r, binary.LittleEndian, &s.TriBase)
-	binary.Read(r, binary.LittleEndian, &s.VertCount)
-	binary.Read(r, binary.LittleEndian, &s.TriCount)
-	// TODO: do not hard-code this
-	return 12, nil
 }
 
 // Bounding volume node.
@@ -670,7 +558,7 @@ func (m *NavMesh) baseOffMeshLinks(tile *MeshTile) {
 		base PolyRef
 	)
 
-	base = m.getPolyRefBase(tile)
+	base = m.polyRefBase(tile)
 
 	// Base off-mesh connection start points.
 	for i = 0; i < tile.Header.OffMeshConCount; i++ {
@@ -816,7 +704,7 @@ func (m *NavMesh) queryPolygonsInTile(
 		bmax[2] = uint16(uint32(qfac*maxz+1) | 1)
 
 		// Traverse tree
-		base := m.getPolyRefBase(tile)
+		base := m.polyRefBase(tile)
 		var n int32
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
@@ -842,10 +730,11 @@ func (m *NavMesh) queryPolygonsInTile(
 
 	}
 
-	bmin := d3.NewVec3()
-	bmax := d3.NewVec3()
-	var n, i int32
-	base := m.getPolyRefBase(tile)
+	var (
+		bmin, bmax [3]float32
+		n, i       int32
+	)
+	base := m.polyRefBase(tile)
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		p := &tile.Polys[i]
 		// Do not return off-mesh connection polygons.
@@ -854,15 +743,15 @@ func (m *NavMesh) queryPolygonsInTile(
 		}
 		// Calc polygon bounds.
 		v := tile.Verts[p.Verts[0]*3 : 3]
-		bmin.Assign(v)
-		bmax.Assign(v)
+		d3.Vec3(bmin[:]).Assign(v)
+		d3.Vec3(bmax[:]).Assign(v)
 		var j uint8
 		for j = 1; j < p.VertCount; j++ {
 			v = tile.Verts[p.Verts[j]*3 : 3]
-			d3.Vec3Min(bmin, v)
-			d3.Vec3Max(bmax, v)
+			d3.Vec3Min(bmin[:], v)
+			d3.Vec3Max(bmax[:], v)
 		}
-		if OverlapBounds(qmin, qmax, bmin, bmax) {
+		if OverlapBounds(qmin, qmax, bmin[:], bmax[:]) {
 			if n < maxPolys {
 				n++
 				polys[n] = base | PolyRef(i)
@@ -1085,7 +974,7 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 				landPolyIdx := uint16(m.decodePolyIDPoly(ref))
 				landPoly := &tile.Polys[landPolyIdx]
 				link := &tile.Links[tidx]
-				link.Ref = m.getPolyRefBase(target) | PolyRef(targetCon.Poly)
+				link.Ref = m.polyRefBase(target) | PolyRef(targetCon.Poly)
 				link.Edge = 0xff
 				if side == -1 {
 					link.Side = 0xff
@@ -1227,7 +1116,7 @@ func (m *NavMesh) findConnectingPolys(
 	l := extLink | uint16(side)
 	var n int32
 
-	base := m.getPolyRefBase(tile)
+	base := m.polyRefBase(tile)
 
 	var i int32
 	for i = 0; i < tile.Header.PolyCount; i++ {
@@ -1404,7 +1293,7 @@ func (m *NavMesh) TileRef(tile *MeshTile) TileRef {
 		return 0
 	}
 
-	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles)))
+	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0])))
 	return TileRef(m.encodePolyID(tile.Salt, it, 0))
 }
 

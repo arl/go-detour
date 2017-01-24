@@ -68,7 +68,7 @@ func calcTriNormal(v0, v1, v2, norm d3.Vec3) {
 /// See the #rcConfig documentation for more information on the configuration parameters.
 ///
 /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
-func MarkWalkableTriangles(ctx *Context, walkableSlopeAngle float32,
+func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
@@ -103,7 +103,7 @@ func MarkWalkableTriangles(ctx *Context, walkableSlopeAngle float32,
 /// See the #rcConfig documentation for more information on the configuration parameters.
 ///
 /// @see rcHeightfield, rcClearUnwalkableTriangles, rcRasterizeTriangles
-func ClearUnwalkableTriangles(ctx *Context, walkableSlopeAngle float32,
+func ClearUnwalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
@@ -122,7 +122,7 @@ func ClearUnwalkableTriangles(ctx *Context, walkableSlopeAngle float32,
 }
 
 /// Recast performance timer categories.
-/// @see Context
+/// @see BuildContext
 type TimerLabel int
 
 const (

@@ -1485,7 +1485,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 		bmax[2] = uint16(qfac*maxz+1) | 1
 
 		// Traverse tree
-		base := q.nav.getPolyRefBase(tile)
+		base := q.nav.polyRefBase(tile)
 		// TODO: probably need to use an index or unsafe.Pointer here
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
@@ -1518,7 +1518,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 		var bmin, bmax d3.Vec3
 		bmin = d3.NewVec3()
 		bmax = d3.NewVec3()
-		base := q.nav.getPolyRefBase(tile)
+		base := q.nav.polyRefBase(tile)
 		for i := int32(0); i < tile.Header.PolyCount; i++ {
 			p := &tile.Polys[i]
 			// Do not return off-mesh connection polygons.

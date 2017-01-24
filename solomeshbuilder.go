@@ -1,12 +1,9 @@
 package recast
 
 import (
-	"fmt"
-
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/math32"
-	"github.com/fatih/structs"
 )
 
 type SamplePartitionType int
@@ -18,17 +15,16 @@ const (
 )
 
 type SoloMesh struct {
-	ctx           *recast.Context
-	buildCtx      recast.BuildContext
+	ctx           *recast.BuildContext
 	geom          recast.InputGeom
 	meshName      string
 	cfg           recast.Config
 	partitionType SamplePartitionType
 }
 
-func NewSoloMesh() *SoloMesh {
+func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
 	sm := &SoloMesh{}
-	sm.ctx = recast.NewContext(true, &sm.buildCtx)
+	sm.ctx = ctx
 	sm.partitionType = SAMPLE_PARTITION_MONOTONE
 	return sm
 }
@@ -38,11 +34,10 @@ func (sm *SoloMesh) Load(path string) bool {
 	if !sm.geom.Load(sm.ctx, path) {
 		return false
 	}
-	sm.buildCtx.DumpLog("Geom load log %s:", path)
+	sm.ctx.Progressf("Geom load log %s:", path)
 	return true
 }
 
-//func (sm *SoloMesh) Build() ([]uint8, bool) {
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
@@ -109,8 +104,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	sm.cfg.BMin = bmin
 	sm.cfg.BMax = bmax
 	sm.cfg.Width, sm.cfg.Height = recast.CalcGridSize(sm.cfg.BMin, sm.cfg.BMax, sm.cfg.Cs)
-
-	fmt.Println(structs.Map(sm.cfg))
 
 	// Reset build times gathering.
 	sm.ctx.ResetTimers()
@@ -309,8 +302,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	}
 	var (
 		navData []uint8
-		//navDataSize int32
-		err error
+		err     error
 	)
 
 	// Update poly flags from areas.
@@ -331,7 +323,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	}
 
 	var params detour.NavMeshCreateParams
-	//memset(&params, 0, sizeof(params));
 	params.Verts = m_pmesh.Verts
 	params.VertCount = m_pmesh.NVerts
 	params.Polys = m_pmesh.Polys
@@ -389,6 +380,5 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 
 	//m_tileBuildTime := sm.ctx.AccumulatedTime(RC_TIMER_TOTAL) / 1000.0
 	//dataSize = navDataSize
-	sm.buildCtx.DumpLog("Navmesh Build log")
 	return &navMesh, true
 }

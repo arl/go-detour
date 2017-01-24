@@ -51,7 +51,7 @@ func NewHeightfield() *Heightfield {
 /// See the #rcConfig documentation for more information on the configuration parameters.
 ///
 /// @see rcAllocHeightfield, rcHeightfield
-func (hf *Heightfield) Create(ctx *Context, width, height int32,
+func (hf *Heightfield) Create(ctx *BuildContext, width, height int32,
 	bmin, bmax []float32, cs, ch float32) bool {
 	hf.Width = width
 	hf.Height = height
@@ -239,7 +239,7 @@ type CompactHeightfield struct {
 	Areas          []uint8        // Array containing area id data. [Size: #spanCount]
 }
 
-func (hf *Heightfield) GetHeightFieldSpanCount(ctx *Context) int32 {
+func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
 	w := hf.Width
 	h := hf.Height
 	spanCount := int32(0)
@@ -262,7 +262,7 @@ func (hf *Heightfield) GetHeightFieldSpanCount(ctx *Context) int32 {
 /// See the #rcConfig documentation for more information on the configuration parameters.
 ///
 /// @see rcAllocCompactHeightfield, rcHeightfield, rcCompactHeightfield, rcConfig
-func BuildCompactHeightfield(ctx *Context, walkableHeight, walkableClimb int32,
+func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb int32,
 	hf *Heightfield, chf *CompactHeightfield) bool {
 
 	assert.True(ctx != nil, "ctx should not be nil")

@@ -11,7 +11,7 @@ import (
 /// No spans will be added if the triangle does not overlap the heightfield grid.
 ///
 /// @see rcHeightfield
-func RasterizeTriangle(ctx *Context, v0, v1, v2 d3.Vec3,
+func RasterizeTriangle(ctx *BuildContext, v0, v1, v2 d3.Vec3,
 	area uint8, solid *Heightfield,
 	flagMergeThr int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
@@ -34,7 +34,7 @@ func RasterizeTriangle(ctx *Context, v0, v1, v2 d3.Vec3,
 /// Spans will only be added for triangles that overlap the heightfield grid.
 ///
 /// @see rcHeightfield
-func RasterizeTriangles(ctx *Context, verts []float32, nv int32,
+func RasterizeTriangles(ctx *BuildContext, verts []float32, nv int32,
 	tris []int32, areas []uint8, nt int32,
 	solid *Heightfield, flagMergeThr int32) bool {
 
@@ -65,7 +65,7 @@ func RasterizeTriangles(ctx *Context, verts []float32, nv int32,
 /// Spans will only be added for triangles that overlap the heightfield grid.
 ///
 /// @see rcHeightfield
-func RasterizeTriangles2(ctx *Context, verts []float32, areas []uint8, nt int32,
+func RasterizeTriangles2(ctx *BuildContext, verts []float32, areas []uint8, nt int32,
 	solid *Heightfield, flagMergeThr int32) bool {
 
 	assert.True(ctx != nil, "ctx should not be nil")

@@ -2,15 +2,12 @@ package detour
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"unsafe"
 
-	"github.com/aurelien-rainone/aligned"
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
-	"github.com/fatih/structs"
 )
 
 type BVItem struct {
@@ -483,8 +480,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	}
 
 	// Off-mesh connectionss are stored as polygons, adjust values.
-	totPolyCount := params.PolyCount + storedOffMeshConCount
-	totVertCount := params.VertCount + storedOffMeshConCount*2
+	totPolyCount := int(params.PolyCount + storedOffMeshConCount)
+	totVertCount := int(params.VertCount + storedOffMeshConCount*2)
 
 	// Find portal edges which are at tile borders.
 	var (
@@ -548,30 +545,29 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		}
 	}
 
-	// Calculate data size
-	// TODO: to be removed once writing is working and checked
-	// we don't need the size, we just write
-	headerSize := aligned.AlignN(int(unsafe.Sizeof(MeshHeader{})), 4)
-	vertsSize := aligned.AlignN(int(4*3*totVertCount), 4)
-	polysSize := aligned.AlignN(int(unsafe.Sizeof(Poly{})*uintptr(totPolyCount)), 4)
-	linksSize := aligned.AlignN(int(unsafe.Sizeof(Link{})*uintptr(maxLinkCount)), 4)
-	detailMeshesSize := aligned.AlignN(int(unsafe.Sizeof(PolyDetail{})*uintptr(params.PolyCount)), 4)
-	detailVertsSize := aligned.AlignN(int(4*3*uintptr(uniqueDetailVertCount)), 4)
-	detailTrisSize := aligned.AlignN(int(1*4*uintptr(detailTriCount)), 4)
-	var bvTreeSize int
-	if params.BuildBvTree {
-		bvTreeSize = aligned.AlignN(int(unsafe.Sizeof(BvNode{})*uintptr(params.PolyCount*2)), 4)
-	}
-	offMeshConsSize := aligned.AlignN(int(unsafe.Sizeof(OffMeshConnection{})*uintptr(storedOffMeshConCount)), 4)
+	var (
+		hdr        MeshHeader
+		bvTreeSize int
+	)
 
-	// TODO: dataSize will be used to check that the length of the written
-	// buffer is what we expect
+	// Calculate data size in order to allocate buffer
+	headerSize := hdr.Size()
+	vertsSize := 4 * 3 * totVertCount
+	polysSize := int(unsafe.Sizeof(Poly{})) * totPolyCount
+	linksSize := int(unsafe.Sizeof(Link{})) * int(maxLinkCount)
+	detailMeshesSize := int(unsafe.Sizeof(PolyDetail{})) * int(params.PolyCount)
+	detailVertsSize := 4 * 3 * int(uniqueDetailVertCount)
+	detailTrisSize := 4 * int(detailTriCount)
+	if params.BuildBvTree {
+		bvTreeSize = int(unsafe.Sizeof(BvNode{})) * int(params.PolyCount*2)
+	}
+	offMeshConsSize := int(unsafe.Sizeof(OffMeshConnection{})) * int(storedOffMeshConCount)
+
 	dataSize := headerSize + vertsSize + polysSize + linksSize +
 		detailMeshesSize + detailVertsSize + detailTrisSize +
 		bvTreeSize + offMeshConsSize
 
-	// create the variable that will hold the values to serialize
-	var hdr MeshHeader
+	// create the variables that will hold the values to serialize
 	navVerts := make([]float32, 3*totVertCount)
 	navPolys := make([]Poly, totPolyCount)
 
@@ -588,8 +584,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	hdr.Y = params.TileY
 	hdr.Layer = params.TileLayer
 	hdr.UserID = params.UserID
-	hdr.PolyCount = totPolyCount
-	hdr.VertCount = totVertCount
+	hdr.PolyCount = int32(totPolyCount)
+	hdr.VertCount = int32(totVertCount)
 	hdr.MaxLinkCount = maxLinkCount
 	copy(hdr.Bmin[:], params.BMin[:])
 	copy(hdr.Bmax[:], params.BMax[:])
@@ -606,8 +602,6 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	if params.BuildBvTree {
 		hdr.BvNodeCount = params.PolyCount * 2
 	}
-
-	fmt.Println("header:", structs.Map(hdr))
 
 	offMeshVertsBase := params.VertCount
 	offMeshPolyBase := params.PolyCount
@@ -780,18 +774,9 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		}
 	}
 
-	var total int
 	buf := make([]byte, dataSize)
-	bufw := NewBufWriter(buf)
-
-	hdr.WriteTo(bufw)
-	total += headerSize
-	if bufw.Current() > total {
-		log.Fatalf("shouldn't be past %v, but we are at %v\n", total, bufw.Current())
-	}
-
-	err := SerializeTile(bufw.Next(dataSize-headerSize),
-		//err := SerializeTile(buf[headerSize:],
+	hdr.Serialize(buf)
+	err := SerializeTileData(buf[hdr.Size():],
 		navVerts,
 		navPolys,
 		make([]Link, maxLinkCount),

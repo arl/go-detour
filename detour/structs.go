@@ -1,11 +1,9 @@
 package detour
 
 import (
-	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
-	"unsafe"
+	"math"
 )
 
 type navMeshSetHeader struct {
@@ -13,6 +11,34 @@ type navMeshSetHeader struct {
 	Version  int32
 	NumTiles int32
 	Params   NavMeshParams
+}
+
+func (s *navMeshSetHeader) Size() int {
+	return 12 + s.Params.Size()
+}
+
+func (s *navMeshSetHeader) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
+		panic("undersized buffer for navMeshSetHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	little.PutUint32(dst[off:], uint32(s.Magic))
+	little.PutUint32(dst[off+4:], uint32(s.Version))
+	little.PutUint32(dst[off+8:], uint32(s.NumTiles))
+	s.Params.Serialize(dst[off+12:])
+}
+
+func (s *navMeshSetHeader) WriteTo(w io.Writer) (int64, error) {
+	buf := make([]byte, s.Size())
+	s.Serialize(buf)
+
+	n, err := w.Write(buf)
+	return int64(n), err
 }
 
 // NavMeshParams contains the configuration parameters used to define
@@ -26,6 +52,29 @@ type NavMeshParams struct {
 	TileHeight float32    // The height of each tile. (Along the z-axis.)
 	MaxTiles   uint32     // The maximum number of tiles the navigation mesh can contain.
 	MaxPolys   uint32     // The maximum number of polygons each tile can contain.
+}
+
+func (s *NavMeshParams) Size() int {
+	return 28
+}
+
+func (s *NavMeshParams) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
+		panic("undersized buffer for navMeshSetHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	little.PutUint32(dst[off:], uint32(math.Float32bits(s.Orig[0])))
+	little.PutUint32(dst[off+4:], uint32(math.Float32bits(s.Orig[1])))
+	little.PutUint32(dst[off+8:], uint32(math.Float32bits(s.Orig[2])))
+	little.PutUint32(dst[off+12:], uint32(math.Float32bits(s.TileWidth)))
+	little.PutUint32(dst[off+16:], uint32(math.Float32bits(s.TileHeight)))
+	little.PutUint32(dst[off+20:], uint32(s.MaxTiles))
+	little.PutUint32(dst[off+24:], uint32(s.MaxPolys))
 }
 
 // MeshHeader provides high level information related to a MeshTile object.
@@ -53,60 +102,82 @@ type MeshHeader struct {
 	BvQuantFactor   float32    // The bounding volume quantization factor.
 }
 
-// TODO: should probably remove this useless function
-func (s *MeshHeader) WriteTo(w io.Writer) (n int64, err error) {
-	// write each field as little endian
-	binary.Write(w, binary.LittleEndian, s.Magic)
-	binary.Write(w, binary.LittleEndian, s.Version)
-	binary.Write(w, binary.LittleEndian, s.X)
-	binary.Write(w, binary.LittleEndian, s.Y)
-	binary.Write(w, binary.LittleEndian, s.Layer)
-	binary.Write(w, binary.LittleEndian, s.UserID)
-	binary.Write(w, binary.LittleEndian, s.PolyCount)
-	binary.Write(w, binary.LittleEndian, s.VertCount)
-	binary.Write(w, binary.LittleEndian, s.MaxLinkCount)
-	binary.Write(w, binary.LittleEndian, s.DetailMeshCount)
-	binary.Write(w, binary.LittleEndian, s.DetailVertCount)
-	binary.Write(w, binary.LittleEndian, s.DetailTriCount)
-	binary.Write(w, binary.LittleEndian, s.BvNodeCount)
-	binary.Write(w, binary.LittleEndian, s.OffMeshConCount)
-	binary.Write(w, binary.LittleEndian, s.OffMeshBase)
-	binary.Write(w, binary.LittleEndian, s.WalkableHeight)
-	binary.Write(w, binary.LittleEndian, s.WalkableRadius)
-	binary.Write(w, binary.LittleEndian, s.WalkableClimb)
-	binary.Write(w, binary.LittleEndian, s.Bmin)
-	binary.Write(w, binary.LittleEndian, s.Bmax)
-	binary.Write(w, binary.LittleEndian, s.BvQuantFactor)
-	// TODO: do not hard-code this
-	return 100, nil
+func (s *MeshHeader) Size() int {
+	return 100
 }
 
-// TODO: should probably remove this useless function
-func (s *MeshHeader) ReadFrom(r io.Reader) (n int64, err error) {
-	// read each field as little endian
-	binary.Read(r, binary.LittleEndian, &s.Magic)
-	binary.Read(r, binary.LittleEndian, &s.Version)
-	binary.Read(r, binary.LittleEndian, &s.X)
-	binary.Read(r, binary.LittleEndian, &s.Y)
-	binary.Read(r, binary.LittleEndian, &s.Layer)
-	binary.Read(r, binary.LittleEndian, &s.UserID)
-	binary.Read(r, binary.LittleEndian, &s.PolyCount)
-	binary.Read(r, binary.LittleEndian, &s.VertCount)
-	binary.Read(r, binary.LittleEndian, &s.MaxLinkCount)
-	binary.Read(r, binary.LittleEndian, &s.DetailMeshCount)
-	binary.Read(r, binary.LittleEndian, &s.DetailVertCount)
-	binary.Read(r, binary.LittleEndian, &s.DetailTriCount)
-	binary.Read(r, binary.LittleEndian, &s.BvNodeCount)
-	binary.Read(r, binary.LittleEndian, &s.OffMeshConCount)
-	binary.Read(r, binary.LittleEndian, &s.OffMeshBase)
-	binary.Read(r, binary.LittleEndian, &s.WalkableHeight)
-	binary.Read(r, binary.LittleEndian, &s.WalkableRadius)
-	binary.Read(r, binary.LittleEndian, &s.WalkableClimb)
-	binary.Read(r, binary.LittleEndian, &s.Bmin)
-	binary.Read(r, binary.LittleEndian, &s.Bmax)
-	binary.Read(r, binary.LittleEndian, &s.BvQuantFactor)
-	// TODO: do not hard-code this
-	return 100, nil
+func (s *MeshHeader) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
+		panic("undersized buffer for MeshHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	little.PutUint32(dst[off:], uint32(s.Magic))
+	little.PutUint32(dst[off+4:], uint32(s.Version))
+	little.PutUint32(dst[off+8:], uint32(s.X))
+	little.PutUint32(dst[off+12:], uint32(s.Y))
+	little.PutUint32(dst[off+16:], uint32(s.Layer))
+	little.PutUint32(dst[off+20:], uint32(s.UserID))
+	little.PutUint32(dst[off+24:], uint32(s.PolyCount))
+	little.PutUint32(dst[off+28:], uint32(s.VertCount))
+	little.PutUint32(dst[off+32:], uint32(s.MaxLinkCount))
+	little.PutUint32(dst[off+36:], uint32(s.DetailMeshCount))
+	little.PutUint32(dst[off+40:], uint32(s.DetailVertCount))
+	little.PutUint32(dst[off+44:], uint32(s.DetailTriCount))
+	little.PutUint32(dst[off+48:], uint32(s.BvNodeCount))
+	little.PutUint32(dst[off+52:], uint32(s.OffMeshConCount))
+	little.PutUint32(dst[off+56:], uint32(s.OffMeshBase))
+	little.PutUint32(dst[off+60:], uint32(math.Float32bits(s.WalkableHeight)))
+	little.PutUint32(dst[off+64:], uint32(math.Float32bits(s.WalkableRadius)))
+	little.PutUint32(dst[off+68:], uint32(math.Float32bits(s.WalkableClimb)))
+	little.PutUint32(dst[off+72:], uint32(math.Float32bits(s.Bmin[0])))
+	little.PutUint32(dst[off+76:], uint32(math.Float32bits(s.Bmin[1])))
+	little.PutUint32(dst[off+80:], uint32(math.Float32bits(s.Bmin[2])))
+	little.PutUint32(dst[off+84:], uint32(math.Float32bits(s.Bmax[0])))
+	little.PutUint32(dst[off+88:], uint32(math.Float32bits(s.Bmax[1])))
+	little.PutUint32(dst[off+92:], uint32(math.Float32bits(s.Bmax[2])))
+	little.PutUint32(dst[off+96:], uint32(math.Float32bits(s.BvQuantFactor)))
+}
+
+func (s *MeshHeader) Unserialize(src []byte) {
+	if len(src) < s.Size() {
+		panic("undersized buffer for MeshHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	s.Magic = int32(little.Uint32(src[off:]))
+	s.Version = int32(little.Uint32(src[off+4:]))
+	s.X = int32(little.Uint32(src[off+8:]))
+	s.Y = int32(little.Uint32(src[off+12:]))
+	s.Layer = int32(little.Uint32(src[off+16:]))
+	s.UserID = little.Uint32(src[off+20:])
+	s.PolyCount = int32(little.Uint32(src[off+24:]))
+	s.VertCount = int32(little.Uint32(src[off+28:]))
+	s.MaxLinkCount = int32(little.Uint32(src[off+32:]))
+	s.DetailMeshCount = int32(little.Uint32(src[off+36:]))
+	s.DetailVertCount = int32(little.Uint32(src[off+40:]))
+	s.DetailTriCount = int32(little.Uint32(src[off+44:]))
+	s.BvNodeCount = int32(little.Uint32(src[off+48:]))
+	s.OffMeshConCount = int32(little.Uint32(src[off+52:]))
+	s.OffMeshBase = int32(little.Uint32(src[off+56:]))
+	s.WalkableHeight = math.Float32frombits(little.Uint32(src[off+60:]))
+	s.WalkableRadius = math.Float32frombits(little.Uint32(src[off+64:]))
+	s.WalkableClimb = math.Float32frombits(little.Uint32(src[off+68:]))
+	s.Bmin[0] = math.Float32frombits(little.Uint32(src[off+72:]))
+	s.Bmin[1] = math.Float32frombits(little.Uint32(src[off+76:]))
+	s.Bmin[2] = math.Float32frombits(little.Uint32(src[off+80:]))
+	s.Bmax[0] = math.Float32frombits(little.Uint32(src[off+84:]))
+	s.Bmax[1] = math.Float32frombits(little.Uint32(src[off+88:]))
+	s.Bmax[2] = math.Float32frombits(little.Uint32(src[off+92:]))
+	s.BvQuantFactor = math.Float32frombits(little.Uint32(src[off+96:]))
 }
 
 // MeshTile defines a navigation mesh tile.
@@ -132,36 +203,4 @@ type MeshTile struct {
 	DataSize int32     // Size of the tile data.
 	Flags    int32     // Tile flags. (See: tileFlags)
 	Next     *MeshTile // The next free tile, or the next tile in the spatial grid.
-}
-
-// UpdateData updates the Data field with the actual content of the tile
-// for later serialization.
-
-//we are doing exactly the same thing in navmeshcreate ligne 783,
-//factorize this
-func (s *MeshTile) UpdateData() error {
-	var buf bytes.Buffer
-	expected := int(s.DataSize) - int(unsafe.Sizeof(*s.Header))
-	buf.Grow(expected)
-
-	// write each field as little endian
-	binary.Write(&buf, binary.LittleEndian, s.Verts)
-	binary.Write(&buf, binary.LittleEndian, s.Polys)
-	binary.Write(&buf, binary.LittleEndian, s.Links)
-	for i := range s.DetailMeshes {
-		s.DetailMeshes[i].WriteTo(&buf)
-		//binary.Write(&buf, binary.LittleEndian, s.DetailMeshes)
-	}
-	binary.Write(&buf, binary.LittleEndian, s.DetailVerts)
-	binary.Write(&buf, binary.LittleEndian, s.DetailTris)
-	binary.Write(&buf, binary.LittleEndian, s.BvTree)
-	binary.Write(&buf, binary.LittleEndian, s.OffMeshCons)
-
-	// buffer should not be larger than DataSize
-	if buf.Len() != expected {
-		return fmt.Errorf("couldn't update MeshTile.Data(buf:%v, DataSize:%v)\n", buf.Len(), expected)
-	}
-
-	s.Data = buf.Bytes()
-	return nil
 }

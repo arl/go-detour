@@ -13,7 +13,7 @@ import (
 /// This method is usually called immediately after the heightfield has been built.
 ///
 /// @see rcCompactHeightfield, rcBuildCompactHeightfield, rcConfig::walkableRadius
-func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool {
+func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
 	w := chf.Width
@@ -194,7 +194,7 @@ func ErodeWalkableArea(ctx *Context, radius int32, chf *CompactHeightfield) bool
 /// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
 ///
 /// @see rcCompactHeightfield, rcMedianFilterWalkableArea
-func MarkConvexPolyArea(ctx *Context, verts []float32, nverts int32,
+func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 	hmin, hmax float32, areaId uint8, chf *CompactHeightfield) {
 
 	assert.True(ctx != nil, "ctx should not be nil")
