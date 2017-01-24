@@ -12,6 +12,23 @@ type navMeshSetHeader struct {
 	Params   NavMeshParams
 }
 
+func (s *navMeshSetHeader) Serialize(dst []byte) int {
+	if len(dst) < 100 {
+		panic("undersized buffer for navMeshSetHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	little.PutUint32(dst[off:], uint32(s.Magic))
+	little.PutUint32(dst[off+4:], uint32(s.Version))
+	little.PutUint32(dst[off+8:], uint32(s.NumTiles))
+	s.Params.Serialize(dst[off+12:])
+	return 44
+}
+
 // NavMeshParams contains the configuration parameters used to define
 // multi-tile navigation meshes.
 //
@@ -23,6 +40,26 @@ type NavMeshParams struct {
 	TileHeight float32    // The height of each tile. (Along the z-axis.)
 	MaxTiles   uint32     // The maximum number of tiles the navigation mesh can contain.
 	MaxPolys   uint32     // The maximum number of polygons each tile can contain.
+}
+
+func (s *NavMeshParams) Serialize(dst []byte) int {
+	if len(dst) < 28 {
+		panic("undersized buffer for navMeshSetHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	little.PutUint32(dst[off:], uint32(math.Float32bits(s.Orig[0])))
+	little.PutUint32(dst[off+4:], uint32(math.Float32bits(s.Orig[1])))
+	little.PutUint32(dst[off+8:], uint32(math.Float32bits(s.Orig[2])))
+	little.PutUint32(dst[off+12:], uint32(math.Float32bits(s.TileWidth)))
+	little.PutUint32(dst[off+16:], uint32(math.Float32bits(s.TileHeight)))
+	little.PutUint32(dst[off+20:], uint32(s.MaxTiles))
+	little.PutUint32(dst[off+24:], uint32(s.MaxPolys))
+	return 28
 }
 
 // MeshHeader provides high level information related to a MeshTile object.
