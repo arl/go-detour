@@ -174,7 +174,7 @@ func TestCreateHeightfield(t *testing.T) {
 }
 
 func TestMarkWalkableTriangles(t *testing.T) {
-	var ctx *Context
+	var ctx *BuildContext
 	walkableSlopeAngle := float32(45)
 	verts := []float32{
 		0, 0, 0,
@@ -221,7 +221,7 @@ func TestMarkWalkableTriangles(t *testing.T) {
 }
 
 func TestClearUnwalkableTriangles(t *testing.T) {
-	var ctx *Context
+	var ctx *BuildContext
 	walkableSlopeAngle := float32(45)
 	verts := []float32{
 		0, 0, 0,
@@ -261,7 +261,7 @@ func TestClearUnwalkableTriangles(t *testing.T) {
 }
 
 func TestAddSpan(t *testing.T) {
-	var ctx *Context
+	var ctx *BuildContext
 
 	verts := []float32{
 		1, 2, 3,
@@ -427,7 +427,7 @@ func TestAddSpan(t *testing.T) {
 }
 
 func TestRasterizeTriangle(t *testing.T) {
-	var ctx Context
+	var ctx BuildContext
 	verts := []float32{
 		0, 0, 0,
 		1, 0, 0,
@@ -474,7 +474,7 @@ func TestRasterizeTriangle(t *testing.T) {
 }
 
 func TestRasterizeTriangles(t *testing.T) {
-	var ctx Context
+	var ctx BuildContext
 	verts := []float32{
 		0, 0, 0,
 		1, 0, 0,
