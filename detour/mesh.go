@@ -730,9 +730,10 @@ func (m *NavMesh) queryPolygonsInTile(
 
 	}
 
-	bmin := d3.NewVec3()
-	bmax := d3.NewVec3()
-	var n, i int32
+	var (
+		bmin, bmax [3]float32
+		n, i       int32
+	)
 	base := m.polyRefBase(tile)
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		p := &tile.Polys[i]
@@ -742,15 +743,15 @@ func (m *NavMesh) queryPolygonsInTile(
 		}
 		// Calc polygon bounds.
 		v := tile.Verts[p.Verts[0]*3 : 3]
-		bmin.Assign(v)
-		bmax.Assign(v)
+		d3.Vec3(bmin[:]).Assign(v)
+		d3.Vec3(bmax[:]).Assign(v)
 		var j uint8
 		for j = 1; j < p.VertCount; j++ {
 			v = tile.Verts[p.Verts[j]*3 : 3]
-			d3.Vec3Min(bmin, v)
-			d3.Vec3Max(bmax, v)
+			d3.Vec3Min(bmin[:], v)
+			d3.Vec3Max(bmax[:], v)
 		}
-		if OverlapBounds(qmin, qmax, bmin, bmax) {
+		if OverlapBounds(qmin, qmax, bmin[:], bmax[:]) {
 			if n < maxPolys {
 				n++
 				polys[n] = base | PolyRef(i)
