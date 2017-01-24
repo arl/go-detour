@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/aurelien-rainone/assertgo"
-	detour "github.com/aurelien-rainone/go-detour"
+	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
