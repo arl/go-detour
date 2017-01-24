@@ -547,9 +547,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		}
 	}
 
-	// Calculate data size
-	// TODO: to be removed once writing is working and checked
-	// we don't need the size, we just write
+	// Calculate data size in order to allocate buffer
 	headerSize := aligned.AlignN(int(unsafe.Sizeof(MeshHeader{})), 4)
 	vertsSize := aligned.AlignN(int(4*3*totVertCount), 4)
 	polysSize := aligned.AlignN(int(unsafe.Sizeof(Poly{})*uintptr(totPolyCount)), 4)
@@ -563,8 +561,6 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	}
 	offMeshConsSize := aligned.AlignN(int(unsafe.Sizeof(OffMeshConnection{})*uintptr(storedOffMeshConCount)), 4)
 
-	// TODO: dataSize will be used to check that the length of the written
-	// buffer is what we expect
 	dataSize := headerSize + vertsSize + polysSize + linksSize +
 		detailMeshesSize + detailVertsSize + detailTrisSize +
 		bvTreeSize + offMeshConsSize
@@ -788,7 +784,6 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	}
 
 	err := SerializeTile(bufw.Next(dataSize-headerSize),
-		//err := SerializeTile(buf[headerSize:],
 		navVerts,
 		navPolys,
 		make([]Link, maxLinkCount),
