@@ -2,6 +2,7 @@ package detour
 
 import (
 	"encoding/binary"
+	"io"
 	"math"
 )
 
@@ -12,8 +13,12 @@ type navMeshSetHeader struct {
 	Params   NavMeshParams
 }
 
-func (s *navMeshSetHeader) Serialize(dst []byte) int {
-	if len(dst) < 100 {
+func (s *navMeshSetHeader) Size() int {
+	return 12 + s.Params.Size()
+}
+
+func (s *navMeshSetHeader) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
 		panic("undersized buffer for navMeshSetHeader")
 	}
 	var (
@@ -26,7 +31,14 @@ func (s *navMeshSetHeader) Serialize(dst []byte) int {
 	little.PutUint32(dst[off+4:], uint32(s.Version))
 	little.PutUint32(dst[off+8:], uint32(s.NumTiles))
 	s.Params.Serialize(dst[off+12:])
-	return 44
+}
+
+func (s *navMeshSetHeader) WriteTo(w io.Writer) (int64, error) {
+	buf := make([]byte, s.Size())
+	s.Serialize(buf)
+
+	n, err := w.Write(buf)
+	return int64(n), err
 }
 
 // NavMeshParams contains the configuration parameters used to define
@@ -42,8 +54,12 @@ type NavMeshParams struct {
 	MaxPolys   uint32     // The maximum number of polygons each tile can contain.
 }
 
-func (s *NavMeshParams) Serialize(dst []byte) int {
-	if len(dst) < 28 {
+func (s *NavMeshParams) Size() int {
+	return 28
+}
+
+func (s *NavMeshParams) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
 		panic("undersized buffer for navMeshSetHeader")
 	}
 	var (
@@ -59,7 +75,6 @@ func (s *NavMeshParams) Serialize(dst []byte) int {
 	little.PutUint32(dst[off+16:], uint32(math.Float32bits(s.TileHeight)))
 	little.PutUint32(dst[off+20:], uint32(s.MaxTiles))
 	little.PutUint32(dst[off+24:], uint32(s.MaxPolys))
-	return 28
 }
 
 // MeshHeader provides high level information related to a MeshTile object.
@@ -87,8 +102,12 @@ type MeshHeader struct {
 	BvQuantFactor   float32    // The bounding volume quantization factor.
 }
 
-func (s *MeshHeader) Serialize(dst []byte) int {
-	if len(dst) < 100 {
+func (s *MeshHeader) Size() int {
+	return 100
+}
+
+func (s *MeshHeader) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
 		panic("undersized buffer for MeshHeader")
 	}
 	var (
@@ -122,11 +141,10 @@ func (s *MeshHeader) Serialize(dst []byte) int {
 	little.PutUint32(dst[off+88:], uint32(math.Float32bits(s.Bmax[1])))
 	little.PutUint32(dst[off+92:], uint32(math.Float32bits(s.Bmax[2])))
 	little.PutUint32(dst[off+96:], uint32(math.Float32bits(s.BvQuantFactor)))
-	return 100
 }
 
-func (s *MeshHeader) Unserialize(src []byte) int {
-	if len(src) < 100 {
+func (s *MeshHeader) Unserialize(src []byte) {
+	if len(src) < s.Size() {
 		panic("undersized buffer for MeshHeader")
 	}
 	var (
@@ -160,7 +178,6 @@ func (s *MeshHeader) Unserialize(src []byte) int {
 	s.Bmax[1] = math.Float32frombits(little.Uint32(src[off+88:]))
 	s.Bmax[2] = math.Float32frombits(little.Uint32(src[off+92:]))
 	s.BvQuantFactor = math.Float32frombits(little.Uint32(src[off+96:]))
-	return 100
 }
 
 // MeshTile defines a navigation mesh tile.

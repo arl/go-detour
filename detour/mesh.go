@@ -49,7 +49,9 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		header.NumTiles++
 	}
 	header.Params = m.Params
-	if err = binary.Write(f, binary.LittleEndian, header); err != nil {
+
+	if _, err = header.WriteTo(f); err != nil {
+		fmt.Println(err)
 		return err
 	}
 
@@ -63,11 +65,11 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		var tileHeader navMeshTileHeader
 		tileHeader.TileRef = m.TileRef(tile)
 		tileHeader.DataSize = tile.DataSize
-		if err = binary.Write(f, binary.LittleEndian, tileHeader); err != nil {
+		if _, err = tileHeader.WriteTo(f); err != nil {
 			return err
 		}
 
-		if err = binary.Write(f, binary.LittleEndian, tile.Data); err != nil {
+		if _, err = f.Write(tile.Data); err != nil {
 			return err
 		}
 	}

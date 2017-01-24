@@ -15,6 +15,32 @@ type navMeshTileHeader struct {
 	DataSize int32
 }
 
+func (s *navMeshTileHeader) Size() int {
+	return 8
+}
+
+func (s *navMeshTileHeader) WriteTo(w io.Writer) (int64, error) {
+	buf := make([]byte, s.Size())
+	s.Serialize(buf)
+
+	n, err := w.Write(buf)
+	return int64(n), err
+}
+
+func (s *navMeshTileHeader) Serialize(dst []byte) {
+	if len(dst) < s.Size() {
+		panic("undersized buffer for navMeshTileHeader")
+	}
+	var (
+		little = binary.LittleEndian
+		off    int
+	)
+
+	// write each field as little endian
+	little.PutUint32(dst[off:], uint32(s.TileRef))
+	little.PutUint32(dst[off+4:], uint32(s.DataSize))
+}
+
 // Decode reads a tiled navigation mesh from r and returns the loaded NavMesh
 // object or nil and an error in case of failure.
 func Decode(r io.Reader) (*NavMesh, error) {
