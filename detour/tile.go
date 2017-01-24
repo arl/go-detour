@@ -87,7 +87,7 @@ func SerializeTile(dst []byte,
 	offMeshCons []OffMeshConnection,
 ) error {
 	var (
-		little littleEndian
+		little = binary.LittleEndian
 		off    int
 	)
 	for _, f := range verts {

@@ -1,6 +1,9 @@
 package detour
 
-import "math"
+import (
+	"encoding/binary"
+	"math"
+)
 
 type navMeshSetHeader struct {
 	Magic    int32
@@ -52,7 +55,7 @@ func (s *MeshHeader) Serialize(dst []byte) int {
 		panic("undersized buffer for MeshHeader")
 	}
 	var (
-		little littleEndian
+		little = binary.LittleEndian
 		off    int
 	)
 
