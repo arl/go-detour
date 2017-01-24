@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"unsafe"
@@ -540,26 +539,6 @@ type PolyDetail struct {
 	TriBase   uint32 // The offset of the triangles in the MeshTile.DetailTris slice.
 	VertCount uint8  // The number of vertices in the sub-mesh.
 	TriCount  uint8  // The number of triangles in the sub-mesh.
-}
-
-func (s *PolyDetail) WriteTo(w io.Writer) (n int64, err error) {
-	// write each field as little endian
-	binary.Write(w, binary.LittleEndian, s.VertBase)
-	binary.Write(w, binary.LittleEndian, s.TriBase)
-	binary.Write(w, binary.LittleEndian, s.VertCount)
-	binary.Write(w, binary.LittleEndian, s.TriCount)
-	// TODO: do not hard-code this
-	return 12, nil
-}
-
-func (s *PolyDetail) ReadFrom(r io.Reader) (n int64, err error) {
-	// read each field as little endian
-	binary.Read(r, binary.LittleEndian, &s.VertBase)
-	binary.Read(r, binary.LittleEndian, &s.TriBase)
-	binary.Read(r, binary.LittleEndian, &s.VertCount)
-	binary.Read(r, binary.LittleEndian, &s.TriCount)
-	// TODO: do not hard-code this
-	return 12, nil
 }
 
 // Bounding volume node.
