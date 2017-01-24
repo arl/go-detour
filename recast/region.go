@@ -2,25 +2,25 @@ package recast
 
 import "github.com/aurelien-rainone/assertgo"
 
-/// @par
-///
-/// Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
-/// Contours will form simple polygons.
-///
-/// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
-/// re-assigned to the zero (null) region.
-///
-/// Partitioning can result in smaller than necessary regions. @p mergeRegionArea helps
-/// reduce unecessarily small regions.
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// The region data will be available via the rcCompactHeightfield::maxRegions
-/// and rcCompactSpan::reg fields.
-///
-/// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
-///
-/// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+// Non-null regions will consist of connected, non-overlapping walkable spans
+// that form a single contour.  Contours will form simple polygons.
+//
+// If multiple regions form an area that is smaller than `minRegionArea`, then
+// all spans will be re-assigned to the zero (null) region.
+//
+// Partitioning can result in smaller than necessary regions. `mergeRegionArea`
+// helps reduce unecessarily small regions.
+//
+// See the Config documentation for more information on the configuration
+// parameters.
+//
+// The region data will be available via the CompactHeightfield.maxRegions
+// and CompactSpan.reg fields.
+//
+// Warning: the distance field must be created using BuildDistanceField
+// before attempting to build regions.
+//
+// see CompactHeightfield, CompactSpan, BuildDistanceField, BuildRegionsMonotone, Config
 func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
