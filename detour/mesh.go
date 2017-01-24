@@ -346,7 +346,7 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 		i    int32
 		base PolyRef
 	)
-	base = m.getPolyRefBase(tile)
+	base = m.polyRefBase(tile)
 
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		poly := &tile.Polys[i]
@@ -380,18 +380,18 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 	}
 }
 
-// getPolyRefBase returns the polygon reference for the base polygon in the
+// polyRefBase returns the polygon reference for the base polygon in the
 // specified tile.
 //
 // Example use case:
-//  base := navmesh.GetPolyRefBase(tile);
+//  base := navmesh.polyRefBase(tile);
 //  for i = 0; i < tile.Header.PolyCount; i++ {
 //      poly = &tile.polys[i]
 //      ref := base | PolyRef(i)
 //
 //      // Use the reference to access the polygon data.
 //  }
-func (m *NavMesh) getPolyRefBase(tile *MeshTile) PolyRef {
+func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 	if tile == nil {
 		return 0
 	}
@@ -562,7 +562,7 @@ func (m *NavMesh) baseOffMeshLinks(tile *MeshTile) {
 		base PolyRef
 	)
 
-	base = m.getPolyRefBase(tile)
+	base = m.polyRefBase(tile)
 
 	// Base off-mesh connection start points.
 	for i = 0; i < tile.Header.OffMeshConCount; i++ {
@@ -708,7 +708,7 @@ func (m *NavMesh) queryPolygonsInTile(
 		bmax[2] = uint16(uint32(qfac*maxz+1) | 1)
 
 		// Traverse tree
-		base := m.getPolyRefBase(tile)
+		base := m.polyRefBase(tile)
 		var n int32
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
@@ -737,7 +737,7 @@ func (m *NavMesh) queryPolygonsInTile(
 	bmin := d3.NewVec3()
 	bmax := d3.NewVec3()
 	var n, i int32
-	base := m.getPolyRefBase(tile)
+	base := m.polyRefBase(tile)
 	for i = 0; i < tile.Header.PolyCount; i++ {
 		p := &tile.Polys[i]
 		// Do not return off-mesh connection polygons.
@@ -977,7 +977,7 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 				landPolyIdx := uint16(m.decodePolyIDPoly(ref))
 				landPoly := &tile.Polys[landPolyIdx]
 				link := &tile.Links[tidx]
-				link.Ref = m.getPolyRefBase(target) | PolyRef(targetCon.Poly)
+				link.Ref = m.polyRefBase(target) | PolyRef(targetCon.Poly)
 				link.Edge = 0xff
 				if side == -1 {
 					link.Side = 0xff
@@ -1119,7 +1119,7 @@ func (m *NavMesh) findConnectingPolys(
 	l := extLink | uint16(side)
 	var n int32
 
-	base := m.getPolyRefBase(tile)
+	base := m.polyRefBase(tile)
 
 	var i int32
 	for i = 0; i < tile.Header.PolyCount; i++ {
