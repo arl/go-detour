@@ -829,7 +829,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 	*nverts = nin
 
 	for i := int32(0); i < nin; i++ {
-		copy(verts[i*3:], in[i*3:])
+		copy(verts[i*3:], in[i*3:3+i*3])
 	}
 
 	*edges = make([]int32, 0)
@@ -906,7 +906,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 				}
 				// If the max deviation is larger than accepted error,
 				// add new point, else continue to next segment.
-				if maxi != -1 && maxd > math32.Sqrt(sampleMaxError) {
+				if maxi != -1 && maxd > math32.Sqr(sampleMaxError) {
 					for m := nidx; m > k; m-- {
 						idx[m] = idx[m-1]
 					}
