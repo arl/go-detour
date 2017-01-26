@@ -635,10 +635,6 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 
 	var i int32
 	for j := nhull - 1; i < nhull; i++ {
-		panic("THERE'S A CHECK TO DO with addEdge")
-		// TODO/AR: check that edges[0] is modified if necessary when calling
-		// addEdge. In case it's not working, there are other cases, just below
-		// in this function (look for ARaddEdge)
 		addEdge(ctx, (*edges)[:], &nedges, maxEdges, hull[j], hull[i], EV_HULL, EV_UNDEF)
 		j = i
 	}
