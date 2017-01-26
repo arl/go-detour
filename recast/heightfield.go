@@ -45,7 +45,7 @@ type Heightfield struct {
 	Freelist *rcSpan     // The next free span.
 }
 
-// See the #rcConfig documentation for more information on the configuration parameters.
+// See the Config documentation for more information on the configuration parameters.
 func NewHeightfield(width, height int32, bmin, bmax []float32, cs, ch float32) *Heightfield {
 	hf := &Heightfield{
 		Width:  width,
