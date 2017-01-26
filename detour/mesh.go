@@ -12,7 +12,7 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-// NavMesh is a navigation mesh based on tiles of convex polygons.
+// A NavMesh is a navigation mesh based on tiles of convex polygons.
 type NavMesh struct {
 	Params                NavMeshParams // Current initialization params. TODO: do not store this info twice.
 	Orig                  d3.Vec3       // Origin of the tile (0,0)
@@ -28,6 +28,7 @@ type NavMesh struct {
 	polyBits              uint32        // Number of poly bits in the tile ID.
 }
 
+// SaveToFile saves the navigation mesh as a binary file.
 func (m *NavMesh) SaveToFile(fn string) error {
 	f, err := os.Create(fn)
 	if err != nil {
@@ -75,10 +76,12 @@ func (m *NavMesh) SaveToFile(fn string) error {
 
 // InitForSingleTile set up the navigation mesh for single tile use.
 //
-//  param[in]	data		Data of the new tile. (See: #CreateNavMeshData)
-//  param[in]	dataSize	The data size of the new tile.
-//  param[in]	flags		The tile flags. (See: #TileFlags)
-// return The status flags for the operation.
+//  Arguments:
+//   data     Data of the new tile. (See: CreateNavMeshData)
+//   dataSize The data size of the new tile.
+//   flags    The tile flags. (See: TileFlags)
+//
+// Return The status flags for the operation.
 //  see CreateNavMeshData
 func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	var header MeshHeader

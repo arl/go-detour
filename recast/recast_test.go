@@ -12,7 +12,7 @@ func require(t *testing.T, exp bool, err string) {
 	}
 }
 
-func TestiMin(t *testing.T) {
+func TestIMin(t *testing.T) {
 	ttable := []struct {
 		a, b, res int32
 	}{
@@ -29,7 +29,7 @@ func TestiMin(t *testing.T) {
 	}
 }
 
-func TestiMax(t *testing.T) {
+func TestIMax(t *testing.T) {
 	ttable := []struct {
 		a, b, res int32
 	}{
@@ -46,7 +46,7 @@ func TestiMax(t *testing.T) {
 	}
 }
 
-func TestiAbs(t *testing.T) {
+func TestIAbs(t *testing.T) {
 	ttable := []struct {
 		a, res int32
 	}{

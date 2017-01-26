@@ -44,7 +44,8 @@ func (s *navMeshSetHeader) WriteTo(w io.Writer) (int64, error) {
 // NavMeshParams contains the configuration parameters used to define
 // multi-tile navigation meshes.
 //
-// The values are used to allocate space during the initialization of a navigation mesh.
+// The values are used to allocate space during the initialization of a
+// navigation mesh.
 // see NavMesh.init()
 type NavMeshParams struct {
 	Orig       [3]float32 // The world space origin of the navigation mesh's tile space. [(x, y, z)]
@@ -54,13 +55,17 @@ type NavMeshParams struct {
 	MaxPolys   uint32     // The maximum number of polygons each tile can contain.
 }
 
+// Size returns the size of the serialized structure.
 func (s *NavMeshParams) Size() int {
 	return 28
 }
 
+// Serialize encodes the structure content into dst.
+//
+// The function panics is the destination slice is too small.
 func (s *NavMeshParams) Serialize(dst []byte) {
 	if len(dst) < s.Size() {
-		panic("undersized buffer for navMeshSetHeader")
+		panic("destination slice is too small")
 	}
 	var (
 		little = binary.LittleEndian

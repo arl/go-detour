@@ -5,14 +5,22 @@ import (
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
-/// @par
-///
-/// Basically, any spans that are closer to a boundary or obstruction than the specified radius
-/// are marked as unwalkable.
-///
-/// This method is usually called immediately after the heightfield has been built.
-///
-/// @see rcCompactHeightfield, rcBuildCompactHeightfield, rcConfig::walkableRadius
+// ErodeWalkableArea erodes the walkable area within the heightfield by the
+//specified radius.
+//
+//  Arguments:
+//   ctx     The build context to use during the operation.
+//   radius  The radius of erosion. [Limits: 0 < value < 255] [Units: vx]
+//   chf     The populated compact heightfield to erode.
+//
+// Returns true if the operation completed successfully.
+//
+// Basically, any spans that are closer to a boundary or obstruction than the
+// specified radius are marked as unwalkable.
+//
+// This method is usually called immediately after the heightfield has been
+// built.
+// see CompactHeightfield, BuildCompactHeightfield, Config.WalkableRadius
 func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
@@ -186,14 +194,24 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	return true
 }
 
-/// @par
-///
-/// The value of spacial parameters are in world units.
-///
-/// The y-values of the polygon vertices are ignored. So the polygon is effectively
-/// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
-///
-/// @see rcCompactHeightfield, rcMedianFilterWalkableArea
+// MarkConvexPolyArea applies the area id to the all spans within the specified
+// convex polygon.
+//
+//  Arguments:
+//   ctx     The build context to use during the operation.
+//   verts   The vertices of the polygon [Fomr: (x, y, z) * @p nverts]
+//   nverts  The number of vertices in the polygon.
+//   hmin    The height of the base of the polygon.
+//   hmax    The height of the top of the polygon.
+//   areaId  The area id to apply. [Limit: <= RC_WALKABLE_AREA]
+//   chf     A populated compact heightfield.
+//
+// The value of spacial parameters are in world units.
+//
+// The y-values of the polygon vertices are ignored. So the polygon is
+// effectively projected onto the xz-plane at hmin, then extruded to hmax.
+//
+// See CompactHeightfield, MedianFilterWalkableArea
 func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 	hmin, hmax float32, areaId uint8, chf *CompactHeightfield) {
 
@@ -201,7 +219,6 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 
 	ctx.StartTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
 	defer ctx.StopTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
-
 	var bmin, bmax [3]float32
 	copy(bmin[:], verts[:3])
 	copy(bmax[:], verts[:3])

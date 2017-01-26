@@ -207,25 +207,25 @@ type CompactSpan struct {
 	H   uint8  // The height of the span.  (Measured from #y.)
 }
 
-/// A compact, static heightfield representing unobstructed space.
-/// @ingroup recast
+// A CompactHeightfield is a compact, static heightfield representing
+// unobstructed space.
 type CompactHeightfield struct {
 	Width          int32          // The width of the heightfield. (Along the x-axis in cell units.)
 	Height         int32          // The height of the heightfield. (Along the z-axis in cell units.)
 	SpanCount      int32          // The number of spans in the heightfield.
-	WalkableHeight int32          // The walkable height used during the build of the field.  (See: rcConfig::walkableHeight)
-	WalkableClimb  int32          // The walkable climb used during the build of the field. (See: rcConfig::walkableClimb)
-	BorderSize     int32          // The AABB border size used during the build of the field. (See: rcConfig::borderSize)
+	WalkableHeight int32          // The walkable height used during the build of the field.  (See: Config.walkableHeight)
+	WalkableClimb  int32          // The walkable climb used during the build of the field. (See: Config.walkableClimb)
+	BorderSize     int32          // The AABB border size used during the build of the field. (See: Config.borderSize)
 	MaxDistance    uint16         // The maximum distance value of any span within the field.
 	MaxRegions     uint16         // The maximum region id of any span within the field.
 	BMin           [3]float32     // The minimum bounds in world space. [(x, y, z)]
 	BMax           [3]float32     // The maximum bounds in world space. [(x, y, z)]
 	Cs             float32        // The size of each cell. (On the xz-plane.)
 	Ch             float32        // The height of each cell. (The minimum increment along the y-axis.)
-	Cells          []*CompactCell // Array of cells. [Size: #width*#height]
-	Spans          []*CompactSpan // Array of spans. [Size: #spanCount]
-	Dist           []uint16       // Array containing border distance data. [Size: #spanCount]
-	Areas          []uint8        // Array containing area id data. [Size: #spanCount]
+	Cells          []*CompactCell // Array of cells. [Size: width*height]
+	Spans          []*CompactSpan // Array of spans. [Size: SpanCount]
+	Dist           []uint16       // Array containing border distance data. [Size: SpanCount]
+	Areas          []uint8        // Array containing area id data. [Size: SpanCount]
 }
 
 func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
@@ -244,13 +244,13 @@ func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
 	return spanCount
 }
 
-/// This is just the beginning of the process of fully building a compact heightfield.
-/// Various filters may be applied, then the distance field and regions built.
-/// E.g: #rcBuildDistanceField and #rcBuildRegions
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocCompactHeightfield, rcHeightfield, rcCompactHeightfield, rcConfig
+// This is just the beginning of the process of fully building a compact heightfield.
+// Various filters may be applied, then the distance field and regions built.
+// E.g: BuildDistanceField and cBuildRegions
+//
+// See the cConfig documentation for more information on the configuration parameters.
+//
+// see Heightfield, CompactHeightfield, Config
 func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb int32,
 	hf *Heightfield, chf *CompactHeightfield) bool {
 

@@ -329,20 +329,20 @@ type NavMeshCreateParams struct {
 	// Used to create the base navigation graph.
 	// See recast.PolyMesh for details related to these attributes.
 
-	Verts     []uint16 // The polygon mesh vertices. [(x, y, z) * #vertCount] [Unit: vx]
+	Verts     []uint16 // The polygon mesh vertices. [(x, y, z) * vertCount] [Unit: vx]
 	VertCount int32    // The number vertices in the polygon mesh. [Limit: >= 3]
-	Polys     []uint16 // The polygon data. [Size: #polyCount * 2 * #nvp]
-	PolyFlags []uint16 // The user defined flags assigned to each polygon. [Size: #polyCount]
-	PolyAreas []uint8  // The user defined area ids assigned to each polygon. [Size: #polyCount]
+	Polys     []uint16 // The polygon data. [Size: polyCount * 2 * nvp]
+	PolyFlags []uint16 // The user defined flags assigned to each polygon. [Size: polyCount]
+	PolyAreas []uint8  // The user defined area ids assigned to each polygon. [Size: polyCount]
 	PolyCount int32    // Number of polygons in the mesh. [Limit: >= 1]
 	Nvp       int32    // Number maximum number of vertices per polygon. [Limit: >= 3]
 
 	// Height Detail Attributes (Optional)
 	// See #recast.PolyMeshDetail for details related to these attributes.
-	DetailMeshes     []int32   // The height detail sub-mesh data. [Size: 4 * #polyCount]
-	DetailVerts      []float32 // The detail mesh vertices. [Size: 3 * #detailVertsCount] [Unit: wu]
+	DetailMeshes     []int32   // The height detail sub-mesh data. [Size: 4 * polyCount]
+	DetailVerts      []float32 // The detail mesh vertices. [Size: 3 * detailVertsCount] [Unit: wu]
 	DetailVertsCount int32     // The number of vertices in the detail mesh.
-	DetailTris       []uint8   // The detail mesh triangles. [Size: 4 * #detailTriCount]
+	DetailTris       []uint8   // The detail mesh triangles. [Size: 4 * detailTriCount]
 	DetailTriCount   int32     // The number of triangles in the detail mesh.
 
 	// Off-Mesh Connections Attributes (Optional)
@@ -350,34 +350,33 @@ type NavMeshCreateParams struct {
 	// off-mesh connection is a user defined traversable connection made up to two vertices,
 	// at least one of which resides within a navigation mesh polygon.
 
-	// Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * #offMeshConCount] [Unit: wu]
+	// Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * offMeshConCount] [Unit: wu]
 	OffMeshConVerts []float32
-	// Off-mesh connection radii. [Size: #offMeshConCount] [Unit: wu]
+	// Off-mesh connection radii. [Size: offMeshConCount] [Unit: wu]
 	OffMeshConRad []float32
-	// User defined flags assigned to the off-mesh connections. [Size: #offMeshConCount]
+	// User defined flags assigned to the off-mesh connections. [Size: offMeshConCount]
 	OffMeshConFlags []uint16
-	// User defined area ids assigned to the off-mesh connections. [Size: #offMeshConCount]
+	// User defined area ids assigned to the off-mesh connections. [Size: offMeshConCount]
 	OffMeshConAreas []uint8
-	// The permitted travel direction of the off-mesh connections. [Size: #offMeshConCount]
+	// The permitted travel direction of the off-mesh connections. [Size: offMeshConCount]
 	//
 	// 0 = Travel only from endpoint A to endpoint B.<br/>
-	// #DT_OFFMESH_CON_BIDIR = Bidirectional travel.
+	// OffMeshConBiDir = Bidirectional travel.
 	OffMeshConDir []uint8
-	// The user defined ids of the off-mesh connection. [Size: #offMeshConCount]
+	// The user defined ids of the off-mesh connection. [Size: offMeshConCount]
 	OffMeshConUserID []uint32
 	// The number of off-mesh connections. [Limit: >= 0]
 	OffMeshConCount int32
 
 	// Tile Attributes
 	// note The tile grid/layer data can be left at zero if the destination is a single tile mesh.
-	// @{
 
-	UserID    uint32     ///< The user defined id of the tile.
-	TileX     int32      ///< The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.)
-	TileY     int32      ///< The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.)
-	TileLayer int32      ///< The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.)
-	BMin      [3]float32 ///< The minimum bounds of the tile. [(x, y, z)] [Unit: wu]
-	BMax      [3]float32 ///< The maximum bounds of the tile. [(x, y, z)] [Unit: wu]
+	UserID    uint32     // The user defined id of the tile.
+	TileX     int32      // The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.)
+	TileY     int32      // The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.)
+	TileLayer int32      // The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.)
+	BMin      [3]float32 // The minimum bounds of the tile. [(x, y, z)] [Unit: wu]
+	BMax      [3]float32 // The maximum bounds of the tile. [(x, y, z)] [Unit: wu]
 
 	// General Configuration Attributes
 
