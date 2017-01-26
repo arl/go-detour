@@ -350,12 +350,10 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 	)
 	verts = make([]float32, 256*3)
 
-	//rcScopedDelete<int> bounds((int*)rcAlloc(sizeof(int)*mesh.npolys*4, RC_ALLOC_TEMP));
 	bounds := make([]*int32, mesh.NPolys*4)
 	for i := range bounds {
 		bounds[i] = new(int32)
 	}
-	//rcScopedDelete<float> poly((float*)rcAlloc(sizeof(float)*nvp*3, RC_ALLOC_TEMP));
 	poly := make([]float32, nvp*3)
 
 	// Find max size for a polygon area.
