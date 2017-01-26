@@ -69,6 +69,14 @@ func TestCreateCubeNavMesh(t *testing.T) {
 	testCreateSoloNavMesh(t, "cube")
 }
 
+func TestCreateCube5DegreesNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "cube5xdeg")
+}
+
+func TestCreateCube45DegreesNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "cube45xdeg")
+}
+
 func benchmarkCreateNavMesh(b *testing.B, meshname string) {
 	meshName := "testdata/" + meshname + ".obj"
 
