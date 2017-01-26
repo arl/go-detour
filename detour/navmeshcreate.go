@@ -703,12 +703,12 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 			ndv := uint8(params.DetailMeshes[i*4+1])
 			nv := navPolys[i].VertCount
 			dtl.VertBase = uint32(vbase)
-			dtl.VertCount = ndv - nv
+			dtl.VertCount = uint8(ndv - nv)
 			dtl.TriBase = uint32(params.DetailMeshes[i*4+2])
 			dtl.TriCount = uint8(params.DetailMeshes[i*4+3])
 			// Copy vertices except the first 'nv' verts which are equal to nav poly verts.
 			if ndv-nv != 0 {
-				start, length := (vb+nv)*3, 3*(ndv-nv)
+				start, length := int32(vb+nv)*3, 3*int32(ndv-nv)
 				copy(navDVerts[vbase*3:], params.DetailVerts[start:start+length])
 				vbase += uint16(ndv - nv)
 			}
