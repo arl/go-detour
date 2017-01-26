@@ -128,13 +128,7 @@ func TestCreateHeightfield(t *testing.T) {
 	cellHeight := float32(2)
 
 	w, h := CalcGridSize(bmin, bmax, cellSize)
-
-	var hf Heightfield
-	result := hf.Create(nil, w, h, bmin[:], bmax[:], cellSize, cellHeight)
-
-	if !result {
-		t.Fatalf("result should be true")
-	}
+	hf := NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 
 	if hf.Width != w {
 		t.Fatalf("should have heightfield.width == width")
@@ -261,8 +255,6 @@ func TestClearUnwalkableTriangles(t *testing.T) {
 }
 
 func TestAddSpan(t *testing.T) {
-	var ctx *BuildContext
-
 	verts := []float32{
 		1, 2, 3,
 		0, 2, 6,
@@ -276,7 +268,7 @@ func TestAddSpan(t *testing.T) {
 	w, h := CalcGridSize(bmin, bmax, cellSize)
 
 	var (
-		hf           Heightfield
+		hf           *Heightfield
 		x, y         int32
 		smin, smax   uint16
 		area         uint8
@@ -285,11 +277,7 @@ func TestAddSpan(t *testing.T) {
 
 	testSetup := func() {
 
-		res := hf.Create(ctx, w, h, bmin[:], bmax[:], cellSize, cellHeight)
-		if !res {
-			t.Fatalf("Heightfield should have been successfully created")
-		}
-
+		hf = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 		x, y = 0, 0
 		smin, smax = 0, 1
 		area = 42
@@ -441,16 +429,13 @@ func TestRasterizeTriangle(t *testing.T) {
 
 	w, h := CalcGridSize(bmin, bmax, cellSize)
 
-	var solid Heightfield
-	res := solid.Create(&ctx, w, h, bmin[:], bmax[:], cellSize, cellHeight)
-	if !res {
-		t.Fatalf("Heightfield should have been successfully created")
-	}
+	var solid *Heightfield
+	solid = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 
 	area := uint8(42)
 	flagMergeThr := int32(1)
 
-	res = RasterizeTriangle(&ctx, verts[0:3], verts[3:6], verts[6:9], area, &solid, flagMergeThr)
+	RasterizeTriangle(&ctx, verts[0:3], verts[3:6], verts[6:9], area, solid, flagMergeThr)
 
 	require(t, solid.Spans[0+0*w] != nil, "solid.Spans[0+0*w]")
 	require(t, solid.Spans[1+0*w] == nil, "!solid.Spans[1+0*w]")
@@ -498,18 +483,15 @@ func TestRasterizeTriangles(t *testing.T) {
 	w, h := CalcGridSize(bmin, bmax, cellSize)
 
 	var (
-		solid        Heightfield
+		solid        *Heightfield
 		flagMergeThr int32
 	)
-	res := solid.Create(&ctx, w, h, bmin[:], bmax[:], cellSize, cellHeight)
-	if !res {
-		t.Fatalf("Heightfield should have been successfully created")
-	}
+	solid = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 
 	flagMergeThr = 1
 
 	// SECTION("Rasterize some triangles")
-	res = RasterizeTriangles(&ctx, verts, 4, tris, areas, 2, &solid, flagMergeThr)
+	res := RasterizeTriangles(&ctx, verts, 4, tris, areas, 2, solid, flagMergeThr)
 	if !res {
 		t.Fatalf("result should be true")
 	}
@@ -558,7 +540,7 @@ func TestRasterizeTriangles(t *testing.T) {
 		0, 1, 2,
 		0, 3, 1,
 	}
-	res = RasterizeTriangles(&ctx, verts, 4, utris, areas, 2, &solid, flagMergeThr)
+	res = RasterizeTriangles(&ctx, verts, 4, utris, areas, 2, solid, flagMergeThr)
 	if !res {
 		t.Fatalf("result should be true")
 	}
@@ -612,7 +594,7 @@ func TestRasterizeTriangles(t *testing.T) {
 		1, 0, 0,
 	}
 
-	res = RasterizeTriangles2(&ctx, vertsList, areas, 2, &solid, flagMergeThr)
+	res = RasterizeTriangles2(&ctx, vertsList, areas, 2, solid, flagMergeThr)
 	if !res {
 		t.Fatalf("result should be true")
 	}
