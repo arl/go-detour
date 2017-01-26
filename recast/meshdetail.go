@@ -796,12 +796,12 @@ func triangulateHull(nverts int32, verts []float32, nhull int32, hull []int32, t
 	}
 }
 
-func getJitterX(i int64) float32 {
-	return float32(((i*0x8da6b343)&0xffff)/65535.0*2.0) - 1.0
+func jitterX(i int64) float32 {
+	return (float32((i*0x8da6b343)&0xffff) / float32(65535.0) * float32(2.0)) - float32(1.0)
 }
 
-func getJitterY(i int64) float32 {
-	return float32(((i*0xd8163841)&0xffff)/65535.0*2.0) - 1.0
+func jitterY(i int64) float32 {
+	return (float32((i*0xd8163841)&0xffff) / float32(65535.0) * float32(2.0)) - float32(1.0)
 }
 
 func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
@@ -1009,9 +1009,9 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 				var pt [3]float32
 				// The sample location is jittered to get rid of some bad triangulations
 				// which are cause by symmetrical data from the grid structure.
-				pt[0] = float32(s[0])*sampleDist + getJitterX(int64(i))*cs*0.1
+				pt[0] = float32(s[0])*sampleDist + jitterX(int64(i))*cs*0.1
 				pt[1] = float32(s[1]) * chf.Ch
-				pt[2] = float32(s[2])*sampleDist + getJitterY(int64(i))*cs*0.1
+				pt[2] = float32(s[2])*sampleDist + jitterY(int64(i))*cs*0.1
 				d := distToTriMesh(pt[:], verts, *nverts, *tris, int32(len(*tris)/4))
 				if d < 0 {
 					continue // did not hit the mesh.
