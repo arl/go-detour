@@ -653,7 +653,6 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 	}
 
 	// Create tris
-	//tris.resize(nfaces*4);
 	*tris = make([]int32, nfaces*4)
 	for i := int32(0); i < nfaces*4; i++ {
 		(*tris)[i] = -1
@@ -1023,6 +1022,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 					copy(bestpt[:], pt[:])
 				}
 			}
+
 			// If the max error is within accepted threshold, stop tesselating.
 			if bestd <= sampleMaxError || besti == -1 {
 				break
@@ -1035,8 +1035,6 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 
 			// Create new triangulation.
 			// TODO: Incremental add instead of full rebuild.
-			//edges.resize(0)
-			//tris.resize(0)
 			*edges = make([]int32, 0)
 			*tris = make([]int32, 0)
 			delaunayHull(ctx, *nverts, verts, nhull, hull[:], tris, edges)

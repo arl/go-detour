@@ -278,28 +278,12 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 		chf.Cells[i] = new(CompactCell)
 	}
 
-	//if len(chf.cells) == 0 {
-	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.cells' (%d)", w*h)
-	//return false
-	//}
-	//memset(chf.cells, 0, sizeof(rcCompactCell)*w*h)
 	chf.Spans = make([]*CompactSpan, spanCount)
 	for i := range chf.Spans {
 		chf.Spans[i] = new(CompactSpan)
 	}
 
-	//fmt.Println("spanCount", spanCount)
-	//if len(chf.spans) == 0 {
-	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.spans' (%d)", spanCount)
-	//return false
-	//}
-	//memset(chf.spans, 0, sizeof(rcCompactSpan)*spanCount);
 	chf.Areas = make([]uint8, spanCount)
-	//if len(chf.areas) == 0 {
-	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.areas' (%d)", spanCount)
-	//return false
-	//}
-	//memset(chf.areas, RC_NULL_AREA, sizeof(unsigned char)*spanCount);
 	for i := range chf.Areas {
 		chf.Areas[i] = RC_NULL_AREA
 	}
