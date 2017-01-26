@@ -927,7 +927,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 				}
 			} else {
 				for k := int32(1); k < nidx-1; k++ {
-					copy(verts[*nverts*3:], edge[idx[k]*3:])
+					copy(verts[*nverts*3:], edge[idx[k]*3:3+(idx[k]*3)])
 					hull[nhull] = *nverts
 					nhull++
 					*nverts++
@@ -961,8 +961,8 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 		copy(bmin[:], in)
 		copy(bmax[:], in)
 		for i := int32(1); i < nin; i++ {
-			copy(bmin[:], in[i*3:])
-			copy(bmax[:], in[i*3:])
+			d3.Vec3Min(bmin[:], in[i*3:])
+			d3.Vec3Max(bmax[:], in[i*3:])
 		}
 		x0 := int32(math32.Floor(bmin[0] / sampleDist))
 		x1 := int32(math32.Ceil(bmax[0] / sampleDist))
