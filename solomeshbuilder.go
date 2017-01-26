@@ -268,7 +268,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 
 	var dmesh *recast.PolyMeshDetail
 	dmesh, ret = recast.BuildPolyMeshDetail(sm.ctx, pmesh, chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
-	_, ret = recast.BuildPolyMeshDetail(sm.ctx, pmesh, chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	if !ret {
 		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
 		return nil, false
