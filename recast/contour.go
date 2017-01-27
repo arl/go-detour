@@ -7,7 +7,7 @@ import (
 )
 
 func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
-	s := chf.Spans[i]
+	s := &chf.Spans[i]
 	ch = int32(s.Y)
 	dirp := (dir + 1) & 0x3
 
@@ -21,7 +21,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
-		as := chf.Spans[ai]
+		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
 		regs[1] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
 		if GetCon(as, dirp) != RC_NOT_CONNECTED {
@@ -37,7 +37,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		ax := x + GetDirOffsetX(dirp)
 		ay := y + GetDirOffsetY(dirp)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dirp)
-		as := chf.Spans[ai]
+		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
 		regs[3] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
 		if GetCon(as, dir) != RC_NOT_CONNECTED {
@@ -243,7 +243,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 				if (chf.Spans[i].Reg == 0) || ((chf.Spans[i].Reg & RC_BORDER_REG) != 0) {
 					flags[i] = 0
 					continue
@@ -467,7 +467,7 @@ func walkContour2(x, y, i int32,
 				break
 			}
 			r := int32(0)
-			s := chf.Spans[i]
+			s := &chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
 				ax := x + GetDirOffsetX(int32(dir))
 				ay := y + GetDirOffsetY(int32(dir))
@@ -491,7 +491,7 @@ func walkContour2(x, y, i int32,
 			ni := int32(-1)
 			nx := x + GetDirOffsetX(int32(dir))
 			ny := y + GetDirOffsetY(int32(dir))
-			s := chf.Spans[i]
+			s := &chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
 				nc := chf.Cells[nx+ny*chf.Width]
 				ni = int32(nc.Index) + GetCon(s, int32(dir))

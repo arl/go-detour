@@ -223,7 +223,7 @@ type CompactHeightfield struct {
 	Cs             float32        // The size of each cell. (On the xz-plane.)
 	Ch             float32        // The height of each cell. (The minimum increment along the y-axis.)
 	Cells          []*CompactCell // Array of cells. [Size: width*height]
-	Spans          []*CompactSpan // Array of spans. [Size: SpanCount]
+	Spans          []CompactSpan  // Array of spans. [Size: SpanCount]
 	Dist           []uint16       // Array containing border distance data. [Size: SpanCount]
 	Areas          []uint8        // Array containing area id data. [Size: SpanCount]
 }
@@ -278,10 +278,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 		chf.Cells[i] = new(CompactCell)
 	}
 
-	chf.Spans = make([]*CompactSpan, spanCount)
-	for i := range chf.Spans {
-		chf.Spans[i] = new(CompactSpan)
-	}
+	chf.Spans = make([]CompactSpan, spanCount)
 
 	chf.Areas = make([]uint8, spanCount)
 	for i := range chf.Areas {
@@ -330,7 +327,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 			c := chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 
 				for dir := int32(0); dir < 4; dir++ {
 					SetCon(s, dir, RC_NOT_CONNECTED)

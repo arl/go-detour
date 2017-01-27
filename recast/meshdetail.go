@@ -1183,7 +1183,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		//rcSwap(dirs[directDir], dirs[3]);
 		dirs[directDir], dirs[3] = dirs[3], dirs[directDir]
 
-		cs := chf.Spans[ci]
+		cs := &chf.Spans[ci]
 		for i := int32(0); i < int32(4); i++ {
 			dir := dirs[i]
 			if GetCon(cs, dir) == RC_NOT_CONNECTED {
@@ -1281,7 +1281,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 				c := chf.Cells[x+y*chf.Width]
 				i := int32(c.Index)
 				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-					s := chf.Spans[i]
+					s := &chf.Spans[i]
 					if int32(s.Reg) == region {
 						// Store height
 						hp.data[hx+hy*hp.width] = s.Y
@@ -1338,7 +1338,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 			*queue = (*queue)[:len(*queue)-RETRACT_SIZE*3]
 		}
 
-		cs := chf.Spans[ci]
+		cs := &chf.Spans[ci]
 		for dir := int32(0); dir < 4; dir++ {
 			if GetCon(cs, dir) == RC_NOT_CONNECTED {
 				continue

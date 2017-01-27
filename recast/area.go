@@ -46,7 +46,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 				if chf.Areas[i] == RC_NULL_AREA {
 					dist[i] = 0
 				} else {
-					s := chf.Spans[i]
+					s := &chf.Spans[i]
 					nc := int32(0)
 					for dir := int32(0); dir < 4; dir++ {
 						if GetCon(s, dir) != RC_NOT_CONNECTED {
@@ -75,14 +75,14 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 			c := chf.Cells[x+y*w]
 			ni := int32(c.Index) + int32(c.Count)
 			for i := int32(c.Index); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 
 				if GetCon(s, 0) != RC_NOT_CONNECTED {
 					// (-1,0)
 					ax := x + GetDirOffsetX(0)
 					ay := y + GetDirOffsetY(0)
 					ai := int32(chf.Cells[ax+ay*w].Index) + int32(GetCon(s, 0))
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -105,7 +105,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					ax := x + GetDirOffsetX(3)
 					ay := y + GetDirOffsetY(3)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 3)
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -132,14 +132,14 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 			c := chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 
 				if GetCon(s, 2) != RC_NOT_CONNECTED {
 					// (1,0)
 					ax := x + GetDirOffsetX(2)
 					ay := y + GetDirOffsetY(2)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 2)
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -161,7 +161,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					ax := x + GetDirOffsetX(1)
 					ay := y + GetDirOffsetY(1)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 1)
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd

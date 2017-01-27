@@ -68,7 +68,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 				if chf.Areas[i] == RC_NULL_AREA {
 					continue
 				}
@@ -385,7 +385,7 @@ func floodRegion(x, y, i int32,
 		cx := (*stack)[len(*stack)-1]
 		*stack = (*stack)[:len(*stack)-1]
 
-		cs := chf.Spans[ci]
+		cs := &chf.Spans[ci]
 
 		// Check if any of the neighbours already have a valid region set.
 		var (
@@ -412,7 +412,7 @@ func floodRegion(x, y, i int32,
 					break
 				}
 
-				as := chf.Spans[ai]
+				as := &chf.Spans[ai]
 
 				dir2 := int32((dir + 1) & 0x3)
 				if GetCon(as, dir2) != RC_NOT_CONNECTED {
@@ -517,7 +517,7 @@ func expandRegions(maxIter int, level uint16,
 			r := (*srcReg)[i]
 			d2 := int32(0xffff)
 			area := chf.Areas[i]
-			s := chf.Spans[i]
+			s := &chf.Spans[i]
 			var dir int32
 			for dir = 0; dir < 4; dir++ {
 				if GetCon(s, dir) == RC_NOT_CONNECTED {
@@ -784,7 +784,7 @@ func (reg *Region) isConnectedToBorder() bool {
 
 func isSolidEdge(chf *CompactHeightfield, srcReg []uint16,
 	x, y, i, dir int32) bool {
-	s := chf.Spans[i]
+	s := &chf.Spans[i]
 	var r uint16
 	if GetCon(s, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
@@ -805,7 +805,7 @@ func walkContour(x, y, i, dir int32,
 	startDir := dir
 	starti := i
 
-	ss := chf.Spans[i]
+	ss := &chf.Spans[i]
 	var curReg uint16
 	if GetCon(ss, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
@@ -816,7 +816,7 @@ func walkContour(x, y, i, dir int32,
 	*cont = append(*cont, int32(curReg))
 
 	for iter := int32(1); iter < 39999; iter++ {
-		s := chf.Spans[i]
+		s := &chf.Spans[i]
 
 		if isSolidEdge(chf, srcReg, x, y, i, dir) {
 			// Choose the edge corner
