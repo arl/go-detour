@@ -39,13 +39,15 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	orgNavMeshName = "testdata/" + meshname + ".org.bin"
 	tmpBin = "out.bin"
 
-	ctx = recast.NewBuildContext(false)
+	ctx = recast.NewBuildContext(true)
 	soloMesh = NewSoloMesh(ctx)
 	if !soloMesh.Load(meshName) {
+		ctx.DumpLog("")
 		t.Fatalf("couldn't load mesh %v", meshName)
 	}
 	navMesh, ok := soloMesh.Build()
 	if !ok {
+		ctx.DumpLog("")
 		t.Fatalf("couldn't build navmesh for %v", meshname)
 	}
 
@@ -58,7 +60,6 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	if !ok {
 		t.Fatalf("%v and %v are different", tmpBin, orgNavMeshName)
 	}
-	ctx.DumpLog("Navmesh Build log")
 }
 
 func TestCreateDungeonNavMesh(t *testing.T) {
