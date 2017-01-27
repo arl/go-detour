@@ -62,6 +62,10 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	}
 }
 
+func TestCreateDevelerNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "develer")
+}
+
 func TestCreateDungeonNavMesh(t *testing.T) {
 	testCreateSoloNavMesh(t, "dungeon")
 }
@@ -93,6 +97,10 @@ func benchmarkCreateNavMesh(b *testing.B, meshname string) {
 			b.Fatalf("couldn't build navmesh for %v", meshname)
 		}
 	}
+}
+
+func BenchmarkCreateDevelerNavMesh(b *testing.B) {
+	benchmarkCreateNavMesh(b, "develer")
 }
 
 func BenchmarkCreateCubeNavMesh(b *testing.B) {
