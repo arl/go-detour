@@ -82,7 +82,7 @@ type Contour struct {
 
 // ContourSet represents a group of related contours.
 type ContourSet struct {
-	Conts      []*Contour // An array of the contours in the set. [Size: #nconts]
+	Conts      []Contour  // An array of the contours in the set. [Size: #nconts]
 	NConts     int32      // The number of contours in the set.
 	BMin       [3]float32 // The minimum bounds in world space. [(x, y, z)]
 	BMax       [3]float32 // The maximum bounds in world space. [(x, y, z)]
@@ -217,10 +217,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	cset.MaxError = maxError
 
 	maxContours := iMax(int32(chf.MaxRegions), 8)
-	cset.Conts = make([]*Contour, maxContours)
-	for i := range cset.Conts {
-		cset.Conts[i] = new(Contour)
-	}
+	cset.Conts = make([]Contour, maxContours)
 	cset.NConts = 0
 
 	flags := make([]uint8, chf.SpanCount)
@@ -297,7 +294,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 						// This happens when a region has holes.
 						oldMax := maxContours
 						maxContours *= 2
-						newConts := make([]*Contour, maxContours)
+						newConts := make([]Contour, maxContours)
 						for j := int32(0); j < cset.NConts; j++ {
 							newConts[j] = cset.Conts[j]
 							// Reset source pointers to prevent data deletion.
@@ -306,10 +303,10 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 						}
 						cset.Conts = newConts
 
-						ctx.Warningf("rcBuildContours: Expanding max contours from %d to %d.", oldMax, maxContours)
+						ctx.Warningf("BuildContours: Expanding max contours from %d to %d.", oldMax, maxContours)
 					}
 
-					cont := cset.Conts[cset.NConts]
+					cont := &cset.Conts[cset.NConts]
 					cset.NConts++
 					cont.NVerts = int32(len(simplified) / 4)
 					cont.Verts = make([]int32, cont.NVerts*4)
@@ -348,11 +345,12 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 		winding := make([]uint8, cset.NConts)
 		var nholes int32
 		for i := int32(0); i < cset.NConts; i++ {
-			cont := cset.Conts[i]
+			cont := &cset.Conts[i]
 			// If the contour is wound backwards, it is a hole.
 			if calcAreaOfPolygon2D(cont.Verts, cont.NVerts) < 0 {
 				// TODO: check that!
 				//winding[i] = uint8(-1)
+				panic("CHECK THAT frogb")
 				winding[i] = 0xff
 			} else {
 				winding[i] = 1
@@ -370,7 +368,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			holes := make([]*ContourHole, cset.NConts)
 
 			for i := int32(0); i < cset.NConts; i++ {
-				cont := cset.Conts[i]
+				cont := &cset.Conts[i]
 				// Positively would contours are outlines, negative holes.
 				if winding[i] > 0 {
 					if regions[cont.Reg].outline != nil {
@@ -390,7 +388,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 				}
 			}
 			for i := int32(0); i < cset.NConts; i++ {
-				cont := cset.Conts[i]
+				cont := &cset.Conts[i]
 				reg := regions[cont.Reg]
 				if winding[i] < 0 {
 					reg.holes[reg.nholes].contour = cont
@@ -622,9 +620,6 @@ func simplifyContour(points, simplified *[]int32,
 			cinc = pn - 1
 			ci = (bi + cinc) % pn
 			endi = ai
-			// TODO: check that
-			//rcSwap(ax, bx)
-			//rcSwap(az, bz)
 			ax, bx = bx, ax
 			az, bz = bz, az
 		}
@@ -646,8 +641,6 @@ func simplifyContour(points, simplified *[]int32,
 		// add new point, else continue to next segment.
 		if maxi != -1 && maxd > (maxError*maxError) {
 			// Add space for the new point.
-			// TODO: check that, original code:
-			// simplified.resize(simplified.size()+4);
 			*simplified = append(*simplified, make([]int32, 4)...)
 			n := len(*simplified) / 4
 			for j := n - 1; j > i; j-- {
