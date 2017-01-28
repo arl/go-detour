@@ -277,10 +277,9 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	for i := range chf.Cells {
 		chf.Cells[i] = new(CompactCell)
 	}
-
 	chf.Spans = make([]CompactSpan, spanCount)
-
 	chf.Areas = make([]uint8, spanCount)
+	// TODO: why not using bytes package to do that really faster?
 	for i := range chf.Areas {
 		chf.Areas[i] = RC_NULL_AREA
 	}
@@ -343,7 +342,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 					nc := chf.Cells[nx+ny*w]
 					k := int32(nc.Index)
 					for nk := int32(nc.Index + uint32(nc.Count)); k < nk; k++ {
-						ns := chf.Spans[k]
+						ns := &chf.Spans[k]
 						bot := iMax(int32(s.Y), int32(ns.Y))
 						top := iMin(int32(s.Y)+int32(s.H), int32(ns.Y)+int32(ns.H))
 

@@ -269,10 +269,10 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 			c := chf.Cells[x+z*chf.Width]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
 				if chf.Areas[i] == RC_NULL_AREA {
 					continue
 				}
+				s := &chf.Spans[i]
 				if int32(s.Y) >= miny && int32(s.Y) <= maxy {
 					var p [3]float32
 					p[0] = chf.BMin[0] + (float32(x)+0.5)*chf.Cs

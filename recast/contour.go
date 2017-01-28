@@ -28,8 +28,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 			ax2 := ax + GetDirOffsetX(dirp)
 			ay2 := ay + GetDirOffsetY(dirp)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dirp)
-			as2 := chf.Spans[ai2]
-			ch = iMax(ch, int32(as2.Y))
+			ch = iMax(ch, int32(chf.Spans[ai2].Y))
 			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
 		}
 	}
@@ -44,8 +43,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 			ax2 := ax + GetDirOffsetX(dir)
 			ay2 := ay + GetDirOffsetY(dir)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dir)
-			as2 := chf.Spans[ai2]
-			ch = iMax(ch, int32(as2.Y))
+			ch = iMax(ch, int32(chf.Spans[ai2].Y))
 			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
 		}
 	}
@@ -244,7 +242,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
 				s := &chf.Spans[i]
-				if (chf.Spans[i].Reg == 0) || ((chf.Spans[i].Reg & RC_BORDER_REG) != 0) {
+				if (s.Reg == 0) || ((s.Reg & RC_BORDER_REG) != 0) {
 					flags[i] = 0
 					continue
 				}

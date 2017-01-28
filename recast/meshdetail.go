@@ -1090,8 +1090,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 			c := chf.Cells[(ax+bs)+(az+bs)*chf.Width]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni && dmin > 0; i++ {
-				s := chf.Spans[i]
-				d := iAbs(ay - int32(s.Y))
+				d := iAbs(ay - int32(chf.Spans[i].Y))
 				if d < dmin {
 					startCellX = ax
 					startCellY = az
@@ -1221,8 +1220,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		hp.data[i] = 0xffff
 	}
 
-	cs := chf.Spans[ci]
-	hp.data[cx-hp.xmin+(cy-hp.ymin)*hp.width] = cs.Y
+	hp.data[cx-hp.xmin+(cy-hp.ymin)*hp.width] = chf.Spans[ci].Y
 }
 
 func distToPoly(nvert int32, verts, p []float32) float32 {
@@ -1295,8 +1293,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 								ax := x + GetDirOffsetX(dir)
 								ay := y + GetDirOffsetY(dir)
 								ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
-								as := chf.Spans[ai]
-								if int32(as.Reg) != region {
+								if int32(chf.Spans[ai].Reg) != region {
 									border = true
 									break
 								}
@@ -1358,9 +1355,8 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 			}
 
 			ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(cs, dir)
-			as := chf.Spans[ai]
 
-			hp.data[hx+hy*hp.width] = as.Y
+			hp.data[hx+hy*hp.width] = chf.Spans[ai].Y
 
 			push3(queue, ax, ay, ai)
 		}
