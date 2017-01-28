@@ -174,19 +174,33 @@ func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	}
 }
 
-/// @par
-///
-/// The raw contours will match the region outlines exactly. The @p maxError and @p maxEdgeLen
-/// parameters control how closely the simplified contours will match the raw contours.
-///
-/// Simplified contours are generated such that the vertices for portals between areas match up.
-/// (They are considered mandatory vertices.)
-///
-/// Setting @p maxEdgeLength to zero will disabled the edge length feature.
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocContourSet, rcCompactHeightfield, rcContourSet, rcConfig
+// BuildContours builds a contour set from the region outlines in the provided
+// compact heightfield.
+//
+//  Arguments:
+//   ctx         The build context to use during the operation.
+//   chf         A fully built compact heightfield.
+//   maxError    The maximum distance a simplfied contour's border edges should
+//               deviate the original raw contour. [Limit: >=0] [Units: wu]
+//   maxEdgeLen  The maximum allowed length for contour edges along the border
+//               of the mesh. [Limit: >=0] [Units: vx]
+//   cset        The resulting contour set. (Must be pre-allocated.)
+//   buildFlags  The build flags. (See: BuildContoursFlags)
+//
+//  Returns true if the operation completed successfully.
+//
+// The raw contours will match the region outlines exactly. The maxError and
+// maxEdgeLen parameters control how closely the simplified contours will match
+// the raw contours.
+// Simplified contours are generated such that the vertices for portals between
+// areas match up. (They are considered mandatory vertices.)
+//
+// Setting maxEdgeLength to zero will disabled the edge length feature.
+//
+// See the Config documentation for more information on the configuration
+// parameters.
+//
+// see CompactHeightfield, ContourSet, Config
 func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	maxError float32, maxEdgeLen int32,
 	cset *ContourSet, buildFlags int32) bool {
