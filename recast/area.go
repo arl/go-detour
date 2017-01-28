@@ -40,7 +40,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	// Mark boundary cells.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			ni := int32(c.Index) + int32(c.Count)
 			for i := int32(c.Index); i < ni; i++ {
 				if chf.Areas[i] == RC_NULL_AREA {
@@ -72,7 +72,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	// Pass 1
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			ni := int32(c.Index) + int32(c.Count)
 			for i := int32(c.Index); i < ni; i++ {
 				s := &chf.Spans[i]
@@ -129,7 +129,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	// Pass 2
 	for y := int32(h - 1); y >= 0; y-- {
 		for x := int32(w - 1); x >= 0; x-- {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				s := &chf.Spans[i]
@@ -266,7 +266,7 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 	// TODO: Optimize.
 	for z := minz; z <= maxz; z++ {
 		for x := minx; x <= maxx; x++ {
-			c := chf.Cells[x+z*chf.Width]
+			c := &chf.Cells[x+z*chf.Width]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if chf.Areas[i] == RC_NULL_AREA {

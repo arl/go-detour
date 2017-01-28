@@ -237,7 +237,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	// Mark boundaries.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
@@ -270,7 +270,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if flags[i] == 0 || flags[i] == 0xf {
@@ -491,8 +491,7 @@ func walkContour2(x, y, i int32,
 			ny := y + GetDirOffsetY(int32(dir))
 			s := &chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
-				nc := chf.Cells[nx+ny*chf.Width]
-				ni = int32(nc.Index) + GetCon(s, int32(dir))
+				ni = int32(chf.Cells[nx+ny*chf.Width].Index) + GetCon(s, int32(dir))
 			}
 			if ni == -1 {
 				// Should not happen.

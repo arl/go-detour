@@ -64,7 +64,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 		rid := uint16(1)
 
 		for x := borderSize; x < w-borderSize; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
@@ -126,7 +126,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 
 		// Remap IDs
 		for x := borderSize; x < w-borderSize; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if srcReg[i] > 0 && srcReg[i] < rid {
@@ -336,7 +336,7 @@ func paintRectRegion(minx, maxx, miny, maxy int32, regId uint16, chf *CompactHei
 	w := chf.Width
 	for y := miny; y < maxy; y++ {
 		for x := minx; x < maxx; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if chf.Areas[i] != RC_NULL_AREA {
@@ -472,11 +472,12 @@ func expandRegions(maxIter int, level uint16,
 		*stack = make([]int32, 0)
 		for y := int32(0); y < h; y++ {
 			for x := int32(0); x < w; x++ {
-				c := chf.Cells[x+y*w]
+				c := &chf.Cells[x+y*w]
 				i := int32(c.Index)
 				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 					if chf.Dist[i] >= level && (*srcReg)[i] == 0 && chf.Areas[i] != RC_NULL_AREA {
 						*stack = append(*stack, x, y, i)
+						panic("NON TEST POUR CUBES ET DEVELER NavMesh")
 						//stack.push(x);
 						//stack.push(y);
 						//stack.push(i);
@@ -582,7 +583,7 @@ func sortCellsByLevel(startLevel uint16,
 	// put all cells in the level range into the appropriate stacks
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if chf.Areas[i] == RC_NULL_AREA || srcReg[i] != 0 {
@@ -612,6 +613,7 @@ func appendStacks(srcStack, dstStack []int32, srcReg []uint16) {
 		if (i < 0) || (srcReg[i] != 0) {
 			continue
 		}
+		panic("NON TEST POUR CUBES ET DEVELER NavMesh")
 		dstStack = append(dstStack, srcStack[j:j+3]...)
 		//dstStack.push(srcStack[j+1]);
 		//dstStack.push(srcStack[j+2]);
@@ -838,8 +840,7 @@ func walkContour(x, y, i, dir int32,
 			nx := x + GetDirOffsetX(dir)
 			ny := y + GetDirOffsetY(dir)
 			if GetCon(s, dir) != RC_NOT_CONNECTED {
-				nc := chf.Cells[nx+ny*chf.Width]
-				ni = int32(nc.Index) + GetCon(s, dir)
+				ni = int32(chf.Cells[nx+ny*chf.Width].Index) + GetCon(s, dir)
 			}
 			if ni == -1 {
 				// Should not happen.
@@ -864,7 +865,6 @@ func walkContour(x, y, i, dir int32,
 				for k := j; k < len(*cont)-1; k++ {
 					(*cont)[k] = (*cont)[k+1]
 				}
-				//cont.pop()
 				*cont = (*cont)[:len(*cont)-1]
 			} else {
 				j++
@@ -894,7 +894,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 	// Find edge of a region and find connections around the contour.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i2 := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i2 < ni; i2++ {
 				r := srcReg[i2]

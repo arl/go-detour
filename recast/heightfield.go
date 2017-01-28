@@ -210,22 +210,22 @@ type CompactSpan struct {
 // A CompactHeightfield is a compact, static heightfield representing
 // unobstructed space.
 type CompactHeightfield struct {
-	Width          int32          // The width of the heightfield. (Along the x-axis in cell units.)
-	Height         int32          // The height of the heightfield. (Along the z-axis in cell units.)
-	SpanCount      int32          // The number of spans in the heightfield.
-	WalkableHeight int32          // The walkable height used during the build of the field.  (See: Config.walkableHeight)
-	WalkableClimb  int32          // The walkable climb used during the build of the field. (See: Config.walkableClimb)
-	BorderSize     int32          // The AABB border size used during the build of the field. (See: Config.borderSize)
-	MaxDistance    uint16         // The maximum distance value of any span within the field.
-	MaxRegions     uint16         // The maximum region id of any span within the field.
-	BMin           [3]float32     // The minimum bounds in world space. [(x, y, z)]
-	BMax           [3]float32     // The maximum bounds in world space. [(x, y, z)]
-	Cs             float32        // The size of each cell. (On the xz-plane.)
-	Ch             float32        // The height of each cell. (The minimum increment along the y-axis.)
-	Cells          []*CompactCell // Array of cells. [Size: width*height]
-	Spans          []CompactSpan  // Array of spans. [Size: SpanCount]
-	Dist           []uint16       // Array containing border distance data. [Size: SpanCount]
-	Areas          []uint8        // Array containing area id data. [Size: SpanCount]
+	Width          int32         // The width of the heightfield. (Along the x-axis in cell units.)
+	Height         int32         // The height of the heightfield. (Along the z-axis in cell units.)
+	SpanCount      int32         // The number of spans in the heightfield.
+	WalkableHeight int32         // The walkable height used during the build of the field.  (See: Config.walkableHeight)
+	WalkableClimb  int32         // The walkable climb used during the build of the field. (See: Config.walkableClimb)
+	BorderSize     int32         // The AABB border size used during the build of the field. (See: Config.borderSize)
+	MaxDistance    uint16        // The maximum distance value of any span within the field.
+	MaxRegions     uint16        // The maximum region id of any span within the field.
+	BMin           [3]float32    // The minimum bounds in world space. [(x, y, z)]
+	BMax           [3]float32    // The maximum bounds in world space. [(x, y, z)]
+	Cs             float32       // The size of each cell. (On the xz-plane.)
+	Ch             float32       // The height of each cell. (The minimum increment along the y-axis.)
+	Cells          []CompactCell // Array of cells. [Size: width*height]
+	Spans          []CompactSpan // Array of spans. [Size: SpanCount]
+	Dist           []uint16      // Array containing border distance data. [Size: SpanCount]
+	Areas          []uint8       // Array containing area id data. [Size: SpanCount]
 }
 
 func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
@@ -273,10 +273,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	chf.BMax[1] += float32(walkableHeight) * hf.Ch
 	chf.Cs = hf.Cs
 	chf.Ch = hf.Ch
-	chf.Cells = make([]*CompactCell, w*h)
-	for i := range chf.Cells {
-		chf.Cells[i] = new(CompactCell)
-	}
+	chf.Cells = make([]CompactCell, w*h)
 	chf.Spans = make([]CompactSpan, spanCount)
 	chf.Areas = make([]uint8, spanCount)
 	// TODO: why not using bytes package to do that really faster?
@@ -295,7 +292,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 			if s == nil {
 				continue
 			}
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			c.Index = idx
 			c.Count = 0
 			for s != nil {
@@ -323,7 +320,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	tooHighNeighbour := int32(0)
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				s := &chf.Spans[i]
@@ -339,7 +336,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 
 					// Iterate over all neighbour spans and check if any of the is
 					// accessible from current cell.
-					nc := chf.Cells[nx+ny*w]
+					nc := &chf.Cells[nx+ny*w]
 					k := int32(nc.Index)
 					for nk := int32(nc.Index + uint32(nc.Count)); k < nk; k++ {
 						ns := &chf.Spans[k]
