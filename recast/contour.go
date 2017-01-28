@@ -375,11 +375,12 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 		}
 
 		if nholes > 0 {
+			panic("UNTESTED")
 			// Collect outline contour and holes contours per region.
 			// We assume that there is one outline and multiple holes.
 			nregions := chf.MaxRegions + 1
-			regions := make([]*ContourRegion, nregions)
-			holes := make([]*ContourHole, cset.NConts)
+			regions := make([]ContourRegion, nregions)
+			holes := make([]ContourHole, cset.NConts)
 
 			for i := int32(0); i < cset.NConts; i++ {
 				cont := &cset.Conts[i]
@@ -403,7 +404,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			}
 			for i := int32(0); i < cset.NConts; i++ {
 				cont := &cset.Conts[i]
-				reg := regions[cont.Reg]
+				reg := &regions[cont.Reg]
 				if winding[i] < 0 {
 					reg.holes[reg.nholes].contour = cont
 					reg.nholes++
@@ -412,7 +413,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 
 			// Finally merge each regions holes into the outline.
 			for i := uint16(0); i < nregions; i++ {
-				reg := regions[i]
+				reg := &regions[i]
 				if reg.nholes == 0 {
 					continue
 				}
@@ -895,9 +896,6 @@ func findLeftMostVertex(contour *Contour) (minx, minz, leftmost int32) {
 func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 	maxVerts := ca.NVerts + cb.NVerts + 2
 	verts := make([]int32, maxVerts*4)
-	//if !verts {
-	//return false
-	//}
 
 	var nv int32
 
@@ -936,7 +934,7 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 
 type ContourRegion struct {
 	outline *Contour
-	holes   []*ContourHole
+	holes   []ContourHole
 	nholes  int32
 }
 
@@ -945,7 +943,7 @@ type ContourHole struct {
 	minx, minz, leftmost int32
 }
 
-type compareHoles []*ContourHole
+type compareHoles []ContourHole
 
 // Len is the number of elements in the collection.
 func (s compareHoles) Len() int {
@@ -955,7 +953,6 @@ func (s compareHoles) Len() int {
 // Less reports whether the element with
 // index a should sort before the element with index b.
 func (s compareHoles) Less(i, j int) bool {
-
 	a := s[i]
 	b := s[j]
 	if a.minx == b.minx {
