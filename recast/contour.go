@@ -70,7 +70,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 	return ch, isBorderVertex
 }
 
-/// Represents a simple, non-overlapping contour in field space.
+// Contour represents a simple, non-overlapping contour in field space.
 type Contour struct {
 	Verts   []int32 // Simplified contour vertex and connection data. [Size: 4 * #nverts]
 	NVerts  int32   // The number of vertices in the simplified contour.
@@ -80,7 +80,7 @@ type Contour struct {
 	Area    uint8   // The area id of the contour.
 }
 
-// Represents a group of related contours.
+// ContourSet represents a group of related contours.
 type ContourSet struct {
 	Conts      []*Contour // An array of the contours in the set. [Size: #nconts]
 	NConts     int32      // The number of contours in the set.
@@ -97,11 +97,9 @@ type ContourSet struct {
 func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	// Sort holes from left to right.
 	for i := int32(0); i < region.nholes; i++ {
-
 		region.holes[i].minx, region.holes[i].minz, region.holes[i].leftmost = findLeftMostVertex(region.holes[i].contour)
 	}
 
-	//sort.Sort(region.holes, region.nholes, sizeof(rcContourHole), compareHoles);
 	sort.Sort(compareHoles(region.holes))
 
 	maxVerts := region.outline.NVerts
@@ -110,11 +108,6 @@ func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	}
 
 	diags := make([]PotentialDiagonal, maxVerts)
-	//if (!diags)
-	//{
-	//ctx.log(RC_LOG_WARNING, "mergeRegionHoles: Failed to allocated diags %d.", maxVerts);
-	//return;
-	//}
 
 	outline := region.outline
 

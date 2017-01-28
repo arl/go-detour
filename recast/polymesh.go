@@ -196,9 +196,6 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 					lastPoly := polys[(npolys-1)*nvp:]
 
 					if !compareSlicesUInt16(pb, lastPoly) {
-						//if pb != lastPoly {
-						// TODO: AR take care here!
-						//memcpy(pb, lastPoly, sizeof(unsigned short)*nvp);
 						copy(pb, lastPoly[:nvp])
 					}
 					npolys--
