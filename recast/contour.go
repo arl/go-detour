@@ -364,7 +364,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			if calcAreaOfPolygon2D(cont.Verts, cont.NVerts) < 0 {
 				// TODO: check that!
 				//winding[i] = uint8(-1)
-				panic("CHECK THAT frogb")
+				panic("UNTESTED")
 				winding[i] = 0xff
 			} else {
 				winding[i] = 1
@@ -921,11 +921,9 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 		nv++
 	}
 
-	//rcFree(ca.verts);
 	ca.Verts = verts
 	ca.NVerts = nv
 
-	//rcFree(cb.verts);
 	cb.Verts = make([]int32, 0)
 	cb.NVerts = 0
 
