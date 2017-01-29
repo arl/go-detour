@@ -28,10 +28,7 @@ func (s compareItemX) Less(i, j int) bool {
 	a := s[i]
 	b := s[j]
 
-	if a.BMin[0] < b.BMin[0] {
-		return true
-	}
-	return false
+	return a.BMin[0] < b.BMin[0]
 }
 
 // Swap swaps the elements with indexes i and j.
@@ -52,10 +49,7 @@ func (s compareItemY) Less(i, j int) bool {
 	a := s[i]
 	b := s[j]
 
-	if a.BMin[1] < b.BMin[1] {
-		return true
-	}
-	return false
+	return a.BMin[1] < b.BMin[1]
 }
 
 // Swap swaps the elements with indexes i and j.
@@ -76,10 +70,7 @@ func (s compareItemZ) Less(i, j int) bool {
 	a := s[i]
 	b := s[j]
 
-	if a.BMin[2] < b.BMin[2] {
-		return true
-	}
-	return false
+	return a.BMin[2] < b.BMin[2]
 }
 
 // Swap swaps the elements with indexes i and j.
