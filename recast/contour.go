@@ -15,7 +15,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 
 	// Combine region and area codes in order to prevent
 	// border vertices which are in between two areas to be removed.
-	regs[0] = chf.Spans[i].Reg | uint16(chf.Areas[i]<<16)
+	regs[0] = uint16(uint32(chf.Spans[i].Reg) | (uint32(chf.Areas[i]) << 16))
 
 	if GetCon(s, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
@@ -23,13 +23,13 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
 		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
-		regs[1] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
+		regs[1] = uint16(uint32(chf.Spans[ai].Reg) | (uint32(chf.Areas[ai]) << 16))
 		if GetCon(as, dirp) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dirp)
 			ay2 := ay + GetDirOffsetY(dirp)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dirp)
 			ch = iMax(ch, int32(chf.Spans[ai2].Y))
-			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
+			regs[2] = uint16(uint32(chf.Spans[ai2].Reg) | (uint32(chf.Areas[ai2]) << 16))
 		}
 	}
 	if GetCon(s, dirp) != RC_NOT_CONNECTED {
@@ -38,13 +38,13 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dirp)
 		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
-		regs[3] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
+		regs[3] = uint16(uint32(chf.Spans[ai].Reg) | (uint32(chf.Areas[ai]) << 16))
 		if GetCon(as, dir) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dir)
 			ay2 := ay + GetDirOffsetY(dir)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dir)
 			ch = iMax(ch, int32(chf.Spans[ai2].Y))
-			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
+			regs[2] = uint16(uint32(chf.Spans[ai2].Reg) | (uint32(chf.Areas[ai2]) << 16))
 		}
 	}
 
@@ -59,7 +59,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		// followed by two interior cells and none of the regions are out of bounds.
 		twoSameExts := (regs[a]&regs[b]&RC_BORDER_REG) != 0 && regs[a] == regs[b]
 		twoInts := ((regs[c] | regs[d]) & RC_BORDER_REG) == 0
-		intsSameArea := (regs[c] >> 16) == (regs[d] >> 16)
+		intsSameArea := (uint32(regs[c]) >> 16) == (uint32(regs[d]) >> 16)
 		noZeros := regs[a] != 0 && regs[b] != 0 && regs[c] != 0 && regs[d] != 0
 		if twoSameExts && twoInts && intsSameArea && noZeros {
 			isBorderVertex = true
