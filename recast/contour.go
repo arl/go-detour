@@ -7,7 +7,7 @@ import (
 )
 
 func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
-	s := chf.Spans[i]
+	s := &chf.Spans[i]
 	ch = int32(s.Y)
 	dirp := (dir + 1) & 0x3
 
@@ -15,38 +15,36 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 
 	// Combine region and area codes in order to prevent
 	// border vertices which are in between two areas to be removed.
-	regs[0] = chf.Spans[i].Reg | uint16(chf.Areas[i]<<16)
+	regs[0] = uint16(uint32(chf.Spans[i].Reg) | (uint32(chf.Areas[i]) << 16))
 
 	if GetCon(s, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
-		as := chf.Spans[ai]
+		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
-		regs[1] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
+		regs[1] = uint16(uint32(chf.Spans[ai].Reg) | (uint32(chf.Areas[ai]) << 16))
 		if GetCon(as, dirp) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dirp)
 			ay2 := ay + GetDirOffsetY(dirp)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dirp)
-			as2 := chf.Spans[ai2]
-			ch = iMax(ch, int32(as2.Y))
-			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
+			ch = iMax(ch, int32(chf.Spans[ai2].Y))
+			regs[2] = uint16(uint32(chf.Spans[ai2].Reg) | (uint32(chf.Areas[ai2]) << 16))
 		}
 	}
 	if GetCon(s, dirp) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dirp)
 		ay := y + GetDirOffsetY(dirp)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dirp)
-		as := chf.Spans[ai]
+		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
-		regs[3] = chf.Spans[ai].Reg | uint16(chf.Areas[ai]<<16)
+		regs[3] = uint16(uint32(chf.Spans[ai].Reg) | (uint32(chf.Areas[ai]) << 16))
 		if GetCon(as, dir) != RC_NOT_CONNECTED {
 			ax2 := ax + GetDirOffsetX(dir)
 			ay2 := ay + GetDirOffsetY(dir)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dir)
-			as2 := chf.Spans[ai2]
-			ch = iMax(ch, int32(as2.Y))
-			regs[2] = chf.Spans[ai2].Reg | uint16(chf.Areas[ai2]<<16)
+			ch = iMax(ch, int32(chf.Spans[ai2].Y))
+			regs[2] = uint16(uint32(chf.Spans[ai2].Reg) | (uint32(chf.Areas[ai2]) << 16))
 		}
 	}
 
@@ -61,7 +59,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 		// followed by two interior cells and none of the regions are out of bounds.
 		twoSameExts := (regs[a]&regs[b]&RC_BORDER_REG) != 0 && regs[a] == regs[b]
 		twoInts := ((regs[c] | regs[d]) & RC_BORDER_REG) == 0
-		intsSameArea := (regs[c] >> 16) == (regs[d] >> 16)
+		intsSameArea := (uint32(regs[c]) >> 16) == (uint32(regs[d]) >> 16)
 		noZeros := regs[a] != 0 && regs[b] != 0 && regs[c] != 0 && regs[d] != 0
 		if twoSameExts && twoInts && intsSameArea && noZeros {
 			isBorderVertex = true
@@ -72,7 +70,7 @@ func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isB
 	return ch, isBorderVertex
 }
 
-/// Represents a simple, non-overlapping contour in field space.
+// Contour represents a simple, non-overlapping contour in field space.
 type Contour struct {
 	Verts   []int32 // Simplified contour vertex and connection data. [Size: 4 * #nverts]
 	NVerts  int32   // The number of vertices in the simplified contour.
@@ -82,9 +80,9 @@ type Contour struct {
 	Area    uint8   // The area id of the contour.
 }
 
-// Represents a group of related contours.
+// ContourSet represents a group of related contours.
 type ContourSet struct {
-	Conts      []*Contour // An array of the contours in the set. [Size: #nconts]
+	Conts      []Contour  // An array of the contours in the set. [Size: #nconts]
 	NConts     int32      // The number of contours in the set.
 	BMin       [3]float32 // The minimum bounds in world space. [(x, y, z)]
 	BMax       [3]float32 // The maximum bounds in world space. [(x, y, z)]
@@ -99,11 +97,9 @@ type ContourSet struct {
 func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	// Sort holes from left to right.
 	for i := int32(0); i < region.nholes; i++ {
-
 		region.holes[i].minx, region.holes[i].minz, region.holes[i].leftmost = findLeftMostVertex(region.holes[i].contour)
 	}
 
-	//sort.Sort(region.holes, region.nholes, sizeof(rcContourHole), compareHoles);
 	sort.Sort(compareHoles(region.holes))
 
 	maxVerts := region.outline.NVerts
@@ -112,11 +108,6 @@ func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	}
 
 	diags := make([]PotentialDiagonal, maxVerts)
-	//if (!diags)
-	//{
-	//ctx.log(RC_LOG_WARNING, "mergeRegionHoles: Failed to allocated diags %d.", maxVerts);
-	//return;
-	//}
 
 	outline := region.outline
 
@@ -183,19 +174,33 @@ func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 	}
 }
 
-/// @par
-///
-/// The raw contours will match the region outlines exactly. The @p maxError and @p maxEdgeLen
-/// parameters control how closely the simplified contours will match the raw contours.
-///
-/// Simplified contours are generated such that the vertices for portals between areas match up.
-/// (They are considered mandatory vertices.)
-///
-/// Setting @p maxEdgeLength to zero will disabled the edge length feature.
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocContourSet, rcCompactHeightfield, rcContourSet, rcConfig
+// BuildContours builds a contour set from the region outlines in the provided
+// compact heightfield.
+//
+//  Arguments:
+//   ctx         The build context to use during the operation.
+//   chf         A fully built compact heightfield.
+//   maxError    The maximum distance a simplfied contour's border edges should
+//               deviate the original raw contour. [Limit: >=0] [Units: wu]
+//   maxEdgeLen  The maximum allowed length for contour edges along the border
+//               of the mesh. [Limit: >=0] [Units: vx]
+//   cset        The resulting contour set. (Must be pre-allocated.)
+//   buildFlags  The build flags. (See: BuildContoursFlags)
+//
+//  Returns true if the operation completed successfully.
+//
+// The raw contours will match the region outlines exactly. The maxError and
+// maxEdgeLen parameters control how closely the simplified contours will match
+// the raw contours.
+// Simplified contours are generated such that the vertices for portals between
+// areas match up. (They are considered mandatory vertices.)
+//
+// Setting maxEdgeLength to zero will disabled the edge length feature.
+//
+// See the Config documentation for more information on the configuration
+// parameters.
+//
+// see CompactHeightfield, ContourSet, Config
 func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	maxError float32, maxEdgeLen int32,
 	cset *ContourSet, buildFlags int32) bool {
@@ -226,10 +231,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	cset.MaxError = maxError
 
 	maxContours := iMax(int32(chf.MaxRegions), 8)
-	cset.Conts = make([]*Contour, maxContours)
-	for i := range cset.Conts {
-		cset.Conts[i] = new(Contour)
-	}
+	cset.Conts = make([]Contour, maxContours)
 	cset.NConts = 0
 
 	flags := make([]uint8, chf.SpanCount)
@@ -239,12 +241,12 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	// Mark boundaries.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
-				s := chf.Spans[i]
-				if (chf.Spans[i].Reg == 0) || ((chf.Spans[i].Reg & RC_BORDER_REG) != 0) {
+				s := &chf.Spans[i]
+				if (s.Reg == 0) || ((s.Reg & RC_BORDER_REG) != 0) {
 					flags[i] = 0
 					continue
 				}
@@ -272,7 +274,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if flags[i] == 0 || flags[i] == 0xf {
@@ -306,7 +308,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 						// This happens when a region has holes.
 						oldMax := maxContours
 						maxContours *= 2
-						newConts := make([]*Contour, maxContours)
+						newConts := make([]Contour, maxContours)
 						for j := int32(0); j < cset.NConts; j++ {
 							newConts[j] = cset.Conts[j]
 							// Reset source pointers to prevent data deletion.
@@ -315,10 +317,10 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 						}
 						cset.Conts = newConts
 
-						ctx.Warningf("rcBuildContours: Expanding max contours from %d to %d.", oldMax, maxContours)
+						ctx.Warningf("BuildContours: Expanding max contours from %d to %d.", oldMax, maxContours)
 					}
 
-					cont := cset.Conts[cset.NConts]
+					cont := &cset.Conts[cset.NConts]
 					cset.NConts++
 					cont.NVerts = int32(len(simplified) / 4)
 					cont.Verts = make([]int32, cont.NVerts*4)
@@ -357,11 +359,12 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 		winding := make([]uint8, cset.NConts)
 		var nholes int32
 		for i := int32(0); i < cset.NConts; i++ {
-			cont := cset.Conts[i]
+			cont := &cset.Conts[i]
 			// If the contour is wound backwards, it is a hole.
 			if calcAreaOfPolygon2D(cont.Verts, cont.NVerts) < 0 {
 				// TODO: check that!
 				//winding[i] = uint8(-1)
+				panic("UNTESTED")
 				winding[i] = 0xff
 			} else {
 				winding[i] = 1
@@ -372,14 +375,15 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 		}
 
 		if nholes > 0 {
+			panic("UNTESTED")
 			// Collect outline contour and holes contours per region.
 			// We assume that there is one outline and multiple holes.
 			nregions := chf.MaxRegions + 1
-			regions := make([]*ContourRegion, nregions)
-			holes := make([]*ContourHole, cset.NConts)
+			regions := make([]ContourRegion, nregions)
+			holes := make([]ContourHole, cset.NConts)
 
 			for i := int32(0); i < cset.NConts; i++ {
-				cont := cset.Conts[i]
+				cont := &cset.Conts[i]
 				// Positively would contours are outlines, negative holes.
 				if winding[i] > 0 {
 					if regions[cont.Reg].outline != nil {
@@ -399,8 +403,8 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 				}
 			}
 			for i := int32(0); i < cset.NConts; i++ {
-				cont := cset.Conts[i]
-				reg := regions[cont.Reg]
+				cont := &cset.Conts[i]
+				reg := &regions[cont.Reg]
 				if winding[i] < 0 {
 					reg.holes[reg.nholes].contour = cont
 					reg.nholes++
@@ -409,7 +413,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 
 			// Finally merge each regions holes into the outline.
 			for i := uint16(0); i < nregions; i++ {
-				reg := regions[i]
+				reg := &regions[i]
 				if reg.nholes == 0 {
 					continue
 				}
@@ -467,7 +471,7 @@ func walkContour2(x, y, i int32,
 				break
 			}
 			r := int32(0)
-			s := chf.Spans[i]
+			s := &chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
 				ax := x + GetDirOffsetX(int32(dir))
 				ay := y + GetDirOffsetY(int32(dir))
@@ -491,10 +495,9 @@ func walkContour2(x, y, i int32,
 			ni := int32(-1)
 			nx := x + GetDirOffsetX(int32(dir))
 			ny := y + GetDirOffsetY(int32(dir))
-			s := chf.Spans[i]
+			s := &chf.Spans[i]
 			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
-				nc := chf.Cells[nx+ny*chf.Width]
-				ni = int32(nc.Index) + GetCon(s, int32(dir))
+				ni = int32(chf.Cells[nx+ny*chf.Width].Index) + GetCon(s, int32(dir))
 			}
 			if ni == -1 {
 				// Should not happen.
@@ -632,9 +635,6 @@ func simplifyContour(points, simplified *[]int32,
 			cinc = pn - 1
 			ci = (bi + cinc) % pn
 			endi = ai
-			// TODO: check that
-			//rcSwap(ax, bx)
-			//rcSwap(az, bz)
 			ax, bx = bx, ax
 			az, bz = bz, az
 		}
@@ -656,8 +656,6 @@ func simplifyContour(points, simplified *[]int32,
 		// add new point, else continue to next segment.
 		if maxi != -1 && maxd > (maxError*maxError) {
 			// Add space for the new point.
-			// TODO: check that, original code:
-			// simplified.resize(simplified.size()+4);
 			*simplified = append(*simplified, make([]int32, 4)...)
 			n := len(*simplified) / 4
 			for j := n - 1; j > i; j-- {
@@ -898,9 +896,6 @@ func findLeftMostVertex(contour *Contour) (minx, minz, leftmost int32) {
 func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 	maxVerts := ca.NVerts + cb.NVerts + 2
 	verts := make([]int32, maxVerts*4)
-	//if !verts {
-	//return false
-	//}
 
 	var nv int32
 
@@ -926,11 +921,9 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 		nv++
 	}
 
-	//rcFree(ca.verts);
 	ca.Verts = verts
 	ca.NVerts = nv
 
-	//rcFree(cb.verts);
 	cb.Verts = make([]int32, 0)
 	cb.NVerts = 0
 
@@ -939,7 +932,7 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 
 type ContourRegion struct {
 	outline *Contour
-	holes   []*ContourHole
+	holes   []ContourHole
 	nholes  int32
 }
 
@@ -948,7 +941,7 @@ type ContourHole struct {
 	minx, minz, leftmost int32
 }
 
-type compareHoles []*ContourHole
+type compareHoles []ContourHole
 
 // Len is the number of elements in the collection.
 func (s compareHoles) Len() int {
@@ -958,7 +951,6 @@ func (s compareHoles) Len() int {
 // Less reports whether the element with
 // index a should sort before the element with index b.
 func (s compareHoles) Less(i, j int) bool {
-
 	a := s[i]
 	b := s[j]
 	if a.minx == b.minx {

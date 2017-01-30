@@ -34,10 +34,10 @@ func (pm *PolyMesh) Free() {
 	pm = nil
 }
 
-/// @note If the mesh data is to be used to construct a Detour navigation mesh, then the upper
-/// limit must be retricted to <= #DT_VERTS_PER_POLYGON.
-///
-/// @see rcAllocPolyMesh, rcContourSet, rcPolyMesh, rcConfig
+// Note: If the mesh data is to be used to construct a Detour navigation mesh, then the upper
+// limit must be retricted to <= VertsPerPolygon.
+//
+// @see ContourSet, PolyMesh, Config
 func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
@@ -196,9 +196,6 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 					lastPoly := polys[(npolys-1)*nvp:]
 
 					if !compareSlicesUInt16(pb, lastPoly) {
-						//if pb != lastPoly {
-						// TODO: AR take care here!
-						//memcpy(pb, lastPoly, sizeof(unsigned short)*nvp);
 						copy(pb, lastPoly[:nvp])
 					}
 					npolys--

@@ -2,25 +2,25 @@ package recast
 
 import "github.com/aurelien-rainone/assertgo"
 
-/// @par
-///
-/// Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
-/// Contours will form simple polygons.
-///
-/// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
-/// re-assigned to the zero (null) region.
-///
-/// Partitioning can result in smaller than necessary regions. @p mergeRegionArea helps
-/// reduce unecessarily small regions.
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// The region data will be available via the rcCompactHeightfield::maxRegions
-/// and rcCompactSpan::reg fields.
-///
-/// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
-///
-/// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+// Non-null regions will consist of connected, non-overlapping walkable spans
+// that form a single contour.  Contours will form simple polygons.
+//
+// If multiple regions form an area that is smaller than `minRegionArea`, then
+// all spans will be re-assigned to the zero (null) region.
+//
+// Partitioning can result in smaller than necessary regions. `mergeRegionArea`
+// helps reduce unecessarily small regions.
+//
+// See the Config documentation for more information on the configuration
+// parameters.
+//
+// The region data will be available via the CompactHeightfield.maxRegions
+// and CompactSpan.reg fields.
+//
+// Warning: the distance field must be created using BuildDistanceField
+// before attempting to build regions.
+//
+// see CompactHeightfield, CompactSpan, BuildDistanceField, BuildRegionsMonotone, Config
 func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
@@ -64,11 +64,11 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 		rid := uint16(1)
 
 		for x := borderSize; x < w-borderSize; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 				if chf.Areas[i] == RC_NULL_AREA {
 					continue
 				}
@@ -126,7 +126,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 
 		// Remap IDs
 		for x := borderSize; x < w-borderSize; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if srcReg[i] > 0 && srcReg[i] < rid {
@@ -336,7 +336,7 @@ func paintRectRegion(minx, maxx, miny, maxy int32, regId uint16, chf *CompactHei
 	w := chf.Width
 	for y := miny; y < maxy; y++ {
 		for x := minx; x < maxx; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if chf.Areas[i] != RC_NULL_AREA {
@@ -385,7 +385,7 @@ func floodRegion(x, y, i int32,
 		cx := (*stack)[len(*stack)-1]
 		*stack = (*stack)[:len(*stack)-1]
 
-		cs := chf.Spans[ci]
+		cs := &chf.Spans[ci]
 
 		// Check if any of the neighbours already have a valid region set.
 		var (
@@ -412,7 +412,7 @@ func floodRegion(x, y, i int32,
 					break
 				}
 
-				as := chf.Spans[ai]
+				as := &chf.Spans[ai]
 
 				dir2 := int32((dir + 1) & 0x3)
 				if GetCon(as, dir2) != RC_NOT_CONNECTED {
@@ -472,11 +472,12 @@ func expandRegions(maxIter int, level uint16,
 		*stack = make([]int32, 0)
 		for y := int32(0); y < h; y++ {
 			for x := int32(0); x < w; x++ {
-				c := chf.Cells[x+y*w]
+				c := &chf.Cells[x+y*w]
 				i := int32(c.Index)
 				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 					if chf.Dist[i] >= level && (*srcReg)[i] == 0 && chf.Areas[i] != RC_NULL_AREA {
 						*stack = append(*stack, x, y, i)
+						panic("NON TEST POUR CUBES ET DEVELER NavMesh")
 						//stack.push(x);
 						//stack.push(y);
 						//stack.push(i);
@@ -517,7 +518,7 @@ func expandRegions(maxIter int, level uint16,
 			r := (*srcReg)[i]
 			d2 := int32(0xffff)
 			area := chf.Areas[i]
-			s := chf.Spans[i]
+			s := &chf.Spans[i]
 			var dir int32
 			for dir = 0; dir < 4; dir++ {
 				if GetCon(s, dir) == RC_NOT_CONNECTED {
@@ -582,7 +583,7 @@ func sortCellsByLevel(startLevel uint16,
 	// put all cells in the level range into the appropriate stacks
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				if chf.Areas[i] == RC_NULL_AREA || srcReg[i] != 0 {
@@ -612,6 +613,7 @@ func appendStacks(srcStack, dstStack []int32, srcReg []uint16) {
 		if (i < 0) || (srcReg[i] != 0) {
 			continue
 		}
+		panic("NON TEST POUR CUBES ET DEVELER NavMesh")
 		dstStack = append(dstStack, srcStack[j:j+3]...)
 		//dstStack.push(srcStack[j+1]);
 		//dstStack.push(srcStack[j+2]);
@@ -784,7 +786,7 @@ func (reg *Region) isConnectedToBorder() bool {
 
 func isSolidEdge(chf *CompactHeightfield, srcReg []uint16,
 	x, y, i, dir int32) bool {
-	s := chf.Spans[i]
+	s := &chf.Spans[i]
 	var r uint16
 	if GetCon(s, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
@@ -805,7 +807,7 @@ func walkContour(x, y, i, dir int32,
 	startDir := dir
 	starti := i
 
-	ss := chf.Spans[i]
+	ss := &chf.Spans[i]
 	var curReg uint16
 	if GetCon(ss, dir) != RC_NOT_CONNECTED {
 		ax := x + GetDirOffsetX(dir)
@@ -816,7 +818,7 @@ func walkContour(x, y, i, dir int32,
 	*cont = append(*cont, int32(curReg))
 
 	for iter := int32(1); iter < 39999; iter++ {
-		s := chf.Spans[i]
+		s := &chf.Spans[i]
 
 		if isSolidEdge(chf, srcReg, x, y, i, dir) {
 			// Choose the edge corner
@@ -838,8 +840,7 @@ func walkContour(x, y, i, dir int32,
 			nx := x + GetDirOffsetX(dir)
 			ny := y + GetDirOffsetY(dir)
 			if GetCon(s, dir) != RC_NOT_CONNECTED {
-				nc := chf.Cells[nx+ny*chf.Width]
-				ni = int32(nc.Index) + GetCon(s, dir)
+				ni = int32(chf.Cells[nx+ny*chf.Width].Index) + GetCon(s, dir)
 			}
 			if ni == -1 {
 				// Should not happen.
@@ -864,7 +865,6 @@ func walkContour(x, y, i, dir int32,
 				for k := j; k < len(*cont)-1; k++ {
 					(*cont)[k] = (*cont)[k+1]
 				}
-				//cont.pop()
 				*cont = (*cont)[:len(*cont)-1]
 			} else {
 				j++
@@ -894,7 +894,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 	// Find edge of a region and find connections around the contour.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i2 := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i2 < ni; i2++ {
 				r := srcReg[i2]

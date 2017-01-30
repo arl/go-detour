@@ -1,18 +1,18 @@
 package recast
 
 import (
-	"log"
+	"fmt"
 	"path/filepath"
 )
 
 const (
-	MAX_OFFMESH_CONNECTIONS = 256
-	MAX_VOLUMES             = 256
-	MAX_CONVEXVOL_PTS       = 12
+	maxOffMeshConnections = 256
+	maxVolumes            = 256
+	maxConvexVolPts       = 12
 )
 
 type ConvexVolume struct {
-	Verts      [MAX_CONVEXVOL_PTS * 3]float32
+	Verts      [maxConvexVolPts * 3]float32
 	HMin, HMax float32
 	NVerts     int32
 	Area       int32
@@ -56,145 +56,134 @@ type BuildSettings struct {
 }
 
 type InputGeom struct {
-	m_chunkyMesh *ChunkyTriMesh
-	m_mesh       *MeshLoaderObj
+	chunkyMesh *ChunkyTriMesh
+	mesh       *MeshLoaderObj
 
-	m_meshBMin, m_meshBMax [3]float32
-	m_buildSettings        BuildSettings
-	m_hasBuildSettings     bool
+	meshBMin, meshBMax [3]float32
+	buildSettings      BuildSettings
+	hasBuildSettings   bool
 
 	// Off-Mesh connections.
-	m_offMeshConVerts [MAX_OFFMESH_CONNECTIONS * 3 * 2]float32
-	m_offMeshConRads  [MAX_OFFMESH_CONNECTIONS]float32
-	m_offMeshConDirs  [MAX_OFFMESH_CONNECTIONS]uint8
-	m_offMeshConAreas [MAX_OFFMESH_CONNECTIONS]uint8
-	m_offMeshConFlags [MAX_OFFMESH_CONNECTIONS]uint16
-	m_offMeshConId    [MAX_OFFMESH_CONNECTIONS]uint32
-	m_offMeshConCount int32
+	offMeshConVerts [maxOffMeshConnections * 3 * 2]float32
+	offMeshConRads  [maxOffMeshConnections]float32
+	offMeshConDirs  [maxOffMeshConnections]uint8
+	offMeshConAreas [maxOffMeshConnections]uint8
+	offMeshConFlags [maxOffMeshConnections]uint16
+	offMeshConID    [maxOffMeshConnections]uint32
+	offMeshConCount int32
 
 	// Convex Volumes.
-	m_volumes     [MAX_VOLUMES]ConvexVolume
-	m_volumeCount int32
+	volumes     [maxVolumes]ConvexVolume
+	volumeCount int32
 }
 
-func (ig *InputGeom) Load(ctx *BuildContext, path string) bool {
+func (ig *InputGeom) Load(ctx *BuildContext, path string) error {
 
 	switch filepath.Ext(path) {
 	case ".obj":
 		return ig.loadMesh(ctx, path)
 	case ".gset":
-		//return loadGeomSet(ctx, filepath);
-		log.Printf("gset input geometry not implemented")
+		return fmt.Errorf("gset input geometry not implemented")
 	}
-	// TODO: better error handling in Load
-	return false
+	return fmt.Errorf("couldn't recognize input geometry file extension: '%s'", path)
 }
 
-func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) bool {
-	if ig.m_mesh != nil {
-		ig.m_chunkyMesh = nil
-		ig.m_mesh = nil
+func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
+	var err error
+	if ig.mesh != nil {
+		ig.chunkyMesh = nil
+		ig.mesh = nil
 	}
-	ig.m_offMeshConCount = 0
-	ig.m_volumeCount = 0
+	ig.offMeshConCount = 0
+	ig.volumeCount = 0
 
-	ig.m_mesh = NewMeshLoaderObj()
-	if ig.m_mesh == nil {
-		ctx.Log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.")
-		return false
-	}
-	if ig.m_mesh.Load(path) != nil {
-		ctx.Log(RC_LOG_ERROR, "buildTiledNavigation: Could not load '%s'", path)
-		return false
+	ig.mesh = NewMeshLoaderObj()
+	if err = ig.mesh.Load(path); err != nil {
+		return fmt.Errorf("could not load '%s'", err)
 	}
 
-	CalcBounds(ig.m_mesh.Verts(), ig.m_mesh.VertCount(), ig.m_meshBMin[:], ig.m_meshBMax[:])
+	CalcBounds(ig.mesh.Verts(), ig.mesh.VertCount(), ig.meshBMin[:], ig.meshBMax[:])
 
-	ig.m_chunkyMesh = new(ChunkyTriMesh)
-	if ig.m_chunkyMesh == nil {
-		ctx.Log(RC_LOG_ERROR, "buildTiledNavigation: Out of memory 'm_chunkyMesh'.")
-		return false
-	}
-	if !CreateChunkyTriMesh(ig.m_mesh.Verts(), ig.m_mesh.Tris(), ig.m_mesh.TriCount(), 256, ig.ChunkyMesh()) {
-		ctx.Log(RC_LOG_ERROR, "buildTiledNavigation: Failed to build chunky mesh.")
-		return false
+	ig.chunkyMesh = new(ChunkyTriMesh)
+	if !CreateChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
+		return fmt.Errorf("failed to build chunky mesh for '%s'", path)
 	}
 
-	return true
+	return nil
 }
 
 // Method to return static mesh data.
 func (ig *InputGeom) Mesh() *MeshLoaderObj {
-	return ig.m_mesh
+	return ig.mesh
 }
 
 func (ig *InputGeom) MeshBoundsMin() [3]float32 {
-	return ig.m_meshBMin
+	return ig.meshBMin
 }
 
 func (ig *InputGeom) MeshBoundsMax() [3]float32 {
-	return ig.m_meshBMax
+	return ig.meshBMax
 }
 
 func (ig *InputGeom) NavMeshBoundsMin() [3]float32 {
-	if ig.m_hasBuildSettings {
-		return ig.m_buildSettings.navMeshBMin
+	if ig.hasBuildSettings {
+		return ig.buildSettings.navMeshBMin
 	} else {
-		return ig.m_meshBMin
+		return ig.meshBMin
 	}
 }
 
 func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
-	if ig.m_hasBuildSettings {
-		return ig.m_buildSettings.navMeshBMax
+	if ig.hasBuildSettings {
+		return ig.buildSettings.navMeshBMax
 	} else {
-		return ig.m_meshBMax
+		return ig.meshBMax
 	}
 }
 
 func (ig *InputGeom) ChunkyMesh() *ChunkyTriMesh {
-	return ig.m_chunkyMesh
+	return ig.chunkyMesh
 }
 
 func (ig *InputGeom) BuildSettings() *BuildSettings {
-	if ig.m_hasBuildSettings {
-		return &ig.m_buildSettings
+	if ig.hasBuildSettings {
+		return &ig.buildSettings
 	}
 	return nil
 }
 
 func (ig *InputGeom) ConvexVolumes() []ConvexVolume {
-	return ig.m_volumes[:]
+	return ig.volumes[:]
 }
 
 func (ig *InputGeom) ConvexVolumesCount() int32 {
-	return ig.m_volumeCount
+	return ig.volumeCount
 }
 
 func (ig *InputGeom) OffMeshConnectionVerts() []float32 {
-	return ig.m_offMeshConVerts[:]
+	return ig.offMeshConVerts[:]
 }
 
 func (ig *InputGeom) OffMeshConnectionRads() []float32 {
-	return ig.m_offMeshConRads[:]
+	return ig.offMeshConRads[:]
 }
 
 func (ig *InputGeom) OffMeshConnectionAreas() []uint8 {
-	return ig.m_offMeshConAreas[:]
+	return ig.offMeshConAreas[:]
 }
 
 func (ig *InputGeom) OffMeshConnectionFlags() []uint16 {
-	return ig.m_offMeshConFlags[:]
+	return ig.offMeshConFlags[:]
 }
 
 func (ig *InputGeom) OffMeshConnectionId() []uint32 {
-	return ig.m_offMeshConId[:]
+	return ig.offMeshConID[:]
 }
 
 func (ig *InputGeom) OffMeshConnectionDirs() []uint8 {
-	return ig.m_offMeshConDirs[:]
+	return ig.offMeshConDirs[:]
 }
 
 func (ig *InputGeom) OffMeshConnectionCount() int32 {
-	return ig.m_offMeshConCount
+	return ig.offMeshConCount
 }

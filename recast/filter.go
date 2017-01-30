@@ -20,7 +20,7 @@ func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, s
 
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			var ps *rcSpan
+			var ps *Span
 			previousWalkable := false
 			previousArea := uint8(RC_NULL_AREA)
 

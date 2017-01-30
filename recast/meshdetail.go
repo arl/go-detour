@@ -350,12 +350,10 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 	)
 	verts = make([]float32, 256*3)
 
-	//rcScopedDelete<int> bounds((int*)rcAlloc(sizeof(int)*mesh.npolys*4, RC_ALLOC_TEMP));
 	bounds := make([]*int32, mesh.NPolys*4)
 	for i := range bounds {
 		bounds[i] = new(int32)
 	}
-	//rcScopedDelete<float> poly((float*)rcAlloc(sizeof(float)*nvp*3, RC_ALLOC_TEMP));
 	poly := make([]float32, nvp*3)
 
 	// Find max size for a polygon area.
@@ -470,7 +468,6 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 			if dmesh.NVerts != 0 {
 				copy(newv, dmesh.Verts[:3*dmesh.NVerts])
 			}
-			dmesh.Verts = make([]float32, 0)
 			dmesh.Verts = newv
 		}
 		for j := int32(0); j < nverts; j++ {
@@ -637,10 +634,6 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 
 	var i int32
 	for j := nhull - 1; i < nhull; i++ {
-		panic("THERE'S A CHECK TO DO with addEdge")
-		// TODO/AR: check that edges[0] is modified if necessary when calling
-		// addEdge. In case it's not working, there are other cases, just below
-		// in this function (look for ARaddEdge)
 		addEdge(ctx, (*edges)[:], &nedges, maxEdges, hull[j], hull[i], EV_HULL, EV_UNDEF)
 		j = i
 	}
@@ -659,7 +652,6 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 	}
 
 	// Create tris
-	//tris.resize(nfaces*4);
 	*tris = make([]int32, nfaces*4)
 	for i := int32(0); i < nfaces*4; i++ {
 		(*tris)[i] = -1
@@ -803,12 +795,12 @@ func triangulateHull(nverts int32, verts []float32, nhull int32, hull []int32, t
 	}
 }
 
-func getJitterX(i int64) float32 {
-	return float32(((i*0x8da6b343)&0xffff)/65535.0*2.0) - 1.0
+func jitterX(i int64) float32 {
+	return (float32((i*0x8da6b343)&0xffff) / float32(65535.0) * float32(2.0)) - float32(1.0)
 }
 
-func getJitterY(i int64) float32 {
-	return float32(((i*0xd8163841)&0xffff)/65535.0*2.0) - 1.0
+func jitterY(i int64) float32 {
+	return (float32((i*0xd8163841)&0xffff) / float32(65535.0) * float32(2.0)) - float32(1.0)
 }
 
 func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
@@ -829,7 +821,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 	*nverts = nin
 
 	for i := int32(0); i < nin; i++ {
-		copy(verts[i*3:], in[i*3:])
+		copy(verts[i*3:], in[i*3:3+i*3])
 	}
 
 	*edges = make([]int32, 0)
@@ -906,7 +898,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 				}
 				// If the max deviation is larger than accepted error,
 				// add new point, else continue to next segment.
-				if maxi != -1 && maxd > math32.Sqrt(sampleMaxError) {
+				if maxi != -1 && maxd > math32.Sqr(sampleMaxError) {
 					for m := nidx; m > k; m-- {
 						idx[m] = idx[m-1]
 					}
@@ -922,14 +914,14 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 			// Add new vertices.
 			if swapped {
 				for k := nidx - 2; k > 0; k-- {
-					copy(verts[*nverts*3:], edge[idx[k]*3:])
+					copy(verts[*nverts*3:], edge[idx[k]*3:3+idx[k]*3])
 					hull[nhull] = *nverts
 					nhull++
 					*nverts++
 				}
 			} else {
 				for k := int32(1); k < nidx-1; k++ {
-					copy(verts[*nverts*3:], edge[idx[k]*3:])
+					copy(verts[*nverts*3:], edge[idx[k]*3:3+(idx[k]*3)])
 					hull[nhull] = *nverts
 					nhull++
 					*nverts++
@@ -963,8 +955,8 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 		copy(bmin[:], in)
 		copy(bmax[:], in)
 		for i := int32(1); i < nin; i++ {
-			copy(bmin[:], in[i*3:])
-			copy(bmax[:], in[i*3:])
+			d3.Vec3Min(bmin[:], in[i*3:])
+			d3.Vec3Max(bmax[:], in[i*3:])
 		}
 		x0 := int32(math32.Floor(bmin[0] / sampleDist))
 		x1 := int32(math32.Ceil(bmax[0] / sampleDist))
@@ -1016,9 +1008,9 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 				var pt [3]float32
 				// The sample location is jittered to get rid of some bad triangulations
 				// which are cause by symmetrical data from the grid structure.
-				pt[0] = float32(s[0])*sampleDist + getJitterX(int64(i))*cs*0.1
+				pt[0] = float32(s[0])*sampleDist + jitterX(int64(i))*cs*0.1
 				pt[1] = float32(s[1]) * chf.Ch
-				pt[2] = float32(s[2])*sampleDist + getJitterY(int64(i))*cs*0.1
+				pt[2] = float32(s[2])*sampleDist + jitterY(int64(i))*cs*0.1
 				d := distToTriMesh(pt[:], verts, *nverts, *tris, int32(len(*tris)/4))
 				if d < 0 {
 					continue // did not hit the mesh.
@@ -1029,6 +1021,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 					copy(bestpt[:], pt[:])
 				}
 			}
+
 			// If the max error is within accepted threshold, stop tesselating.
 			if bestd <= sampleMaxError || besti == -1 {
 				break
@@ -1041,8 +1034,6 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 
 			// Create new triangulation.
 			// TODO: Incremental add instead of full rebuild.
-			//edges.resize(0)
-			//tris.resize(0)
 			*edges = make([]int32, 0)
 			*tris = make([]int32, 0)
 			delaunayHull(ctx, *nverts, verts, nhull, hull[:], tris, edges)
@@ -1098,8 +1089,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 			c := chf.Cells[(ax+bs)+(az+bs)*chf.Width]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni && dmin > 0; i++ {
-				s := chf.Spans[i]
-				d := iAbs(ay - int32(s.Y))
+				d := iAbs(ay - int32(chf.Spans[i].Y))
 				if d < dmin {
 					startCellX = ax
 					startCellY = az
@@ -1191,7 +1181,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		//rcSwap(dirs[directDir], dirs[3]);
 		dirs[directDir], dirs[3] = dirs[3], dirs[directDir]
 
-		cs := chf.Spans[ci]
+		cs := &chf.Spans[ci]
 		for i := int32(0); i < int32(4); i++ {
 			dir := dirs[i]
 			if GetCon(cs, dir) == RC_NOT_CONNECTED {
@@ -1229,8 +1219,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		hp.data[i] = 0xffff
 	}
 
-	cs := chf.Spans[ci]
-	hp.data[cx-hp.xmin+(cy-hp.ymin)*hp.width] = cs.Y
+	hp.data[cx-hp.xmin+(cy-hp.ymin)*hp.width] = chf.Spans[ci].Y
 }
 
 func distToPoly(nvert int32, verts, p []float32) float32 {
@@ -1289,7 +1278,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 				c := chf.Cells[x+y*chf.Width]
 				i := int32(c.Index)
 				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-					s := chf.Spans[i]
+					s := &chf.Spans[i]
 					if int32(s.Reg) == region {
 						// Store height
 						hp.data[hx+hy*hp.width] = s.Y
@@ -1303,8 +1292,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 								ax := x + GetDirOffsetX(dir)
 								ay := y + GetDirOffsetY(dir)
 								ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
-								as := chf.Spans[ai]
-								if int32(as.Reg) != region {
+								if int32(chf.Spans[ai].Reg) != region {
 									border = true
 									break
 								}
@@ -1346,7 +1334,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 			*queue = (*queue)[:len(*queue)-RETRACT_SIZE*3]
 		}
 
-		cs := chf.Spans[ci]
+		cs := &chf.Spans[ci]
 		for dir := int32(0); dir < 4; dir++ {
 			if GetCon(cs, dir) == RC_NOT_CONNECTED {
 				continue
@@ -1366,9 +1354,8 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 			}
 
 			ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(cs, dir)
-			as := chf.Spans[ai]
 
-			hp.data[hx+hy*hp.width] = as.Y
+			hp.data[hx+hy*hp.width] = chf.Spans[ai].Y
 
 			push3(queue, ax, ay, ai)
 		}

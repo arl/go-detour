@@ -154,11 +154,9 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 		if axis == 0 {
 			// Sort along x-axis
 			sort.Sort(alongXAxis(items[imin : imin+inum]))
-			//sort.Sort(items[imin:imin+inum]), static_cast < size_t > (inum), sizeof(BoundsItem), compareItemX)
 		} else if axis == 1 {
 			// Sort along y-axis
 			sort.Sort(alongYAxis(items[imin : imin+inum]))
-			//sort.Sort(items+imin, static_cast < size_t > (inum), sizeof(BoundsItem), compareItemY)
 		}
 
 		isplit := imin + inum/2
@@ -174,8 +172,8 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 	}
 }
 
-/// Creates partitioned triangle mesh (AABB tree),
-/// where each node contains at max trisPerChunk triangles.
+// Creates partitioned triangle mesh (AABB tree),
+// where each node contains at max trisPerChunk triangles.
 func CreateChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int32, cm *ChunkyTriMesh) bool {
 	nchunks := (ntris + trisPerChunk - 1) / trisPerChunk
 	cm.nodes = make([]ChunkyTriMeshNode, nchunks*4)
@@ -260,8 +258,8 @@ func checkOverlapRect(amin, amax, bmin, bmax [2]float32) bool {
 	return overlap
 }
 
-/// Returns the chunk indices which overlap the input rectable.
-func (cm *ChunkyTriMesh) rcGetChunksOverlappingRect(bmin, bmax [2]float32, ids []int32, maxIds int32) bool {
+// Returns the chunk indices which overlap the input rectable.
+func (cm *ChunkyTriMesh) chunksOverlappingRect(bmin, bmax [2]float32, ids []int32, maxIds int32) bool {
 	// Traverse tree
 	var i, n int32
 	for i < cm.nnodes {
@@ -324,8 +322,8 @@ func checkOverlapSegment(p, q, bmin, bmax [2]float32) bool {
 	return true
 }
 
-/// Returns the chunk indices which overlap the input segment.
-func (cm *ChunkyTriMesh) rcGetChunksOverlappingSegment(p, q [2]float32, ids []int32, maxIds int32) int32 {
+// Returns the chunk indices which overlap the input segment.
+func (cm *ChunkyTriMesh) chunksOverlappingSegment(p, q [2]float32, ids []int32, maxIds int32) int32 {
 	// Traverse tree
 	var i, n int32
 	for i < cm.nnodes {

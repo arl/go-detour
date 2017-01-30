@@ -6,7 +6,7 @@ import (
 )
 
 // Recast log categories.
-// @see Context
+// see BuildContext
 type LogCategory int
 
 const (
@@ -17,16 +17,8 @@ const (
 
 const maxMessages = 1000
 
-// BuildContext if the build context for recast.
-//
-// This class does not provide logging or timer functionality on its
-// own.  Both must be provided by a concrete implementation
-// by overriding the protected member functions.  Also, this class does not
-// provide an interface for extracting log messages. (Only adding them.)
-// So concrete implementations must provide one.
-//
-// If no logging or timers are required, just pass an instance of this
-// class through the Recast build process.
+// BuildContext provides an interface for optional logging and performance
+// tracking of the recast build process.
 type BuildContext struct {
 	startTime [RC_MAX_TIMERS]time.Time
 	accTime   [RC_MAX_TIMERS]time.Duration
@@ -35,64 +27,78 @@ type BuildContext struct {
 	numMessages int
 	textPool    string
 
-	/// True if logging is enabled.
-	m_logEnabled bool
+	// True if logging is enabled.
+	logEnabled bool
 
-	/// True if the performance timers are enabled.
-	m_timerEnabled bool
+	// True if the performance timers are enabled.
+	timerEnabled bool
 }
 
+// NewBuildContext returns an initialized buildcontext where state indicated if
+// logging and performance tracking are enabled.
 func NewBuildContext(state bool) *BuildContext {
 	return &BuildContext{
-		m_logEnabled:   state,
-		m_timerEnabled: state,
+		logEnabled:   state,
+		timerEnabled: state,
 	}
 }
 
-// Enables or disables logging.
-//  @param[in]		state	TRUE if logging should be enabled.
+// EnableLog enables or disables logging.
 func (ctx *BuildContext) EnableLog(state bool) {
-	ctx.m_logEnabled = state
+	ctx.logEnabled = state
 }
 
-// Enables or disables the performance timers.
-//  @param[in]		state	TRUE if timers should be enabled.
+// EnableTimer enables or disables the performance timers.
 func (ctx *BuildContext) EnableTimer(state bool) {
-	ctx.m_timerEnabled = state
+	ctx.timerEnabled = state
 }
 
-// Clears all log entries.
+// ResetLog clears all log entries.
 func (ctx *BuildContext) ResetLog() {
-	if ctx.m_logEnabled {
+	if ctx.logEnabled {
 		ctx.numMessages = 0
 	}
 }
 
-// Clears all peformance timers. (Resets all to unused.)
+// ResetTimers clears all peformance timers. (Resets all to unused.)
 func (ctx *BuildContext) ResetTimers() {
-	if ctx.m_timerEnabled {
+	if ctx.timerEnabled {
 		for i := 0; i < RC_MAX_TIMERS; i++ {
 			ctx.accTime[i] = time.Duration(0)
 		}
 	}
 }
 
+// Progressf writes a new log entry in the 'progress' category.
+//
+// The format string and arguments are forwarded to fmt.Sprintf and thus accepts
+// the same format specifiers.
 func (ctx *BuildContext) Progressf(format string, v ...interface{}) {
 	ctx.Log(RC_LOG_PROGRESS, format, v...)
 }
 
+// Warningf writes a new log entry in the 'warning' category.
+//
+// The format string and arguments are forwarded to fmt.Sprintf and thus accepts
+// the same format specifiers.
 func (ctx *BuildContext) Warningf(format string, v ...interface{}) {
 	ctx.Log(RC_LOG_WARNING, format, v...)
 }
 
+// Errorf writes a new log entry in the 'error' category.
+//
+// The format string and arguments are forwarded to fmt.Sprintf and thus accepts
+// the same format specifiers.
 func (ctx *BuildContext) Errorf(format string, v ...interface{}) {
 	ctx.Log(RC_LOG_ERROR, format, v...)
 }
 
-// Logs a message.
-//  @param[in]		format		The message.
+// Log writes a new log entry in the specified category.
+//
+// The format string and arguments are forwarded to fmt.Sprintf and thus accepts
+// the same format specifiers.
 func (ctx *BuildContext) Log(category LogCategory, format string, v ...interface{}) {
-	if ctx.m_logEnabled && ctx.numMessages < maxMessages {
+	if ctx.logEnabled && ctx.numMessages < maxMessages {
 		// Store message
 		switch category {
 		case RC_LOG_PROGRESS:
@@ -106,7 +112,10 @@ func (ctx *BuildContext) Log(category LogCategory, format string, v ...interface
 	}
 }
 
-// Dumps the log to stdout.
+// DumpLog dumps all the log entries to stdout, preceded by a message.
+//
+// The format string and arguments are forwarded to fmt.Sprintf and thus accepts
+// the same format specifiers.
 func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
 
 	// Print header.
@@ -119,27 +128,26 @@ func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
 	}
 }
 
+// LogCount returns the current number of log entries.
 func (ctx *BuildContext) LogCount() int {
 	return ctx.numMessages
 }
 
-/// Returns log message text.
+// LogText returns the log entry at index i.
 func (ctx *BuildContext) LogText(i int32) string {
 	return ctx.messages[i]
 }
 
-// Starts the specified performance timer.
-//  @param	label	The category of the timer.
+// StartTimer starts the specified performance timer.
 func (ctx *BuildContext) StartTimer(label TimerLabel) {
-	if ctx.m_timerEnabled {
+	if ctx.timerEnabled {
 		ctx.startTime[label] = time.Now()
 	}
 }
 
-// Stops the specified performance timer.
-//  @param	label	The category of the timer.
+// StopTimer stops the specified performance timer.
 func (ctx *BuildContext) StopTimer(label TimerLabel) {
-	if ctx.m_timerEnabled {
+	if ctx.timerEnabled {
 		deltaTime := time.Now().Sub(ctx.startTime[label])
 		if ctx.accTime[label] == 0 {
 			ctx.accTime[label] = deltaTime
@@ -149,11 +157,13 @@ func (ctx *BuildContext) StopTimer(label TimerLabel) {
 	}
 }
 
-// Returns the total accumulated time of the specified performance timer.
-//  @param	label	The category of the timer.
-//  @return The accumulated time of the timer, or -1 if timers are disabled or the timer has never been started.
+// AccumulatedTime returns the total accumulated time of the specified
+// performance timer.
+//
+// Returns the accumulated time of the timer, or -1 if timers are disabled or
+// the timer has never been started.
 func (ctx *BuildContext) AccumulatedTime(label TimerLabel) time.Duration {
-	if ctx.m_timerEnabled {
+	if ctx.timerEnabled {
 		return ctx.accTime[label]
 	} else {
 		return time.Duration(0)

@@ -5,14 +5,22 @@ import (
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
-/// @par
-///
-/// Basically, any spans that are closer to a boundary or obstruction than the specified radius
-/// are marked as unwalkable.
-///
-/// This method is usually called immediately after the heightfield has been built.
-///
-/// @see rcCompactHeightfield, rcBuildCompactHeightfield, rcConfig::walkableRadius
+// ErodeWalkableArea erodes the walkable area within the heightfield by the
+//specified radius.
+//
+//  Arguments:
+//   ctx     The build context to use during the operation.
+//   radius  The radius of erosion. [Limits: 0 < value < 255] [Units: vx]
+//   chf     The populated compact heightfield to erode.
+//
+// Returns true if the operation completed successfully.
+//
+// Basically, any spans that are closer to a boundary or obstruction than the
+// specified radius are marked as unwalkable.
+//
+// This method is usually called immediately after the heightfield has been
+// built.
+// see CompactHeightfield, BuildCompactHeightfield, Config.WalkableRadius
 func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
@@ -32,13 +40,13 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	// Mark boundary cells.
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			ni := int32(c.Index) + int32(c.Count)
 			for i := int32(c.Index); i < ni; i++ {
 				if chf.Areas[i] == RC_NULL_AREA {
 					dist[i] = 0
 				} else {
-					s := chf.Spans[i]
+					s := &chf.Spans[i]
 					nc := int32(0)
 					for dir := int32(0); dir < 4; dir++ {
 						if GetCon(s, dir) != RC_NOT_CONNECTED {
@@ -64,17 +72,17 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	// Pass 1
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			ni := int32(c.Index) + int32(c.Count)
 			for i := int32(c.Index); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 
 				if GetCon(s, 0) != RC_NOT_CONNECTED {
 					// (-1,0)
 					ax := x + GetDirOffsetX(0)
 					ay := y + GetDirOffsetY(0)
 					ai := int32(chf.Cells[ax+ay*w].Index) + int32(GetCon(s, 0))
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -97,7 +105,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					ax := x + GetDirOffsetX(3)
 					ay := y + GetDirOffsetY(3)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 3)
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -121,17 +129,17 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	// Pass 2
 	for y := int32(h - 1); y >= 0; y-- {
 		for x := int32(w - 1); x >= 0; x-- {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 
 				if GetCon(s, 2) != RC_NOT_CONNECTED {
 					// (1,0)
 					ax := x + GetDirOffsetX(2)
 					ay := y + GetDirOffsetY(2)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 2)
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -153,7 +161,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					ax := x + GetDirOffsetX(1)
 					ay := y + GetDirOffsetY(1)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 1)
-					as := chf.Spans[ai]
+					as := &chf.Spans[ai]
 					nd = uint8(iMin(int32(dist[ai]+2), int32(255)))
 					if nd < dist[i] {
 						dist[i] = nd
@@ -186,14 +194,24 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	return true
 }
 
-/// @par
-///
-/// The value of spacial parameters are in world units.
-///
-/// The y-values of the polygon vertices are ignored. So the polygon is effectively
-/// projected onto the xz-plane at @p hmin, then extruded to @p hmax.
-///
-/// @see rcCompactHeightfield, rcMedianFilterWalkableArea
+// MarkConvexPolyArea applies the area id to the all spans within the specified
+// convex polygon.
+//
+//  Arguments:
+//   ctx     The build context to use during the operation.
+//   verts   The vertices of the polygon [Fomr: (x, y, z) * @p nverts]
+//   nverts  The number of vertices in the polygon.
+//   hmin    The height of the base of the polygon.
+//   hmax    The height of the top of the polygon.
+//   areaId  The area id to apply. [Limit: <= RC_WALKABLE_AREA]
+//   chf     A populated compact heightfield.
+//
+// The value of spacial parameters are in world units.
+//
+// The y-values of the polygon vertices are ignored. So the polygon is
+// effectively projected onto the xz-plane at hmin, then extruded to hmax.
+//
+// See CompactHeightfield, MedianFilterWalkableArea
 func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 	hmin, hmax float32, areaId uint8, chf *CompactHeightfield) {
 
@@ -201,7 +219,6 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 
 	ctx.StartTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
 	defer ctx.StopTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
-
 	var bmin, bmax [3]float32
 	copy(bmin[:], verts[:3])
 	copy(bmax[:], verts[:3])
@@ -249,13 +266,13 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 	// TODO: Optimize.
 	for z := minz; z <= maxz; z++ {
 		for x := minx; x <= maxx; x++ {
-			c := chf.Cells[x+z*chf.Width]
+			c := &chf.Cells[x+z*chf.Width]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
 				if chf.Areas[i] == RC_NULL_AREA {
 					continue
 				}
+				s := &chf.Spans[i]
 				if int32(s.Y) >= miny && int32(s.Y) <= maxy {
 					var p [3]float32
 					p[0] = chf.BMin[0] + (float32(x)+0.5)*chf.Cs
@@ -277,8 +294,6 @@ func pointInPoly(nvert int32, verts, p []float32) bool {
 		c    bool
 	)
 
-	// TODO: check that, j = i++
-	//for j = nvert-1; i < nvert; j = i++) {
 	for j = nvert - 1; i < nvert; i++ {
 		vi := verts[i*3:]
 		vj := verts[j*3:]

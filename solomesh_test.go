@@ -39,13 +39,15 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	orgNavMeshName = "testdata/" + meshname + ".org.bin"
 	tmpBin = "out.bin"
 
-	ctx = recast.NewBuildContext(false)
+	ctx = recast.NewBuildContext(true)
 	soloMesh = NewSoloMesh(ctx)
 	if !soloMesh.Load(meshName) {
+		ctx.DumpLog("")
 		t.Fatalf("couldn't load mesh %v", meshName)
 	}
 	navMesh, ok := soloMesh.Build()
 	if !ok {
+		ctx.DumpLog("")
 		t.Fatalf("couldn't build navmesh for %v", meshname)
 	}
 
@@ -58,7 +60,10 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	if !ok {
 		t.Fatalf("%v and %v are different", tmpBin, orgNavMeshName)
 	}
-	ctx.DumpLog("Navmesh Build log")
+}
+
+func TestCreateDevelerNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "develer")
 }
 
 func TestCreateDungeonNavMesh(t *testing.T) {
@@ -67,6 +72,26 @@ func TestCreateDungeonNavMesh(t *testing.T) {
 
 func TestCreateCubeNavMesh(t *testing.T) {
 	testCreateSoloNavMesh(t, "cube")
+}
+
+func TestCreateCube5DegreesNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "cube5xdeg")
+}
+
+func TestCreateCube45DegreesNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "cube45xdeg")
+}
+
+func TestCreateStair2NavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "stair2")
+}
+
+func TestCreateStair3NavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "stair3")
+}
+
+func TestCreateHillNavMesh(t *testing.T) {
+	testCreateSoloNavMesh(t, "hill")
 }
 
 func benchmarkCreateNavMesh(b *testing.B, meshname string) {
@@ -84,6 +109,10 @@ func benchmarkCreateNavMesh(b *testing.B, meshname string) {
 			b.Fatalf("couldn't build navmesh for %v", meshname)
 		}
 	}
+}
+
+func BenchmarkCreateDevelerNavMesh(b *testing.B) {
+	benchmarkCreateNavMesh(b, "develer")
 }
 
 func BenchmarkCreateCubeNavMesh(b *testing.B) {

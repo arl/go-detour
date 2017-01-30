@@ -2,72 +2,59 @@ package recast
 
 import "github.com/aurelien-rainone/assertgo"
 
-/// Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
+// Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
 const (
 	RC_SPAN_HEIGHT_BITS uint = 16
-	/// Defines the maximum value for rcSpan::smin and rcSpan::smax.
+
+	// Defines the maximum value for Span.smin and Span.smax.
 	RC_SPAN_MAX_HEIGHT int32 = (1 << RC_SPAN_HEIGHT_BITS) - 1
-	/// The number of spans allocated per span spool.
+
+	// The number of spans allocated per span spool.
 	RC_SPANS_PER_POOL int32 = 2048
 )
 
-/// Represents a span in a heightfield.
-/// @see rcHeightfield
-type rcSpan struct {
-	//unsigned int smin : RC_SPAN_HEIGHT_BITS; ///< The lower limit of the span. [Limit: < #smax]
-	//unsigned int smax : RC_SPAN_HEIGHT_BITS; ///< The upper limit of the span. [Limit: <= #RC_SPAN_MAX_HEIGHT]
-	//unsigned int area : 6;                   ///< The area id assigned to the span.
-
-	smin uint16  ///< The lower limit of the span. [Limit: < #smax]
-	smax uint16  ///< The upper limit of the span. [Limit: <= #RC_SPAN_MAX_HEIGHT]
-	area uint8   ///< The area id assigned to the span.
-	next *rcSpan ///< The next span higher up in column.
+// A Span represents a span in a heightfield.
+// see Heightfield
+type Span struct {
+	smin uint16 // The lower limit of the span. [Limit: < smax]
+	smax uint16 // The upper limit of the span. [Limit: <= RC_SPAN_MAX_HEIGHT]
+	area uint8  // The area id assigned to the span.
+	next *Span  // The next span higher up in column.
 }
 
-/// A memory pool used for quick allocation of spans within a heightfield.
-/// @see rcHeightfield
-type rcSpanPool struct {
-	next  *rcSpanPool               ///< The next span pool.
-	items [RC_SPANS_PER_POOL]rcSpan ///< Array of spans in the pool.
+// A memory pool used for quick allocation of spans within a heightfield.
+//
+// see Heightfield
+type spanPool struct {
+	next  *spanPool               // The next span pool.
+	items [RC_SPANS_PER_POOL]Span // Array of spans in the pool.
 }
 
-// A dynamic heightfield representing obstructed space.
+// Heightfield is a dynamic heightfield representing obstructed space.
 type Heightfield struct {
-	Width    int32       // The width of the heightfield. (Along the x-axis in cell units.)
-	Height   int32       // The height of the heightfield. (Along the z-axis in cell units.)
-	BMin     [3]float32  // The minimum bounds in world space. [(x, y, z)]
-	BMax     [3]float32  // The maximum bounds in world space. [(x, y, z)]
-	Cs       float32     // The size of each cell. (On the xz-plane.)
-	Ch       float32     // The height of each cell. (The minimum increment along the y-axis.)
-	Spans    []*rcSpan   // Heightfield of spans (width*height).
-	Pools    *rcSpanPool // Linked list of span pools.
-	Freelist *rcSpan     // The next free span.
+	Width    int32      // The width of the heightfield. (Along the x-axis in cell units.)
+	Height   int32      // The height of the heightfield. (Along the z-axis in cell units.)
+	BMin     [3]float32 // The minimum bounds in world space. [(x, y, z)]
+	BMax     [3]float32 // The maximum bounds in world space. [(x, y, z)]
+	Cs       float32    // The size of each cell. (On the xz-plane.)
+	Ch       float32    // The height of each cell. (The minimum increment along the y-axis.)
+	Spans    []*Span    // Heightfield of spans (width*height).
+	Pools    *spanPool  // Linked list of span pools.
+	Freelist *Span      // The next free span.
 }
 
-func NewHeightfield() *Heightfield {
-	return &Heightfield{}
-}
-
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocHeightfield, rcHeightfield
-func (hf *Heightfield) Create(ctx *BuildContext, width, height int32,
-	bmin, bmax []float32, cs, ch float32) bool {
-	hf.Width = width
-	hf.Height = height
+// See the Config documentation for more information on the configuration parameters.
+func NewHeightfield(width, height int32, bmin, bmax []float32, cs, ch float32) *Heightfield {
+	hf := &Heightfield{
+		Width:  width,
+		Height: height,
+		Cs:     cs,
+		Ch:     ch,
+		Spans:  make([]*Span, width*height),
+	}
 	copy(hf.BMin[:], bmin)
 	copy(hf.BMax[:], bmax)
-	hf.Cs = cs
-	hf.Ch = ch
-	hf.Spans = make([]*rcSpan, hf.Width*hf.Height)
-	//if len(hf.Spans) == 0 {
-	// NOTE: since in Go, we don't have (for now) any way to check that we
-	// are out of memory, this check doesn't have any sense, but for
-	// completeness with the originla C code, I'll let it, hopefully it will
-	// be replaced one day by a proper "allocation done check"
-	//return false
-	//}
-	return true
+	return hf
 }
 
 func (hf *Heightfield) Free() {
@@ -76,7 +63,7 @@ func (hf *Heightfield) Free() {
 	}
 
 	// Delete span array.
-	hf.Spans = make([]*rcSpan, 0)
+	hf.Spans = make([]*Span, 0)
 	// Delete span pools.
 	for hf.Pools != nil {
 		next := hf.Pools.next
@@ -85,12 +72,12 @@ func (hf *Heightfield) Free() {
 	}
 }
 
-func (hf *Heightfield) allocSpan() *rcSpan {
+func (hf *Heightfield) allocSpan() *Span {
 	// If running out of memory, allocate new page and update the freelist.
 	if hf.Freelist == nil || hf.Freelist.next == nil {
 		// Create new page.
 		// Allocate memory for the new pool.
-		pool := &rcSpanPool{}
+		pool := &spanPool{}
 		if pool == nil {
 			return nil
 		}
@@ -100,9 +87,7 @@ func (hf *Heightfield) allocSpan() *rcSpan {
 		hf.Pools = pool
 		// Add new items to the free list.
 		freelist := hf.Freelist
-		//head := &pool.items[0]
-		//it := pool.items[RC_SPANS_PER_POOL]
-		var it *rcSpan
+		var it *Span
 		for i := len(pool.items) - 1; i > 0; i-- {
 			it = &pool.items[i]
 			it.next = freelist
@@ -121,7 +106,7 @@ func (hf *Heightfield) allocSpan() *rcSpan {
 	return it
 }
 
-func (hf *Heightfield) freeSpan(ptr *rcSpan) {
+func (hf *Heightfield) freeSpan(ptr *Span) {
 	if ptr == nil {
 		return
 	}
@@ -148,7 +133,7 @@ func (hf *Heightfield) addSpan(x, y int32, smin, smax uint16,
 		hf.Spans[idx] = s
 		return true
 	}
-	var prev *rcSpan
+	var prev *Span
 	cur := hf.Spans[idx]
 
 	// Insert and merge spans.
@@ -204,13 +189,15 @@ func (hf *Heightfield) addSpan(x, y int32, smin, smax uint16,
 	return true
 }
 
-/// Provides information on the content of a cell column in a compact heightfield.
+// A CompactCell provides information on the content of a cell column in a
+// compact heightfield.
 type CompactCell struct {
 	Index uint32 // Index to the first span in the column.
 	Count uint8  // Number of spans in the column.
 }
 
-/// Represents a span of unobstructed space within a compact heightfield.
+// CompactSpan represents a span of unobstructed space within a compact
+// heightfield.
 type CompactSpan struct {
 	Y   uint16 // The lower extent of the span. (Measured from the heightfield's base.)
 	Reg uint16 // The id of the region the span belongs to. (Or zero if not in a region.)
@@ -218,25 +205,25 @@ type CompactSpan struct {
 	H   uint8  // The height of the span.  (Measured from #y.)
 }
 
-/// A compact, static heightfield representing unobstructed space.
-/// @ingroup recast
+// A CompactHeightfield is a compact, static heightfield representing
+// unobstructed space.
 type CompactHeightfield struct {
-	Width          int32          // The width of the heightfield. (Along the x-axis in cell units.)
-	Height         int32          // The height of the heightfield. (Along the z-axis in cell units.)
-	SpanCount      int32          // The number of spans in the heightfield.
-	WalkableHeight int32          // The walkable height used during the build of the field.  (See: rcConfig::walkableHeight)
-	WalkableClimb  int32          // The walkable climb used during the build of the field. (See: rcConfig::walkableClimb)
-	BorderSize     int32          // The AABB border size used during the build of the field. (See: rcConfig::borderSize)
-	MaxDistance    uint16         // The maximum distance value of any span within the field.
-	MaxRegions     uint16         // The maximum region id of any span within the field.
-	BMin           [3]float32     // The minimum bounds in world space. [(x, y, z)]
-	BMax           [3]float32     // The maximum bounds in world space. [(x, y, z)]
-	Cs             float32        // The size of each cell. (On the xz-plane.)
-	Ch             float32        // The height of each cell. (The minimum increment along the y-axis.)
-	Cells          []*CompactCell // Array of cells. [Size: #width*#height]
-	Spans          []*CompactSpan // Array of spans. [Size: #spanCount]
-	Dist           []uint16       // Array containing border distance data. [Size: #spanCount]
-	Areas          []uint8        // Array containing area id data. [Size: #spanCount]
+	Width          int32         // The width of the heightfield. (Along the x-axis in cell units.)
+	Height         int32         // The height of the heightfield. (Along the z-axis in cell units.)
+	SpanCount      int32         // The number of spans in the heightfield.
+	WalkableHeight int32         // The walkable height used during the build of the field.  (See: Config.walkableHeight)
+	WalkableClimb  int32         // The walkable climb used during the build of the field. (See: Config.walkableClimb)
+	BorderSize     int32         // The AABB border size used during the build of the field. (See: Config.borderSize)
+	MaxDistance    uint16        // The maximum distance value of any span within the field.
+	MaxRegions     uint16        // The maximum region id of any span within the field.
+	BMin           [3]float32    // The minimum bounds in world space. [(x, y, z)]
+	BMax           [3]float32    // The maximum bounds in world space. [(x, y, z)]
+	Cs             float32       // The size of each cell. (On the xz-plane.)
+	Ch             float32       // The height of each cell. (The minimum increment along the y-axis.)
+	Cells          []CompactCell // Array of cells. [Size: width*height]
+	Spans          []CompactSpan // Array of spans. [Size: SpanCount]
+	Dist           []uint16      // Array containing border distance data. [Size: SpanCount]
+	Areas          []uint8       // Array containing area id data. [Size: SpanCount]
 }
 
 func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
@@ -255,13 +242,27 @@ func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
 	return spanCount
 }
 
-/// This is just the beginning of the process of fully building a compact heightfield.
-/// Various filters may be applied, then the distance field and regions built.
-/// E.g: #rcBuildDistanceField and #rcBuildRegions
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocCompactHeightfield, rcHeightfield, rcCompactHeightfield, rcConfig
+// BuildCompactHeightfield builds a compact heightfield representing open space,
+// from a heightfield representing solid space.
+//
+//  Arguments:
+//   ctx             The build context to use during the operation.
+//   walkableHeight  Minimum floor to 'ceiling' height that will still allow the
+//                   floor area to be considered walkable.
+//                   [Limit: >= 3] [Units: vx]
+//   walkableClimb   Maximum ledge height that is considered to still be
+//                   traversable. [Limit: >=0] [Units: vx]
+//   hf              The heightfield to be compacted.
+//   chf             The resulting compact heightfield. (Must be pre-allocated.)
+//
+//  Returns true if the operation completed successfully.
+//
+// This is just the beginning of the process of fully building a compact
+// heightfield.  Various filters may be applied, then the distance field and
+// regions built.  E.g: BuildDistanceField and BuildRegions
+//
+// See the Config documentation for more information on the configuration parameters.
+// see Heightfield, CompactHeightfield, Config
 func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb int32,
 	hf *Heightfield, chf *CompactHeightfield) bool {
 
@@ -284,33 +285,9 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	chf.BMax[1] += float32(walkableHeight) * hf.Ch
 	chf.Cs = hf.Cs
 	chf.Ch = hf.Ch
-	chf.Cells = make([]*CompactCell, w*h)
-	for i := range chf.Cells {
-		chf.Cells[i] = new(CompactCell)
-	}
-
-	//if len(chf.cells) == 0 {
-	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.cells' (%d)", w*h)
-	//return false
-	//}
-	//memset(chf.cells, 0, sizeof(rcCompactCell)*w*h)
-	chf.Spans = make([]*CompactSpan, spanCount)
-	for i := range chf.Spans {
-		chf.Spans[i] = new(CompactSpan)
-	}
-
-	//fmt.Println("spanCount", spanCount)
-	//if len(chf.spans) == 0 {
-	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.spans' (%d)", spanCount)
-	//return false
-	//}
-	//memset(chf.spans, 0, sizeof(rcCompactSpan)*spanCount);
+	chf.Cells = make([]CompactCell, w*h)
+	chf.Spans = make([]CompactSpan, spanCount)
 	chf.Areas = make([]uint8, spanCount)
-	//if len(chf.areas) == 0 {
-	//ctx.Errorf("rcBuildCompactHeightfield: Out of memory 'chf.areas' (%d)", spanCount)
-	//return false
-	//}
-	//memset(chf.areas, RC_NULL_AREA, sizeof(unsigned char)*spanCount);
 	for i := range chf.Areas {
 		chf.Areas[i] = RC_NULL_AREA
 	}
@@ -326,7 +303,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 			if s == nil {
 				continue
 			}
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			c.Index = idx
 			c.Count = 0
 			for s != nil {
@@ -354,10 +331,10 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	tooHighNeighbour := int32(0)
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
-			c := chf.Cells[x+y*w]
+			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				s := chf.Spans[i]
+				s := &chf.Spans[i]
 
 				for dir := int32(0); dir < 4; dir++ {
 					SetCon(s, dir, RC_NOT_CONNECTED)
@@ -370,10 +347,10 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 
 					// Iterate over all neighbour spans and check if any of the is
 					// accessible from current cell.
-					nc := chf.Cells[nx+ny*w]
+					nc := &chf.Cells[nx+ny*w]
 					k := int32(nc.Index)
 					for nk := int32(nc.Index + uint32(nc.Count)); k < nk; k++ {
-						ns := chf.Spans[k]
+						ns := &chf.Spans[k]
 						bot := iMax(int32(s.Y), int32(ns.Y))
 						top := iMin(int32(s.Y)+int32(s.H), int32(ns.Y)+int32(ns.H))
 
