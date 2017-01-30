@@ -299,17 +299,17 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Update poly flags from areas.
 	for i := int32(0); i < pmesh.NPolys; i++ {
 		if pmesh.Areas[i] == recast.RC_WALKABLE_AREA {
-			pmesh.Areas[i] = SAMPLE_POLYAREA_GROUND
+			pmesh.Areas[i] = samplePolyAreaGround
 		}
 
-		if pmesh.Areas[i] == SAMPLE_POLYAREA_GROUND ||
-			pmesh.Areas[i] == SAMPLE_POLYAREA_GRASS ||
-			pmesh.Areas[i] == SAMPLE_POLYAREA_ROAD {
-			pmesh.Flags[i] = SAMPLE_POLYFLAGS_WALK
-		} else if pmesh.Areas[i] == SAMPLE_POLYAREA_WATER {
-			pmesh.Flags[i] = SAMPLE_POLYFLAGS_SWIM
-		} else if pmesh.Areas[i] == SAMPLE_POLYAREA_DOOR {
-			pmesh.Flags[i] = SAMPLE_POLYFLAGS_WALK | SAMPLE_POLYFLAGS_DOOR
+		if pmesh.Areas[i] == samplePolyAreaGround ||
+			pmesh.Areas[i] == samplePolyAreaGrass ||
+			pmesh.Areas[i] == samplePolyAreaRoad {
+			pmesh.Flags[i] = samplePolyFlagsWalk
+		} else if pmesh.Areas[i] == samplePolyAreaWater {
+			pmesh.Flags[i] = samplePolyFlagsSwim
+		} else if pmesh.Areas[i] == samplePolyAreaDoor {
+			pmesh.Flags[i] = samplePolyFlagsWalk | samplePolyFlagsDoor
 		}
 	}
 
