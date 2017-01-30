@@ -687,15 +687,15 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	// We compress the mesh data by skipping them and using the navmesh coordinates.
 	if params.DetailMeshes != nil && len(params.DetailMeshes) > 0 {
 		var vbase uint16
-		for i := int32(0); i < params.PolyCount; i++ {
-			dtl := &navDMeshes[i]
-			vb := uint8(params.DetailMeshes[i*4+0])
-			ndv := uint8(params.DetailMeshes[i*4+1])
-			nv := navPolys[i].VertCount
+		for i2 := int32(0); i2 < params.PolyCount; i2++ {
+			dtl := &navDMeshes[i2]
+			vb := params.DetailMeshes[i2*4+0]
+			ndv := params.DetailMeshes[i2*4+1]
+			nv := int32(navPolys[i2].VertCount)
 			dtl.VertBase = uint32(vbase)
 			dtl.VertCount = uint8(ndv - nv)
-			dtl.TriBase = uint32(params.DetailMeshes[i*4+2])
-			dtl.TriCount = uint8(params.DetailMeshes[i*4+3])
+			dtl.TriBase = uint32(params.DetailMeshes[i2*4+2])
+			dtl.TriCount = uint8(params.DetailMeshes[i2*4+3])
 			// Copy vertices except the first 'nv' verts which are equal to nav poly verts.
 			if ndv-nv != 0 {
 				start, length := int32(vb+nv)*3, 3*int32(ndv-nv)
