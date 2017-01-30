@@ -294,8 +294,6 @@ func pointInPoly(nvert int32, verts, p []float32) bool {
 		c    bool
 	)
 
-	// TODO: check that, j = i++
-	//for j = nvert-1; i < nvert; j = i++) {
 	for j = nvert - 1; i < nvert; i++ {
 		vi := verts[i*3:]
 		vj := verts[j*3:]
