@@ -1,7 +1,7 @@
 package recast
 
 import (
-	"log"
+	"fmt"
 	"path/filepath"
 )
 
@@ -77,20 +77,19 @@ type InputGeom struct {
 	m_volumeCount int32
 }
 
-func (ig *InputGeom) Load(ctx *BuildContext, path string) bool {
+func (ig *InputGeom) Load(ctx *BuildContext, path string) error {
 
 	switch filepath.Ext(path) {
 	case ".obj":
 		return ig.loadMesh(ctx, path)
 	case ".gset":
-		//return loadGeomSet(ctx, filepath);
-		log.Printf("gset input geometry not implemented")
+		return fmt.Errorf("gset input geometry not implemented")
 	}
-	// TODO: better error handling in Load
-	return false
+	return fmt.Errorf("couldn't recognize input geometry file extension: '%s'", path)
 }
 
-func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) bool {
+func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
+	var err error
 	if ig.m_mesh != nil {
 		ig.m_chunkyMesh = nil
 		ig.m_mesh = nil
@@ -99,28 +98,18 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) bool {
 	ig.m_volumeCount = 0
 
 	ig.m_mesh = NewMeshLoaderObj()
-	if ig.m_mesh == nil {
-		ctx.Log(RC_LOG_ERROR, "loadMesh: Out of memory 'm_mesh'.")
-		return false
-	}
-	if ig.m_mesh.Load(path) != nil {
-		ctx.Log(RC_LOG_ERROR, "buildTiledNavigation: Could not load '%s'", path)
-		return false
+	if err = ig.m_mesh.Load(path); err != nil {
+		return fmt.Errorf("could not load '%s'", err)
 	}
 
 	CalcBounds(ig.m_mesh.Verts(), ig.m_mesh.VertCount(), ig.m_meshBMin[:], ig.m_meshBMax[:])
 
 	ig.m_chunkyMesh = new(ChunkyTriMesh)
-	if ig.m_chunkyMesh == nil {
-		ctx.Log(RC_LOG_ERROR, "buildTiledNavigation: Out of memory 'm_chunkyMesh'.")
-		return false
-	}
 	if !CreateChunkyTriMesh(ig.m_mesh.Verts(), ig.m_mesh.Tris(), ig.m_mesh.TriCount(), 256, ig.ChunkyMesh()) {
-		ctx.Log(RC_LOG_ERROR, "buildTiledNavigation: Failed to build chunky mesh.")
-		return false
+		return fmt.Errorf("failed to build chunky mesh for '%s'", path)
 	}
 
-	return true
+	return nil
 }
 
 // Method to return static mesh data.

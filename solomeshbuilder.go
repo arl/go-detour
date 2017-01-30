@@ -31,7 +31,8 @@ func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
 
 func (sm *SoloMesh) Load(path string) bool {
 	// load geometry
-	if !sm.geom.Load(sm.ctx, path) {
+	if err := sm.geom.Load(sm.ctx, path); err != nil {
+		sm.ctx.DumpLog("SoloMesh loading failure: %v", err)
 		return false
 	}
 	sm.ctx.Progressf("Geom load log %s:", path)
