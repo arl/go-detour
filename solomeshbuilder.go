@@ -175,7 +175,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// (Optional) Mark areas.
 	vols := sm.geom.ConvexVolumes()
 
-	// CONTROL: ConvexVOlumnesCount() is also 0 on org library
+	// TODO: : control that ConvexVolumeCount() is also 0 on original library
 	for i := int32(0); i < sm.geom.ConvexVolumesCount(); i++ {
 		recast.MarkConvexPolyArea(sm.ctx, vols[i].Verts[:], vols[i].NVerts, vols[i].HMin, vols[i].HMax, uint8(vols[i].Area), chf)
 	}
