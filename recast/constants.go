@@ -1,11 +1,12 @@
 package recast
 
 // Contour build flags.
-// @see rcBuildContours
-//enum rcBuildContoursFlags
+// see BuildContours
 const (
-	RC_CONTOUR_TESS_WALL_EDGES int32 = 0x01 ///< Tessellate solid (impassable) edges during contour simplification.
-	RC_CONTOUR_TESS_AREA_EDGES int32 = 0x02 ///< Tessellate edges between areas during contour simplification.
+	// Tessellate solid (impassable) edges during contour simplification.
+	RC_CONTOUR_TESS_WALL_EDGES int32 = 0x01
+	// Tessellate edges between areas during contour simplification.
+	RC_CONTOUR_TESS_AREA_EDGES int32 = 0x02
 )
 
 // Applied to the region id field of contour vertices in order to extract the region id.

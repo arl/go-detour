@@ -6,7 +6,7 @@ import (
 	"github.com/aurelien-rainone/assertgo"
 )
 
-func getCornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
+func cornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {
 	s := &chf.Spans[i]
 	ch = int32(s.Y)
 	dirp := (dir + 1) & 0x3
@@ -362,9 +362,6 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			cont := &cset.Conts[i]
 			// If the contour is wound backwards, it is a hole.
 			if calcAreaOfPolygon2D(cont.Verts, cont.NVerts) < 0 {
-				// TODO: check that!
-				//winding[i] = uint8(-1)
-				panic("UNTESTED")
 				winding[i] = 0xff
 			} else {
 				winding[i] = 1
@@ -456,7 +453,7 @@ func walkContour2(x, y, i int32,
 			isBorderVertex := false
 			isAreaBorder := false
 			px := x
-			py, isBorderVertex := getCornerHeight(x, y, i, int32(dir), chf)
+			py, isBorderVertex := cornerHeight(x, y, i, int32(dir), chf)
 			pz := y
 			switch dir {
 			case 0:

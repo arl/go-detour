@@ -6,11 +6,21 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-/// @par
-///
-/// No spans will be added if the triangle does not overlap the heightfield grid.
-///
-/// @see rcHeightfield
+// RasterizeTriangle rasterizes a triangle into the specified heightfield.
+//
+//  Arguments:
+//  ctx           The build context to use during the operation.
+//  v0            Triangle vertex 0 [(x, y, z)]
+//  v1            Triangle vertex 1 [(x, y, z)]
+//  v2            Triangle vertex 2 [(x, y, z)]
+//  area          The area id of the triangle. [Limit: <= #RC_WALKABLE_AREA]
+//  solid         An initialized heightfield.
+//  flagMergeThr  The distance where the walkable flag is favored over the
+//                non-walkable flag.[Limit: >= 0] [Units: vx]
+//
+// Returns True if the operation completed successfully.
+// No spans will be added if the triangle does not overlap the heightfield grid.
+// see Heightfield
 func RasterizeTriangle(ctx *BuildContext, v0, v1, v2 d3.Vec3,
 	area uint8, solid *Heightfield,
 	flagMergeThr int32) bool {
@@ -29,11 +39,26 @@ func RasterizeTriangle(ctx *BuildContext, v0, v1, v2 d3.Vec3,
 	return true
 }
 
-/// @par
-///
-/// Spans will only be added for triangles that overlap the heightfield grid.
-///
-/// @see rcHeightfield
+// RasterizeTriangles rasterizes an indexed triangle mesh into the specified
+// heightfield.
+//
+//  Arguments:
+//  ctx           The build context to use during the operation.
+//  verts         The vertices. [(x, y, z) * @p nv]
+//  nv            The number of vertices.
+//  tris          The triangle indices. [(vertA, vertB, vertC) * @p nt]
+//  areas         The area id's of the triangles. [Limit: <= #RC_WALKABLE_AREA]
+//                [Size: @p nt]
+//  nt            The number of triangles.
+//  solid         An initialized heightfield.
+//  flagMergeThr  The distance where the walkable flag is favored over the
+//                non-walkable flag. [Limit: >= 0] [Units: vx]
+//
+//  Returns True if the operation completed successfully.
+//
+// Spans will only be added for triangles that overlap the heightfield grid.
+//
+// see Heightfield
 func RasterizeTriangles(ctx *BuildContext, verts []float32, nv int32,
 	tris []int32, areas []uint8, nt int32,
 	solid *Heightfield, flagMergeThr int32) bool {
@@ -60,11 +85,23 @@ func RasterizeTriangles(ctx *BuildContext, verts []float32, nv int32,
 	return true
 }
 
-/// @par
-///
-/// Spans will only be added for triangles that overlap the heightfield grid.
-///
-/// @see rcHeightfield
+// RasterizeTriangles2 rasterizes triangles into the specified heightfield.
+//
+//  Arguments:
+//  ctx           The build context to use during the operation.
+//  verts         The triangle vertices.
+//                [(ax, ay, az, bx, by, bz, cx, by, cx) * nt]
+//  areas         The area id's of the triangles.
+//                [Limit: <= #RC_WALKABLE_AREA] [Size: nt]
+//  nt            The number of triangles.
+//  solid         An initialized heightfield.
+//  flagMergeThr  The distance where the walkable flag is favored over the
+//                non-walkable flag. [Limit: >= 0] [Units: vx]
+//
+// Returns True if the operation completed successfully.
+// Spans will only be added for triangles that overlap the heightfield grid.
+//
+// see Heightfield
 func RasterizeTriangles2(ctx *BuildContext, verts []float32, areas []uint8, nt int32,
 	solid *Heightfield, flagMergeThr int32) bool {
 
@@ -123,7 +160,6 @@ func rasterizeTri(v0, v1, v2 []float32,
 	// Clip the triangle into all grid cells it touches.
 	var buf [7 * 3 * 4]float32
 
-	//float *in = buf, *inrow = buf+7*3, *p1 = inrow+7*3, *p2 = p1+7*3;
 	in := buf[:]
 	inrow := buf[7*3:]
 	p1 := inrow[7*3:]
@@ -217,7 +253,7 @@ func rasterizeTri(v0, v1, v2 []float32,
 //   bmin     Minimum bounds of box B. [(x, y, z)]
 //   bmax     Maximum bounds of box B. [(x, y, z)]
 //
-// Return True if the two AABB's overlap.
+// Return true if the two AABB's overlap.
 func overlapBounds(amin, amax, bmin, bmax []float32) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
 		return false
@@ -265,8 +301,8 @@ func dividePoly(in []float32, nin int32,
 			copy(out2[n*3:n*3+3], out1[m*3:m*3+3])
 			m++
 			n++
-			// add the i'th point to the right polygon. Do NOT add points that are on the dividing line
-			// since these were already added above
+			// add the i'th point to the right polygon. Do NOT add points that
+			// are on the dividing line since these were already added above
 			if d[i] > 0 {
 				copy(out1[m*3:m*3+3], in[i*3:i*3+3])
 				m++
@@ -275,8 +311,8 @@ func dividePoly(in []float32, nin int32,
 				n++
 			}
 		} else {
-			// same side
-			// add the i'th point to the right polygon. Addition is done even for points on the dividing line
+			// same side add the i'th point to the right polygon. Addition is
+			// done even for points on the dividing line
 			if d[i] >= 0 {
 				copy(out1[m*3:m*3+3], in[i*3:i*3+3])
 				m++

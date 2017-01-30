@@ -6,7 +6,7 @@ import (
 )
 
 // ErodeWalkableArea erodes the walkable area within the heightfield by the
-//specified radius.
+// specified radius.
 //
 //  Arguments:
 //   ctx     The build context to use during the operation.
@@ -203,7 +203,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 //   nverts  The number of vertices in the polygon.
 //   hmin    The height of the base of the polygon.
 //   hmax    The height of the top of the polygon.
-//   areaId  The area id to apply. [Limit: <= RC_WALKABLE_AREA]
+//   areaID  The area id to apply. [Limit: <= RC_WALKABLE_AREA]
 //   chf     A populated compact heightfield.
 //
 // The value of spacial parameters are in world units.
@@ -213,7 +213,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 //
 // See CompactHeightfield, MedianFilterWalkableArea
 func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
-	hmin, hmax float32, areaId uint8, chf *CompactHeightfield) {
+	hmin, hmax float32, areaID uint8, chf *CompactHeightfield) {
 
 	assert.True(ctx != nil, "ctx should not be nil")
 
@@ -280,7 +280,7 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 					p[2] = chf.BMin[2] + (float32(z)+0.5)*chf.Cs
 
 					if pointInPoly(nverts, verts, p[:]) {
-						chf.Areas[i] = areaId
+						chf.Areas[i] = areaID
 					}
 				}
 			}

@@ -117,7 +117,6 @@ func (ctx *BuildContext) Log(category LogCategory, format string, v ...interface
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
 func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
-
 	// Print header.
 	fmt.Printf(format+"\n", args...)
 
@@ -165,7 +164,6 @@ func (ctx *BuildContext) StopTimer(label TimerLabel) {
 func (ctx *BuildContext) AccumulatedTime(label TimerLabel) time.Duration {
 	if ctx.timerEnabled {
 		return ctx.accTime[label]
-	} else {
-		return time.Duration(0)
 	}
+	return time.Duration(0)
 }

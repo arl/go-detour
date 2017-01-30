@@ -34,10 +34,22 @@ func (pm *PolyMesh) Free() {
 	pm = nil
 }
 
-// Note: If the mesh data is to be used to construct a Detour navigation mesh, then the upper
+// BuildPolyMesh builds a polygon mesh from the provided contours.
+//
+//  Arguments:
+//  ctx     The build context to use during the operation.
+//  cset    A fully built contour set.
+//  nvp     The maximum number of vertices allowed for polygons generated during
+//          the contour to polygon conversion process. [Limit: >= 3]
+//  mesh    The resulting polygon mesh. (Must be re-allocated.)
+//
+// Returns True if the operation completed successfully.
+//
+// Note: If the mesh data is to be used to construct a Detour navigation mesh,
+// then the upper
 // limit must be retricted to <= VertsPerPolygon.
 //
-// @see ContourSet, PolyMesh, Config
+// see ContourSet, PolyMesh, Config
 func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
@@ -286,12 +298,6 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 
 	// Just allocate the mesh flags array. The user is resposible to fill it.
 	mesh.Flags = make([]uint16, mesh.NPolys)
-	//if (!mesh.flags) {
-	//ctx.Errorf"rcBuildPolyMesh: Out of memory 'mesh.flags' (%d).", mesh.npolys);
-	//return false;
-	//}
-	//memset(mesh.flags, 0, sizeof(unsigned short) * mesh.npolys);
-
 	if mesh.NVerts > 0xffff {
 		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many vertices %d (max %d). Data can be corrupted.", mesh.NVerts, 0xffff)
 	}
