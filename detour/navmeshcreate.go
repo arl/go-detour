@@ -28,7 +28,46 @@ func (s compareItemX) Less(i, j int) bool {
 	a := s[i]
 	b := s[j]
 
-	return a.BMin[0] < b.BMin[0]
+	if a.BMin[0] < b.BMin[0] {
+		return true
+	}
+	if a.BMin[0] > b.BMin[0] {
+		return false
+	}
+
+	// if x are equal, compare y
+	if a.BMin[1] < b.BMin[1] {
+		return true
+	}
+	if a.BMin[1] > b.BMin[1] {
+		return false
+	}
+
+	// if y are equal, compare z
+	if a.BMin[2] < b.BMin[2] {
+		return true
+	}
+	if a.BMin[2] > b.BMin[2] {
+		return false
+	}
+
+	// compare bmax
+	if a.BMax[0] < b.BMax[0] {
+		return true
+	}
+	if a.BMax[0] > b.BMax[0] {
+		return false
+	}
+	if a.BMax[1] < b.BMax[1] {
+		return true
+	}
+	if a.BMax[1] > b.BMax[1] {
+		return false
+	}
+	if a.BMax[2] < b.BMax[2] {
+		return true
+	}
+	return false
 }
 
 // Swap swaps the elements with indexes i and j.
@@ -49,7 +88,46 @@ func (s compareItemY) Less(i, j int) bool {
 	a := s[i]
 	b := s[j]
 
-	return a.BMin[1] < b.BMin[1]
+	if a.BMin[1] < b.BMin[1] {
+		return true
+	}
+	if a.BMin[1] > b.BMin[1] {
+		return false
+	}
+
+	// if y are equal, compare z
+	if a.BMin[2] < b.BMin[2] {
+		return true
+	}
+	if a.BMin[2] > b.BMin[2] {
+		return false
+	}
+
+	// if z are equal, compare x
+	if a.BMin[0] < b.BMin[0] {
+		return true
+	}
+	if a.BMin[0] > b.BMin[0] {
+		return false
+	}
+
+	// compare bmax
+	if a.BMax[0] < b.BMax[0] {
+		return true
+	}
+	if a.BMax[0] > b.BMax[0] {
+		return false
+	}
+	if a.BMax[1] < b.BMax[1] {
+		return true
+	}
+	if a.BMax[1] > b.BMax[1] {
+		return false
+	}
+	if a.BMax[2] < b.BMax[2] {
+		return true
+	}
+	return false
 }
 
 // Swap swaps the elements with indexes i and j.
@@ -70,7 +148,44 @@ func (s compareItemZ) Less(i, j int) bool {
 	a := s[i]
 	b := s[j]
 
-	return a.BMin[2] < b.BMin[2]
+	if a.BMin[2] < b.BMin[2] {
+		return true
+	}
+	if a.BMin[2] > b.BMin[2] {
+		return false
+	}
+	// if z are equal, compare x
+	if a.BMin[0] < b.BMin[0] {
+		return true
+	}
+	if a.BMin[0] > b.BMin[0] {
+		return false
+	}
+	// if x are equal, compare y
+	if a.BMin[1] < b.BMin[1] {
+		return true
+	}
+	if a.BMin[1] > b.BMin[1] {
+		return false
+	}
+
+	// compare bmax
+	if a.BMax[0] < b.BMax[0] {
+		return true
+	}
+	if a.BMax[0] > b.BMax[0] {
+		return false
+	}
+	if a.BMax[1] < b.BMax[1] {
+		return true
+	}
+	if a.BMax[1] > b.BMax[1] {
+		return false
+	}
+	if a.BMax[2] < b.BMax[2] {
+		return true
+	}
+	return false
 }
 
 // Swap swaps the elements with indexes i and j.
@@ -188,13 +303,14 @@ func int32Clamp(a, low, high int32) int32 {
 
 func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 	// Build tree
-	quantFactor := 1.0 / params.Cs
+	quantFactor := float32(1.0) / params.Cs
 	items := make([]BVItem, params.PolyCount)
 	for i := int32(0); i < params.PolyCount; i++ {
 		it := &items[i]
 		it.i = i
 		// Calc polygon bounds. Use detail meshes if available.
 		if len(params.DetailMeshes) > 0 {
+
 			vb := int32(params.DetailMeshes[i*4+0])
 			ndv := int32(params.DetailMeshes[i*4+1])
 			var bmin, bmax [3]float32
@@ -217,6 +333,7 @@ func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 			it.BMax[1] = uint16(int32Clamp(int32((bmax[1]-params.BMin[1])*quantFactor), 0, 0xffff))
 			it.BMax[2] = uint16(int32Clamp(int32((bmax[2]-params.BMin[2])*quantFactor), 0, 0xffff))
 		} else {
+			panic("UNTESTED")
 			p := params.Polys[i*params.Nvp*2:]
 			it.BMin[0] = params.Verts[p[0]*3+0]
 			it.BMin[1] = params.Verts[p[0]*3+1]
