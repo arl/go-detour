@@ -468,7 +468,6 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 			if dmesh.NVerts != 0 {
 				copy(newv, dmesh.Verts[:3*dmesh.NVerts])
 			}
-			dmesh.Verts = make([]float32, 0)
 			dmesh.Verts = newv
 		}
 		for j := int32(0); j < nverts; j++ {
@@ -915,7 +914,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 			// Add new vertices.
 			if swapped {
 				for k := nidx - 2; k > 0; k-- {
-					copy(verts[*nverts*3:], edge[idx[k]*3:])
+					copy(verts[*nverts*3:], edge[idx[k]*3:3+idx[k]*3])
 					hull[nhull] = *nverts
 					nhull++
 					*nverts++
