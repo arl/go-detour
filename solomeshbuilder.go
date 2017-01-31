@@ -30,21 +30,25 @@ type SoloMesh struct {
 	partitionType SamplePartitionType
 }
 
+// NewSoloMesh creates a new solo mesh
 func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
 	sm := &SoloMesh{}
 	sm.ctx = ctx
-	sm.partitionType = SAMPLE_PARTITION_MONOTONE
+	sm.partitionType = SamplePartitionMonotone
 	return sm
 }
 
-func (sm *SoloMesh) Load(path string) bool {
+// LoadGeometry loads geometry from given geometry definition file.
+func (sm *SoloMesh) LoadGeometry(path string) error {
 	// load geometry
-	if err := sm.geom.Load(sm.ctx, path); err != nil {
-		sm.ctx.DumpLog("SoloMesh loading failure: %v", err)
-		return false
+	var err error
+	err = sm.geom.Load(sm.ctx, path)
+	if err != nil {
+		//sm.ctx.DumpLog("SoloMesh loading failure: %v", err)
+		return err
 	}
 	sm.ctx.Progressf("Geom load log %s:", path)
-	return true
+	return nil
 }
 
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {

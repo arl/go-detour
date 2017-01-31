@@ -30,9 +30,12 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 
 func testCreateSoloNavMesh(t *testing.T, meshname string) {
 	var (
-		meshName, orgNavMeshName, tmpBin string
-		ctx                              *recast.BuildContext
-		soloMesh                         *SoloMesh
+		meshName, orgNavMeshName string
+		tmpBin                   string
+		ctx                      *recast.BuildContext
+		soloMesh                 *SoloMesh
+		err                      error
+		ok                       bool
 	)
 
 	meshName = "testdata/" + meshname + ".obj"
@@ -41,7 +44,7 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 
 	ctx = recast.NewBuildContext(true)
 	soloMesh = NewSoloMesh(ctx)
-	if !soloMesh.Load(meshName) {
+	if err = soloMesh.LoadGeometry(meshName); err != nil {
 		ctx.DumpLog("")
 		t.Fatalf("couldn't load mesh %v", meshName)
 	}
@@ -53,7 +56,7 @@ func testCreateSoloNavMesh(t *testing.T, meshname string) {
 
 	navMesh.SaveToFile(tmpBin)
 	t.Logf("%v navmesh successfully built", meshname)
-	ok, err := compareFiles(tmpBin, orgNavMeshName)
+	ok, err = compareFiles(tmpBin, orgNavMeshName)
 	if err != nil {
 		t.Fatalf("couldn't compare %v and %v, %v", tmpBin, orgNavMeshName, err)
 	}
@@ -98,8 +101,8 @@ func benchmarkCreateNavMesh(b *testing.B, meshname string) {
 	meshName := "testdata/" + meshname + ".obj"
 
 	soloMesh := NewSoloMesh(recast.NewBuildContext(false))
-	if !soloMesh.Load(meshName) {
-		b.Fatalf("couldn't load mesh %v", meshName)
+	if err := soloMesh.LoadGeometry(meshName); err != nil {
+		b.Fatalf("couldn't load mesh %v: %v", meshName, err)
 	}
 
 	b.ResetTimer()
