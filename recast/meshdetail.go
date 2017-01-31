@@ -380,7 +380,7 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 		*ymin = chf.Height
 		*ymax = 0
 		for j := int32(0); j < nvp; j++ {
-			if p[j] == RC_MESH_NULL_IDX {
+			if p[j] == meshNullIdx {
 				break
 			}
 			v := mesh.Verts[p[j]*3:]
@@ -421,7 +421,7 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 		// Store polygon vertices for processing.
 		var npoly int32
 		for j := int32(0); j < nvp; j++ {
-			if p[j] == RC_MESH_NULL_IDX {
+			if p[j] == meshNullIdx {
 				break
 			}
 			v := mesh.Verts[p[j]*3:]
@@ -1157,7 +1157,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		cs := &chf.Spans[ci]
 		for i := int32(0); i < int32(4); i++ {
 			dir := dirs[i]
-			if GetCon(cs, dir) == RC_NOT_CONNECTED {
+			if GetCon(cs, dir) == notConnected {
 				continue
 			}
 
@@ -1240,7 +1240,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 	// We cannot sample from this poly if it was created from polys
 	// of different regions. If it was then it could potentially be overlapping
 	// with polys of that region and the heights sampled here could be wrong.
-	if region != int32(RC_MULTIPLE_REGS) {
+	if region != int32(multipleRegs) {
 		// Copy the height from the same region, and mark region borders
 		// as seed points to fill the rest.
 		for hy := int32(0); hy < hp.height; hy++ {
@@ -1260,7 +1260,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 						// add the current location as flood fill start
 						var border bool
 						for dir := int32(0); dir < 4; dir++ {
-							if GetCon(s, dir) != RC_NOT_CONNECTED {
+							if GetCon(s, dir) != notConnected {
 								ax := x + GetDirOffsetX(dir)
 								ay := y + GetDirOffsetY(dir)
 								ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
@@ -1308,7 +1308,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 
 		cs := &chf.Spans[ci]
 		for dir := int32(0); dir < 4; dir++ {
-			if GetCon(cs, dir) == RC_NOT_CONNECTED {
+			if GetCon(cs, dir) == notConnected {
 				continue
 			}
 

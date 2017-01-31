@@ -32,10 +32,10 @@ func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, s
 		for x := int32(0); x < w; x++ {
 			var ps *Span
 			previousWalkable := false
-			previousArea := uint8(RC_NULL_AREA)
+			previousArea := uint8(nullArea)
 
 			for s := solid.Spans[x+y*w]; s != nil; s = s.next {
-				walkable := s.area != RC_NULL_AREA
+				walkable := s.area != nullArea
 				// If current span is not walkable, but there is walkable
 				// span just below it, mark the span above it walkable too.
 				if !walkable && previousWalkable {
@@ -87,7 +87,7 @@ func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, so
 		for x := int32(0); x < w; x++ {
 			for s := solid.Spans[x+y*w]; s != nil; s = s.next {
 				// Skip non walkable spans.
-				if s.area == RC_NULL_AREA {
+				if s.area == nullArea {
 					continue
 				}
 
@@ -159,11 +159,11 @@ func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, so
 				// The current span is close to a ledge if the drop to any
 				// neighbour span is less than the walkableClimb.
 				if minh < -walkableClimb {
-					s.area = RC_NULL_AREA
+					s.area = nullArea
 				} else if int32(asmax-asmin) > walkableClimb {
 					// If the difference between all neighbours is too large,
 					// we are at steep slope, mark the span as ledge.
-					s.area = RC_NULL_AREA
+					s.area = nullArea
 				}
 			}
 		}
@@ -205,7 +205,7 @@ func FilterWalkableLowHeightSpans(ctx *BuildContext, walkableHeight int32, solid
 					top = int32(MAX_HEIGHT)
 				}
 				if (top - bot) <= walkableHeight {
-					s.area = RC_NULL_AREA
+					s.area = nullArea
 				}
 			}
 		}

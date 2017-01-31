@@ -43,17 +43,17 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 			c := &chf.Cells[x+y*w]
 			ni := int32(c.Index) + int32(c.Count)
 			for i := int32(c.Index); i < ni; i++ {
-				if chf.Areas[i] == RC_NULL_AREA {
+				if chf.Areas[i] == nullArea {
 					dist[i] = 0
 				} else {
 					s := &chf.Spans[i]
 					nc := int32(0)
 					for dir := int32(0); dir < 4; dir++ {
-						if GetCon(s, dir) != RC_NOT_CONNECTED {
+						if GetCon(s, dir) != notConnected {
 							nx := x + GetDirOffsetX(dir)
 							ny := y + GetDirOffsetY(dir)
 							nidx := int32(chf.Cells[nx+ny*w].Index) + GetCon(s, dir)
-							if chf.Areas[nidx] != RC_NULL_AREA {
+							if chf.Areas[nidx] != nullArea {
 								nc++
 							}
 						}
@@ -77,7 +77,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 			for i := int32(c.Index); i < ni; i++ {
 				s := &chf.Spans[i]
 
-				if GetCon(s, 0) != RC_NOT_CONNECTED {
+				if GetCon(s, 0) != notConnected {
 					// (-1,0)
 					ax := x + GetDirOffsetX(0)
 					ay := y + GetDirOffsetY(0)
@@ -89,7 +89,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					}
 
 					// (-1,-1)
-					if GetCon(as, 3) != RC_NOT_CONNECTED {
+					if GetCon(as, 3) != notConnected {
 						aax := ax + GetDirOffsetX(3)
 						aay := ay + GetDirOffsetY(3)
 						aai := int32(chf.Cells[aax+aay*w].Index) + int32(GetCon(as, 3))
@@ -100,7 +100,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					}
 				}
 
-				if GetCon(s, 3) != RC_NOT_CONNECTED {
+				if GetCon(s, 3) != notConnected {
 					// (0,-1)
 					ax := x + GetDirOffsetX(3)
 					ay := y + GetDirOffsetY(3)
@@ -112,7 +112,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					}
 
 					// (1,-1)
-					if GetCon(as, 2) != RC_NOT_CONNECTED {
+					if GetCon(as, 2) != notConnected {
 						aax := ax + GetDirOffsetX(2)
 						aay := ay + GetDirOffsetY(2)
 						aai := int32(chf.Cells[aax+aay*w].Index) + GetCon(as, 2)
@@ -134,7 +134,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				s := &chf.Spans[i]
 
-				if GetCon(s, 2) != RC_NOT_CONNECTED {
+				if GetCon(s, 2) != notConnected {
 					// (1,0)
 					ax := x + GetDirOffsetX(2)
 					ay := y + GetDirOffsetY(2)
@@ -146,7 +146,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					}
 
 					// (1,1)
-					if GetCon(as, 1) != RC_NOT_CONNECTED {
+					if GetCon(as, 1) != notConnected {
 						aax := ax + GetDirOffsetX(1)
 						aay := ay + GetDirOffsetY(1)
 						aai := int32(chf.Cells[aax+aay*w].Index) + GetCon(as, 1)
@@ -156,7 +156,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 						}
 					}
 				}
-				if GetCon(s, 1) != RC_NOT_CONNECTED {
+				if GetCon(s, 1) != notConnected {
 					// (0,1)
 					ax := x + GetDirOffsetX(1)
 					ay := y + GetDirOffsetY(1)
@@ -168,7 +168,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 					}
 
 					// (-1,1)
-					if GetCon(as, 0) != RC_NOT_CONNECTED {
+					if GetCon(as, 0) != notConnected {
 						aax := ax + GetDirOffsetX(0)
 						aay := ay + GetDirOffsetY(0)
 						aai := int32(chf.Cells[aax+aay*w].Index) + GetCon(as, 0)
@@ -185,7 +185,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	thr := uint8(radius * 2)
 	for i := int32(0); i < chf.SpanCount; i++ {
 		if dist[i] < thr {
-			chf.Areas[i] = RC_NULL_AREA
+			chf.Areas[i] = nullArea
 		}
 	}
 
@@ -269,7 +269,7 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 			c := &chf.Cells[x+z*chf.Width]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				if chf.Areas[i] == RC_NULL_AREA {
+				if chf.Areas[i] == nullArea {
 					continue
 				}
 				s := &chf.Spans[i]

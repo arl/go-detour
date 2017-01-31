@@ -21,18 +21,18 @@ func buildMeshAdjacency(polys []uint16, npolys int32, nverts, vertsPerPoly int32
 	}
 
 	for i := int32(0); i < nverts; i++ {
-		firstEdge[i] = RC_MESH_NULL_IDX
+		firstEdge[i] = meshNullIdx
 	}
 
 	for i := int32(0); i < npolys; i++ {
 		t := polys[i*vertsPerPoly*2:]
 		for j := int32(0); j < vertsPerPoly; j++ {
-			if t[j] == RC_MESH_NULL_IDX {
+			if t[j] == meshNullIdx {
 				break
 			}
 			var v0, v1 uint16
 			v0 = t[j]
-			if j+1 >= vertsPerPoly || t[j+1] == RC_MESH_NULL_IDX {
+			if j+1 >= vertsPerPoly || t[j+1] == meshNullIdx {
 				v1 = t[0]
 			} else {
 				v1 = t[j+1]
@@ -57,18 +57,18 @@ func buildMeshAdjacency(polys []uint16, npolys int32, nverts, vertsPerPoly int32
 	for i := int32(0); i < npolys; i++ {
 		t := polys[i*vertsPerPoly*2:]
 		for j := int32(0); j < vertsPerPoly; j++ {
-			if t[j] == RC_MESH_NULL_IDX {
+			if t[j] == meshNullIdx {
 				break
 			}
 			var v0, v1 uint16
 			v0 = t[j]
-			if j+1 >= vertsPerPoly || t[j+1] == RC_MESH_NULL_IDX {
+			if j+1 >= vertsPerPoly || t[j+1] == meshNullIdx {
 				v1 = t[0]
 			} else {
 				v1 = t[j+1]
 			}
 			if v0 > v1 {
-				for e := uint16(firstEdge[v1]); e != RC_MESH_NULL_IDX; e = nextEdge[e] {
+				for e := uint16(firstEdge[v1]); e != meshNullIdx; e = nextEdge[e] {
 					edge := edges[e]
 					if edge.vert[1] == v0 && edge.poly[0] == edge.poly[1] {
 						edge.poly[1] = uint16(i)
@@ -311,7 +311,7 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 
 func countPolyVerts(p []uint16, nvp int32) int32 {
 	for i := int32(0); i < nvp; i++ {
-		if p[i] == RC_MESH_NULL_IDX {
+		if p[i] == meshNullIdx {
 			return i
 		}
 	}
@@ -731,7 +731,7 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 			// If this polygon covers multiple region types then
 			// mark it as such
 			if hreg[t[0]] != hreg[t[1]] || hreg[t[1]] != hreg[t[2]] {
-				pregs[npolys] = RC_MULTIPLE_REGS
+				pregs[npolys] = multipleRegs
 			} else {
 				pregs[npolys] = uint16(hreg[t[0]])
 			}
@@ -775,7 +775,7 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 				pb := polys[bestPb*nvp:]
 				mergePolyVerts(pa, pb, bestEa, bestEb, tmpPoly, nvp)
 				if pregs[bestPa] != pregs[bestPb] {
-					pregs[bestPa] = RC_MULTIPLE_REGS
+					pregs[bestPa] = multipleRegs
 				}
 
 				last := polys[(npolys-1)*nvp:]

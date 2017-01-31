@@ -262,7 +262,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 
 	// Create contours.
 	cset := &recast.ContourSet{}
-	if !recast.BuildContours(sm.ctx, chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, cset, recast.RC_CONTOUR_TESS_WALL_EDGES) {
+	if !recast.BuildContours(sm.ctx, chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, cset, recast.ContourTessWallEdges) {
 		sm.ctx.Errorf("buildNavigation: Could not create contours.")
 		return nil, false
 	}
@@ -317,7 +317,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 
 	// Update poly flags from areas.
 	for i := int32(0); i < pmesh.NPolys; i++ {
-		if pmesh.Areas[i] == recast.RC_WALKABLE_AREA {
+		if pmesh.Areas[i] == recast.WalkableArea {
 			pmesh.Areas[i] = samplePolyAreaGround
 		}
 

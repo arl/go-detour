@@ -149,7 +149,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 			v := cont.Verts[j*4:]
 			indices[j] = int64(addVertex(uint16(v[0]), uint16(v[1]), uint16(v[2]),
 				mesh.Verts, firstVert, nextVert, &mesh.NVerts))
-			if (v[3] & RC_BORDER_VERTEX) != 0 {
+			if (v[3] & borderVertex) != 0 {
 				// This vertex should be removed.
 				vflags[indices[j]] = 1
 			}
@@ -269,15 +269,15 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 		for i := int32(0); i < mesh.NPolys; i++ {
 			p := mesh.Polys[i*2*nvp:]
 			for j := int32(0); j < nvp; j++ {
-				if p[j] == RC_MESH_NULL_IDX {
+				if p[j] == meshNullIdx {
 					break
 				}
 				// Skip connected edges.
-				if p[nvp+j] != RC_MESH_NULL_IDX {
+				if p[nvp+j] != meshNullIdx {
 					continue
 				}
 				nj := j + 1
-				if nj >= nvp || p[nj] == RC_MESH_NULL_IDX {
+				if nj >= nvp || p[nj] == meshNullIdx {
 					nj = 0
 				}
 				va := mesh.Verts[p[j]*3:]

@@ -81,7 +81,7 @@ func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 		calcTriNormal(verts[tri[0]*3:], verts[tri[1]*3:], verts[tri[2]*3:], norm[:])
 		// Check if the face is walkable.
 		if norm[1] > walkableThr {
-			areas[i] = RC_WALKABLE_AREA
+			areas[i] = WalkableArea
 		}
 	}
 }
@@ -119,7 +119,7 @@ func ClearUnwalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 		calcTriNormal(verts[tri[0]*3:], verts[tri[1]*3:], verts[tri[2]*3:], norm[:])
 		// Check if the face is walkable.
 		if norm[1] <= walkableThr {
-			areas[i] = RC_NULL_AREA
+			areas[i] = nullArea
 		}
 	}
 }

@@ -56,7 +56,7 @@ type BuildSettings struct {
 }
 
 type InputGeom struct {
-	chunkyMesh *ChunkyTriMesh
+	chunkyMesh *chunkyTriMesh
 	mesh       *MeshLoaderObj
 
 	meshBMin, meshBMax [3]float32
@@ -104,8 +104,8 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 
 	CalcBounds(ig.mesh.Verts(), ig.mesh.VertCount(), ig.meshBMin[:], ig.meshBMax[:])
 
-	ig.chunkyMesh = new(ChunkyTriMesh)
-	if !CreateChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
+	ig.chunkyMesh = new(chunkyTriMesh)
+	if !createChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
 		return fmt.Errorf("failed to build chunky mesh for '%s'", path)
 	}
 
@@ -141,7 +141,7 @@ func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
 	}
 }
 
-func (ig *InputGeom) ChunkyMesh() *ChunkyTriMesh {
+func (ig *InputGeom) ChunkyMesh() *chunkyTriMesh {
 	return ig.chunkyMesh
 }
 

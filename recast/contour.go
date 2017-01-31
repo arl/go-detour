@@ -17,14 +17,14 @@ func cornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBord
 	// border vertices which are in between two areas to be removed.
 	regs[0] = uint16(uint32(chf.Spans[i].Reg) | (uint32(chf.Areas[i]) << 16))
 
-	if GetCon(s, dir) != RC_NOT_CONNECTED {
+	if GetCon(s, dir) != notConnected {
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
 		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
 		regs[1] = uint16(uint32(chf.Spans[ai].Reg) | (uint32(chf.Areas[ai]) << 16))
-		if GetCon(as, dirp) != RC_NOT_CONNECTED {
+		if GetCon(as, dirp) != notConnected {
 			ax2 := ax + GetDirOffsetX(dirp)
 			ay2 := ay + GetDirOffsetY(dirp)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dirp)
@@ -32,14 +32,14 @@ func cornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBord
 			regs[2] = uint16(uint32(chf.Spans[ai2].Reg) | (uint32(chf.Areas[ai2]) << 16))
 		}
 	}
-	if GetCon(s, dirp) != RC_NOT_CONNECTED {
+	if GetCon(s, dirp) != notConnected {
 		ax := x + GetDirOffsetX(dirp)
 		ay := y + GetDirOffsetY(dirp)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dirp)
 		as := &chf.Spans[ai]
 		ch = iMax(ch, int32(as.Y))
 		regs[3] = uint16(uint32(chf.Spans[ai].Reg) | (uint32(chf.Areas[ai]) << 16))
-		if GetCon(as, dir) != RC_NOT_CONNECTED {
+		if GetCon(as, dir) != notConnected {
 			ax2 := ax + GetDirOffsetX(dir)
 			ay2 := ay + GetDirOffsetY(dir)
 			ai2 := int32(chf.Cells[ax2+ay2*chf.Width].Index) + GetCon(as, dir)
@@ -57,8 +57,8 @@ func cornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBord
 
 		// The vertex is a border vertex there are two same exterior cells in a row,
 		// followed by two interior cells and none of the regions are out of bounds.
-		twoSameExts := (regs[a]&regs[b]&RC_BORDER_REG) != 0 && regs[a] == regs[b]
-		twoInts := ((regs[c] | regs[d]) & RC_BORDER_REG) == 0
+		twoSameExts := (regs[a]&regs[b]&borderReg) != 0 && regs[a] == regs[b]
+		twoInts := ((regs[c] | regs[d]) & borderReg) == 0
 		intsSameArea := (uint32(regs[c]) >> 16) == (uint32(regs[d]) >> 16)
 		noZeros := regs[a] != 0 && regs[b] != 0 && regs[c] != 0 && regs[d] != 0
 		if twoSameExts && twoInts && intsSameArea && noZeros {
@@ -94,7 +94,7 @@ type ContourSet struct {
 	MaxError   float32    // The max edge error that this contour set was simplified with.
 }
 
-func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
+func mergeRegionHoles(ctx *BuildContext, region *contourRegion) {
 	// Sort holes from left to right.
 	for i := int32(0); i < region.nholes; i++ {
 		region.holes[i].minx, region.holes[i].minz, region.holes[i].leftmost = findLeftMostVertex(region.holes[i].contour)
@@ -107,7 +107,7 @@ func mergeRegionHoles(ctx *BuildContext, region *ContourRegion) {
 		maxVerts += region.holes[i].contour.NVerts
 	}
 
-	diags := make([]PotentialDiagonal, maxVerts)
+	diags := make([]potentionalDiagonal, maxVerts)
 
 	outline := region.outline
 
@@ -246,13 +246,13 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				var res uint8
 				s := &chf.Spans[i]
-				if (s.Reg == 0) || ((s.Reg & RC_BORDER_REG) != 0) {
+				if (s.Reg == 0) || ((s.Reg & borderReg) != 0) {
 					flags[i] = 0
 					continue
 				}
 				for dir := int32(0); dir < 4; dir++ {
 					var r uint16
-					if GetCon(s, dir) != RC_NOT_CONNECTED {
+					if GetCon(s, dir) != notConnected {
 						ax := x + GetDirOffsetX(dir)
 						ay := y + GetDirOffsetY(dir)
 						ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, dir)
@@ -282,7 +282,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 					continue
 				}
 				reg := chf.Spans[i].Reg
-				if (reg == 0) || ((reg & RC_BORDER_REG) != 0) {
+				if (reg == 0) || ((reg & borderReg) != 0) {
 					continue
 				}
 				area := chf.Areas[i]
@@ -376,8 +376,8 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 			// Collect outline contour and holes contours per region.
 			// We assume that there is one outline and multiple holes.
 			nregions := chf.MaxRegions + 1
-			regions := make([]ContourRegion, nregions)
-			holes := make([]ContourHole, cset.NConts)
+			regions := make([]contourRegion, nregions)
+			holes := make([]contourHole, cset.NConts)
 
 			for i := int32(0); i < cset.NConts; i++ {
 				cont := &cset.Conts[i]
@@ -469,7 +469,7 @@ func walkContour2(x, y, i int32,
 			}
 			r := int32(0)
 			s := &chf.Spans[i]
-			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
+			if GetCon(s, int32(dir)) != notConnected {
 				ax := x + GetDirOffsetX(int32(dir))
 				ay := y + GetDirOffsetY(int32(dir))
 				ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, int32(dir))
@@ -479,10 +479,10 @@ func walkContour2(x, y, i int32,
 				}
 			}
 			if isBorderVertex {
-				r |= RC_BORDER_VERTEX
+				r |= borderVertex
 			}
 			if isAreaBorder {
-				r |= RC_AREA_BORDER
+				r |= areaBorder
 			}
 			*points = append(*points, px, py, pz, r)
 
@@ -493,7 +493,7 @@ func walkContour2(x, y, i int32,
 			nx := x + GetDirOffsetX(int32(dir))
 			ny := y + GetDirOffsetY(int32(dir))
 			s := &chf.Spans[i]
-			if GetCon(s, int32(dir)) != RC_NOT_CONNECTED {
+			if GetCon(s, int32(dir)) != notConnected {
 				ni = int32(chf.Cells[nx+ny*chf.Width].Index) + GetCon(s, int32(dir))
 			}
 			if ni == -1 {
@@ -539,7 +539,7 @@ func simplifyContour(points, simplified *[]int32,
 	// Add initial points.
 	hasConnections := false
 	for i := 0; i < len(*points); i += 4 {
-		if ((*points)[i+3] & RC_CONTOUR_REG_MASK) != 0 {
+		if ((*points)[i+3] & contourRegMask) != 0 {
 			hasConnections = true
 			break
 		}
@@ -551,8 +551,8 @@ func simplifyContour(points, simplified *[]int32,
 		var i int
 		for ni := len(*points) / 4; i < ni; i++ {
 			ii := (i + 1) % ni
-			differentRegs := ((*points)[i*4+3] & RC_CONTOUR_REG_MASK) != ((*points)[ii*4+3] & RC_CONTOUR_REG_MASK)
-			areaBorders := ((*points)[i*4+3] & RC_AREA_BORDER) != ((*points)[ii*4+3] & RC_AREA_BORDER)
+			differentRegs := ((*points)[i*4+3] & contourRegMask) != ((*points)[ii*4+3] & contourRegMask)
+			areaBorders := ((*points)[i*4+3] & areaBorder) != ((*points)[ii*4+3] & areaBorder)
 			if differentRegs || areaBorders {
 				*simplified = append(*simplified, (*points)[i*4+0])
 				*simplified = append(*simplified, (*points)[i*4+1])
@@ -637,8 +637,8 @@ func simplifyContour(points, simplified *[]int32,
 		}
 
 		// Tessellate only outer edges or edges between areas.
-		if ((*points)[ci*4+3]&RC_CONTOUR_REG_MASK) == 0 ||
-			(((*points)[ci*4+3] & RC_AREA_BORDER) != 0) {
+		if ((*points)[ci*4+3]&contourRegMask) == 0 ||
+			(((*points)[ci*4+3] & areaBorder) != 0) {
 			for ci != endi {
 				d := distancePtSeg((*points)[ci*4+0], (*points)[ci*4+2], ax, az, bx, bz)
 				if d > maxd {
@@ -672,7 +672,7 @@ func simplifyContour(points, simplified *[]int32,
 	}
 
 	// Split too long edges.
-	if maxEdgeLen > 0 && (buildFlags&(RC_CONTOUR_TESS_WALL_EDGES|RC_CONTOUR_TESS_AREA_EDGES)) != 0 {
+	if maxEdgeLen > 0 && (buildFlags&(ContourTessWallEdges|ContourTessAreaEdges)) != 0 {
 		for i := 0; i < len(*simplified)/4; {
 			ii := (i + 1) % (len(*simplified) / 4)
 
@@ -691,11 +691,11 @@ func simplifyContour(points, simplified *[]int32,
 			// Tessellate only outer edges or edges between areas.
 			tess := false
 			// Wall edges.
-			if ((buildFlags & RC_CONTOUR_TESS_WALL_EDGES) != 0) && ((*points)[ci*4+3]&RC_CONTOUR_REG_MASK) == 0 {
+			if ((buildFlags & ContourTessWallEdges) != 0) && ((*points)[ci*4+3]&contourRegMask) == 0 {
 				tess = true
 			}
 			// Edges between areas.
-			if ((buildFlags & RC_CONTOUR_TESS_AREA_EDGES) != 0) && (((*points)[ci*4+3] & RC_AREA_BORDER) != 0) {
+			if ((buildFlags & ContourTessAreaEdges) != 0) && (((*points)[ci*4+3] & areaBorder) != 0) {
 				tess = true
 			}
 
@@ -753,7 +753,7 @@ func simplifyContour(points, simplified *[]int32,
 		// and the neighbour region is take from the next raw point.
 		ai := ((*simplified)[i*4+3] + 1) % pn
 		bi := (*simplified)[i*4+3]
-		(*simplified)[i*4+3] = ((*points)[ai*4+3] & (RC_CONTOUR_REG_MASK | RC_AREA_BORDER)) | ((*points)[bi*4+3] & RC_BORDER_VERTEX)
+		(*simplified)[i*4+3] = ((*points)[ai*4+3] & (contourRegMask | areaBorder)) | ((*points)[bi*4+3] & borderVertex)
 	}
 }
 
@@ -830,9 +830,8 @@ func between(a, b, c []int32) bool {
 	// If ab not vertical, check betweenness on x; else on y.
 	if a[0] != b[0] {
 		return ((a[0] <= c[0]) && (c[0] <= b[0])) || ((a[0] >= c[0]) && (c[0] >= b[0]))
-	} else {
-		return ((a[2] <= c[2]) && (c[2] <= b[2])) || ((a[2] >= c[2]) && (c[2] >= b[2]))
 	}
+	return ((a[2] <= c[2]) && (c[2] <= b[2])) || ((a[2] >= c[2]) && (c[2] >= b[2]))
 }
 
 // Returns true iff segments ab and cd intersect, properly or improperly.
@@ -927,18 +926,18 @@ func mergeContours(ca, cb *Contour, ia, ib int32) bool {
 	return true
 }
 
-type ContourRegion struct {
+type contourRegion struct {
 	outline *Contour
-	holes   []ContourHole
+	holes   []contourHole
 	nholes  int32
 }
 
-type ContourHole struct {
+type contourHole struct {
 	contour              *Contour
 	minx, minz, leftmost int32
 }
 
-type compareHoles []ContourHole
+type compareHoles []contourHole
 
 // Len is the number of elements in the collection.
 func (s compareHoles) Len() int {
@@ -973,11 +972,11 @@ func (s compareHoles) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-type PotentialDiagonal struct {
+type potentionalDiagonal struct {
 	vert, dist int32
 }
 
-type compareDiagDist []PotentialDiagonal
+type compareDiagDist []potentionalDiagonal
 
 // Len is the number of elements in the collection.
 func (s compareDiagDist) Len() int {
