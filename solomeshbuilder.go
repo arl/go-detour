@@ -44,13 +44,13 @@ func (sm *SoloMesh) LoadGeometry(path string) error {
 	var err error
 	err = sm.geom.Load(sm.ctx, path)
 	if err != nil {
-		//sm.ctx.DumpLog("SoloMesh loading failure: %v", err)
 		return err
 	}
 	sm.ctx.Progressf("Geom load log %s:", path)
 	return nil
 }
 
+// Build builds the navigation mesh for the input geometry provided
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
