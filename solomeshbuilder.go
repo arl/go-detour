@@ -6,14 +6,22 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
+// SamplePartitionType represents a specific heightfield partitioning method.
 type SamplePartitionType int
 
 const (
-	SAMPLE_PARTITION_WATERSHED SamplePartitionType = iota
-	SAMPLE_PARTITION_MONOTONE
-	SAMPLE_PARTITION_LAYERS
+	// SamplePartitionWatershed uses the watershed partitioning method
+	SamplePartitionWatershed SamplePartitionType = iota
+	// SamplePartitionMonotone uses the monotone partitioning method
+	SamplePartitionMonotone
+	// SamplePartitionLayers uses the layer partitioning method
+	SamplePartitionLayers
 )
 
+// SoloMesh allows building of single tile navigation meshes.
+//
+// TODO: rename SoloMeshBuilder or something like that to show that this is
+// not actually a navmesh, but more an api to build and manage one
 type SoloMesh struct {
 	ctx           *recast.BuildContext
 	geom          recast.InputGeom
@@ -155,9 +163,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Compact the heightfield so that it is faster to handle from now on.
 	// This will result more cache coherent data as well as the neighbours
 	// between walkable cells will be calculated.
-
-	// panic("trouver pourquoi chf.maxRegions n'a pas la meme valeur des 2 cotés")
-
 	chf := &recast.CompactHeightfield{}
 	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, solid, chf) {
 		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
@@ -181,33 +186,43 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		recast.MarkConvexPolyArea(sm.ctx, vols[i].Verts[:], vols[i].NVerts, vols[i].HMin, vols[i].HMax, uint8(vols[i].Area), chf)
 	}
 
-	// Partition the heightfield so that we can use simple algorithm later to triangulate the walkable areas.
-	// There are 3 martitioning methods, each with some pros and cons:
+	// Partition the heightfield so that we can use simple algorithm later to
+	// triangulate the walkable areas. There are 3 partitioning methods, each
+	// with some pros and cons:
 	// 1) Watershed partitioning
 	//   - the classic Recast partitioning
 	//   - creates the nicest tessellation
 	//   - usually slowest
-	//   - partitions the heightfield into nice regions without holes or overlaps
-	//   - the are some corner cases where this method creates produces holes and overlaps
-	//      - holes may appear when a small obstacles is close to large open area (triangulation can handle this)
-	//      - overlaps may occur if you have narrow spiral corridors (i.e stairs), this make triangulation to fail
-	//   * generally the best choice if you precompute the nacmesh, use this if you have large open areas
-	// 2) Monotone partioning
+	//   - partitions the heightfield into nice regions without holes or
+	//     overlaps
+	//   - the are some corner cases where this method creates produces holes
+	//     and overlaps
+	//      - holes may appear when a small obstacles is close to large open
+	//        area (triangulation can handle this)
+	//      - overlaps may occur if you have narrow spiral corridors (i.e
+	//        stairs), this make triangulation to fail
+	//   * generally the best choice if you precompute the nacmesh, use this if
+	//     you have large open areas
+	// 2) Monotone partitioning
 	//   - fastest
-	//   - partitions the heightfield into regions without holes and overlaps (guaranteed)
+	//   - partitions the heightfield into regions without holes and overlaps
+	//     (guaranteed)
 	//   - creates long thin polygons, which sometimes causes paths with detours
 	//   * use this if you want fast navmesh generation
-	// 3) Layer partitoining
+	// 3) Layer partitioning
 	//   - quite fast
 	//   - partitions the heighfield into non-overlapping regions
-	//   - relies on the triangulation code to cope with holes (thus slower than monotone partitioning)
+	//   - relies on the triangulation code to cope with holes (thus slower than
+	//     monotone partitioning)
 	//   - produces better triangles than monotone partitioning
 	//   - does not have the corner cases of watershed partitioning
-	//   - can be slow and create a bit ugly tessellation (still better than monotone)
-	//     if you have large open areas with small obstacles (not a problem if you use tiles)
-	//   * good choice to use for tiled navmesh with medium and small sized tiles
+	//   - can be slow and create a bit ugly tessellation (still better than
+	//     monotone) if you have large open areas with small obstacles (not a
+	//     problem if you use tiles)
+	//   * good choice to use for tiled navmesh with medium and small sized
+	//     tiles
 
-	if sm.partitionType == SAMPLE_PARTITION_WATERSHED {
+	if sm.partitionType == SamplePartitionWatershed {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		//if (!rcBuildDistanceField(m_ctx, *m_chf))
 		//{
@@ -221,7 +236,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
 		//return navData, false
 		//}
-	} else if sm.partitionType == SAMPLE_PARTITION_MONOTONE {
+	} else if sm.partitionType == SamplePartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
 		if !recast.BuildRegionsMonotone(sm.ctx, chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
@@ -365,7 +380,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	}
 
 	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
-	// Show performance stats.
+	// Log performance stats.
 	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL))
 	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", pmesh.NVerts, pmesh.NPolys)
 
