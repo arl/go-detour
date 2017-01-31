@@ -111,6 +111,12 @@ func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	return status
 }
 
+// Init initializes the navigation mesh for tiled use.
+//
+//  Arguments:
+//   params  Initialization parameters.
+//
+// Return the status flags for the operation.
 func (m *NavMesh) Init(params *NavMeshParams) Status {
 	m.Params = *params
 	m.Orig = d3.NewVec3From(params.Orig[0:3])
@@ -452,7 +458,7 @@ type Link struct {
 	Bmax uint8   // If a boundary link, defines the maximum sub-edge area.
 }
 
-// Defines the location of detail sub-mesh data within a MeshTile.
+// A PolyDetail defines the location of detail sub-mesh data within a MeshTile.
 type PolyDetail struct {
 	VertBase  uint32 // The offset of the vertices in the MeshTile.DetailVerts slice.
 	TriBase   uint32 // The offset of the triangles in the MeshTile.DetailTris slice.
@@ -460,7 +466,8 @@ type PolyDetail struct {
 	TriCount  uint8  // The number of triangles in the sub-mesh.
 }
 
-// Bounding volume node.
+// A BvNode is a bounding volume node.
+//
 // Note: This structure is rarely if ever used by the end user.
 // see MeshTile
 type BvNode struct {

@@ -10,12 +10,12 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-type BVItem struct {
+type bvItem struct {
 	BMin, BMax [3]uint16
 	i          int32
 }
 
-type compareItemX []BVItem
+type compareItemX []bvItem
 
 // Len is the number of elements in the collection.
 func (s compareItemX) Len() int {
@@ -75,7 +75,7 @@ func (s compareItemX) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-type compareItemY []BVItem
+type compareItemY []bvItem
 
 // Len is the number of elements in the collection.
 func (s compareItemY) Len() int {
@@ -135,7 +135,7 @@ func (s compareItemY) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-type compareItemZ []BVItem
+type compareItemZ []bvItem
 
 // Len is the number of elements in the collection.
 func (s compareItemZ) Len() int {
@@ -193,7 +193,7 @@ func (s compareItemZ) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-func calcExtends(items []BVItem, imin, imax int32, bmin, bmax []uint16) {
+func calcExtends(items []bvItem, imin, imax int32, bmin, bmax []uint16) {
 	bmin[0] = items[imin].BMin[0]
 	bmin[1] = items[imin].BMin[1]
 	bmin[2] = items[imin].BMin[2]
@@ -239,7 +239,7 @@ func longestAxis(x, y, z uint16) int {
 	return axis
 }
 
-func subdivide(items []BVItem, nitems, imin, imax int32, curNode *int32, nodes []BvNode) {
+func subdivide(items []bvItem, nitems, imin, imax int32, curNode *int32, nodes []BvNode) {
 	inum := imax - imin
 	icur := *curNode
 
@@ -304,7 +304,7 @@ func int32Clamp(a, low, high int32) int32 {
 func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 	// Build tree
 	quantFactor := float32(1.0) / params.Cs
-	items := make([]BVItem, params.PolyCount)
+	items := make([]bvItem, params.PolyCount)
 	for i := int32(0); i < params.PolyCount; i++ {
 		it := &items[i]
 		it.i = i
@@ -344,7 +344,7 @@ func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 			it.BMax[2] = it.BMin[2]
 
 			for j := int32(1); j < params.Nvp; j++ {
-				if p[j] == MESH_NULL_IDX {
+				if p[j] == meshNullIdx {
 					break
 				}
 				x := params.Verts[p[j]*3+0]
@@ -428,84 +428,166 @@ func classifyOffMeshPoint(pt, bmin, bmax d3.Vec3) uint8 {
 	return 0xff
 }
 
-const MESH_NULL_IDX uint16 = 0xffff
+const meshNullIdx uint16 = 0xffff
 
-// Represents the source data used to build an navigation mesh tile.
+// NavMeshCreateParams represents the source data used to build an navigation
+// mesh tile.
 type NavMeshCreateParams struct {
 
+	//
 	// Polygon Mesh Attributes
 	// Used to create the base navigation graph.
 	// See recast.PolyMesh for details related to these attributes.
+	//
 
-	Verts     []uint16 // The polygon mesh vertices. [(x, y, z) * vertCount] [Unit: vx]
-	VertCount int32    // The number vertices in the polygon mesh. [Limit: >= 3]
-	Polys     []uint16 // The polygon data. [Size: polyCount * 2 * nvp]
-	PolyFlags []uint16 // The user defined flags assigned to each polygon. [Size: polyCount]
-	PolyAreas []uint8  // The user defined area ids assigned to each polygon. [Size: polyCount]
-	PolyCount int32    // Number of polygons in the mesh. [Limit: >= 1]
-	Nvp       int32    // Number maximum number of vertices per polygon. [Limit: >= 3]
+	// The polygon mesh vertices.
+	// [(x, y, z) * vertCount] [Unit: vx]
+	Verts []uint16
 
+	// The number vertices in the polygon mesh.
+	// [Limit: >= 3]
+	VertCount int32
+
+	// The polygon data.
+	// [Size: polyCount * 2 * nvp]
+	Polys []uint16
+
+	// The user defined flags assigned to each polygon.
+	// [Size: polyCount]
+	PolyFlags []uint16
+
+	// The user defined area ids assigned to each polygon.
+	// [Size: polyCount]
+	PolyAreas []uint8
+
+	// Number of polygons in the mesh.
+	// [Limit: >= 1]
+	PolyCount int32
+
+	// Number maximum number of vertices per polygon.
+	// [Limit: >= 3]
+	Nvp int32
+
+	//
 	// Height Detail Attributes (Optional)
-	// See #recast.PolyMeshDetail for details related to these attributes.
-	DetailMeshes     []int32   // The height detail sub-mesh data. [Size: 4 * polyCount]
-	DetailVerts      []float32 // The detail mesh vertices. [Size: 3 * detailVertsCount] [Unit: wu]
-	DetailVertsCount int32     // The number of vertices in the detail mesh.
-	DetailTris       []uint8   // The detail mesh triangles. [Size: 4 * detailTriCount]
-	DetailTriCount   int32     // The number of triangles in the detail mesh.
+	// See recast.PolyMeshDetail for details related to these attributes.
+	//
 
+	// The height detail sub-mesh data.
+	// [Size: 4 * polyCount]
+	DetailMeshes []int32
+
+	// The detail mesh vertices.
+	// [Size: 3 * detailVertsCount] [Unit: wu]
+	DetailVerts []float32
+
+	// The number of vertices in the detail mesh.
+	DetailVertsCount int32
+
+	// The detail mesh triangles.
+	// [Size: 4 * detailTriCount]
+	DetailTris []uint8
+
+	// The number of triangles in the detail mesh.
+	DetailTriCount int32
+
+	//
 	// Off-Mesh Connections Attributes (Optional)
-	// Used to define a custom point-to-point edge within the navigation graph, an
-	// off-mesh connection is a user defined traversable connection made up to two vertices,
-	// at least one of which resides within a navigation mesh polygon.
+	// Used to define a custom point-to-point edge within the navigation graph,
+	// an off-mesh connection is a user defined traversable connection made up
+	// to two vertices, at least one of which resides within a navigation mesh
+	// polygon.
+	//
 
-	// Off-mesh connection vertices. [(ax, ay, az, bx, by, bz) * offMeshConCount] [Unit: wu]
+	// Off-mesh connection vertices.
+	// [(ax, ay, az, bx, by, bz) * offMeshConCount] [Unit: wu]
 	OffMeshConVerts []float32
-	// Off-mesh connection radii. [Size: offMeshConCount] [Unit: wu]
+
+	// Off-mesh connection radii.
+	// [Size: offMeshConCount] [Unit: wu]
 	OffMeshConRad []float32
-	// User defined flags assigned to the off-mesh connections. [Size: offMeshConCount]
+
+	// User defined flags assigned to the off-mesh connections.
+	// [Size: offMeshConCount]
 	OffMeshConFlags []uint16
-	// User defined area ids assigned to the off-mesh connections. [Size: offMeshConCount]
+
+	// User defined area ids assigned to the off-mesh connections.
+	// [Size: offMeshConCount]
 	OffMeshConAreas []uint8
-	// The permitted travel direction of the off-mesh connections. [Size: offMeshConCount]
+
+	// The permitted travel direction of the off-mesh connections.
+	// [Size: offMeshConCount]
 	//
 	// 0 = Travel only from endpoint A to endpoint B.<br/>
 	// OffMeshConBiDir = Bidirectional travel.
 	OffMeshConDir []uint8
-	// The user defined ids of the off-mesh connection. [Size: offMeshConCount]
+
+	// The user defined ids of the off-mesh connection.
+	// [Size: offMeshConCount]
 	OffMeshConUserID []uint32
-	// The number of off-mesh connections. [Limit: >= 0]
+
+	// The number of off-mesh connections.
+	// [Limit: >= 0]
 	OffMeshConCount int32
 
+	//
 	// Tile Attributes
-	// note The tile grid/layer data can be left at zero if the destination is a single tile mesh.
+	// note The tile grid/layer data can be left at zero
+	// if the destination is a single tile mesh.
+	//
 
-	UserID    uint32     // The user defined id of the tile.
-	TileX     int32      // The tile's x-grid location within the multi-tile destination mesh. (Along the x-axis.)
-	TileY     int32      // The tile's y-grid location within the multi-tile desitation mesh. (Along the z-axis.)
-	TileLayer int32      // The tile's layer within the layered destination mesh. [Limit: >= 0] (Along the y-axis.)
-	BMin      [3]float32 // The minimum bounds of the tile. [(x, y, z)] [Unit: wu]
-	BMax      [3]float32 // The maximum bounds of the tile. [(x, y, z)] [Unit: wu]
+	// The user defined id of the tile.
+	UserID uint32
 
+	// The tile's x-grid location within the multi-tile destination mesh.
+	// (Along the x-axis.)
+	TileX int32
+
+	// The tile's y-grid location within the multi-tile desitation mesh.
+	// (Along the z-axis.)
+	TileY int32
+
+	// The tile's layer within the layered destination mesh. [Limit: >= 0]
+	// (Along the y-axis.)
+	TileLayer int32
+
+	// The minimum bounds of the tile. [(x, y, z)] [Unit: wu]
+	BMin [3]float32
+
+	// The maximum bounds of the tile. [(x, y, z)] [Unit: wu]
+	BMax [3]float32
+
+	//
 	// General Configuration Attributes
+	//
 
-	WalkableHeight float32 // The agent height. [Unit: wu]
-	WalkableRadius float32 // The agent radius. [Unit: wu]
-	WalkableClimb  float32 // The agent maximum traversable ledge. (Up/Down) [Unit: wu]
-	Cs             float32 // The xz-plane cell size of the polygon mesh. [Limit: > 0] [Unit: wu]
-	Ch             float32 // The y-axis cell height of the polygon mesh. [Limit: > 0] [Unit: wu]
+	// The agent height. [Unit: wu]
+	WalkableHeight float32
+	// The agent radius. [Unit: wu]
+	WalkableRadius float32
+	// The agent maximum traversable ledge. (Up/Down) [Unit: wu]
+	WalkableClimb float32
+	// The xz-plane cell size of the polygon mesh. [Limit: > 0] [Unit: wu]
+	Cs float32
+	// The y-axis cell height of the polygon mesh. [Limit: > 0] [Unit: wu]
+	Ch float32
 
 	// True if a bounding volume tree should be built for the tile.
-	// note The BVTree is not normally needed for layered navigation meshes.
+	// Note The BVTree is not normally needed for layered navigation meshes.
 	BuildBvTree bool
 }
 
-// TODO: Better error handling.
-
-// The output data array is allocated using the detour allocator (dtAlloc()).  The method
-// used to free the memory will be determined by how the tile is added to the navigation
-// mesh.
+// CreateNavMeshData builds navigation mesh tile data from the provided tile
+// creation data.
 //
-// see NavMesh, NavMesh::addTile()
+//  Arguments:
+//  paramsi     Tile creation data.
+//  outData     The resulting tile data.
+//  outDataSize The size of the tile data array.
+//
+// Return true if the tile data was successfully created.
+//
+// see NavMesh, NavMesh.addTile()
 func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	if params.Nvp > int32(VertsPerPolygon) {
 		return nil, fmt.Errorf("wrong value for params.Nvp")
@@ -598,7 +680,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	for i := int32(0); i < params.PolyCount; i++ {
 		p := params.Polys[i*2*nvp:]
 		for j := int32(0); j < nvp; j++ {
-			if p[j] == MESH_NULL_IDX {
+			if p[j] == meshNullIdx {
 				break
 			}
 			edgeCount++
@@ -627,7 +709,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 			ndv := params.DetailMeshes[i*4+1]
 			var nv int32
 			for j := int32(0); j < nvp; j++ {
-				if p[j] == MESH_NULL_IDX {
+				if p[j] == meshNullIdx {
 					break
 				}
 				nv++
@@ -643,7 +725,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 			p := params.Polys[i*nvp*2:]
 			var nv int32
 			for j := int32(0); j < nvp; j++ {
-				if p[j] == MESH_NULL_IDX {
+				if p[j] == meshNullIdx {
 					break
 				}
 				nv++
@@ -745,7 +827,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		p.SetArea(params.PolyAreas[i])
 		p.SetType(uint8(polyTypeGround))
 		for j := int32(0); j < nvp; j++ {
-			if src[j] == MESH_NULL_IDX {
+			if src[j] == meshNullIdx {
 				break
 			}
 			p.Verts[j] = src[j]

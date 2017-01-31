@@ -46,7 +46,7 @@ func (s *navMeshSetHeader) WriteTo(w io.Writer) (int64, error) {
 //
 // The values are used to allocate space during the initialization of a
 // navigation mesh.
-// see NavMesh.init()
+// see NavMesh.Init()
 type NavMeshParams struct {
 	Orig       [3]float32 // The world space origin of the navigation mesh's tile space. [(x, y, z)]
 	TileWidth  float32    // The width of each tile. (Along the x-axis.)
@@ -187,25 +187,59 @@ func (s *MeshHeader) Unserialize(src []byte) {
 
 // MeshTile defines a navigation mesh tile.
 type MeshTile struct {
-	Salt          uint32       // Counter describing modifications to the tile.
-	LinksFreeList uint32       // Index to the next free link.
-	Header        *MeshHeader  // The tile header.
-	Polys         []Poly       // The tile polygons. [Size: MeshHeader.polyCount]
-	Verts         []float32    // The tile vertices. [Size: MeshHeader.vertCount]
-	Links         []Link       // The tile links. [Size: MeshHeader.maxLinkCount]
-	DetailMeshes  []PolyDetail // The tile's detail sub-meshes. [Size: MeshHeader.detailMeshCount]
-	DetailVerts   []float32    // The detail mesh's unique vertices. [(x, y, z) * MeshHeader.detailVertCount]
-	// The detail mesh's triangles. [(vertA, vertB, vertC) * MeshHeader.detailTriCount]
+
+	// Counter describing modifications to the tile.
+	Salt uint32
+
+	// Index to the next free link.
+	LinksFreeList uint32
+
+	// The tile header.
+	Header *MeshHeader
+
+	// The tile polygons.
+	// [Size: MeshHeader.PolyCount]
+	Polys []Poly
+
+	// The tile vertices.
+	// [Size: MeshHeader.VertCount]
+	Verts []float32
+
+	// The tile links.
+	// [Size: MeshHeader.MaxLinkCount]
+	Links []Link
+
+	// The tile's detail sub-meshes.
+	// [Size: MeshHeader.DetailMeshCount]
+	DetailMeshes []PolyDetail
+
+	// The detail mesh's unique vertices.
+	// [(x, y, z) * MeshHeader.DetailVertCount]
+	DetailVerts []float32
+
+	// The detail mesh's triangles.
+	// [(vertA, vertB, vertC) * MeshHeader.DetailTriCount]
 	DetailTris []uint8
 
-	// The tile bounding volume nodes. [Size: MeshHeader.BvNodeCount]
+	// The tile bounding volume nodes.
+	// [Size: MeshHeader.BvNodeCount]
 	// (Will be null if bounding volumes are disabled.)
 	BvTree []BvNode
-	// The tile off-mesh connections. [Size: MeshHeader.offMeshConCount]
+
+	// The tile off-mesh connections.
+	// [Size: MeshHeader.OffMeshConCount]
 	OffMeshCons []OffMeshConnection
 
-	Data     []uint8   // The tile data. (Not directly accessed under normal situations.)
-	DataSize int32     // Size of the tile data.
-	Flags    int32     // Tile flags. (See: tileFlags)
-	Next     *MeshTile // The next free tile, or the next tile in the spatial grid.
+	// The tile data.
+	// Not directly accessed under normal situations.
+	Data []uint8
+
+	// Size of the tile data.
+	DataSize int32
+
+	// Tile flags. (See: tileFlags)
+	Flags int32
+
+	// The next free tile, or the next tile in the spatial grid.
+	Next *MeshTile
 }

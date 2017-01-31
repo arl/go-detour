@@ -102,33 +102,33 @@ func _TestOffMeshConnections(t *testing.T) {
 		filter.SetIncludeFlags(tt.incFlags)
 		filter.SetExcludeFlags(tt.excFlags)
 
-		/// These are just sample areas to use consistent values across the samples.
-		/// The use should specify these base on his needs.
+		// These are just sample areas to use consistent values across the samples.
+		// The use should specify these base on his needs.
 		const (
-			SAMPLE_POLYAREA_GROUND int32 = iota
-			SAMPLE_POLYAREA_WATER
-			SAMPLE_POLYAREA_ROAD
-			SAMPLE_POLYAREA_DOOR
-			SAMPLE_POLYAREA_GRASS
-			SAMPLE_POLYAREA_JUMP
+			samplePolyAreaGround int32 = iota
+			samplePolyAreaWater
+			samplePolyAreaRoad
+			samplePolyAreaDoor
+			samplePolyAreaGrass
+			samplePolyAreaJump
 		)
 
 		const (
-			SAMPLE_POLYFLAGS_WALK     int32 = 0x01   // Ability to walk (ground, grass, road)
-			SAMPLE_POLYFLAGS_SWIM           = 0x02   // Ability to swim (water).
-			SAMPLE_POLYFLAGS_DOOR           = 0x04   // Ability to move through doors.
-			SAMPLE_POLYFLAGS_JUMP           = 0x08   // Ability to jump.
-			SAMPLE_POLYFLAGS_DISABLED       = 0x10   // Disabled polygon
-			SAMPLE_POLYFLAGS_ALL            = 0xffff // All abilities.
+			samplePolyFlagsWalk     int32 = 0x01   // Ability to walk (ground, grass, road)
+			samplePolyFlagsSwim           = 0x02   // Ability to swim (water).
+			samplePolyFlagsDoor           = 0x04   // Ability to move through doors.
+			samplePolyFlagsJump           = 0x08   // Ability to jump.
+			samplePolyFlagsDisabled       = 0x10   // Disabled polygon
+			samplePolyFlagsAll            = 0xffff // All abilities.
 		)
 
 		// Change costs.
-		filter.SetAreaCost(SAMPLE_POLYAREA_GROUND, 1.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_WATER, 10.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_ROAD, 1.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_DOOR, 1.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_GRASS, 2.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_JUMP, 1.5)
+		filter.SetAreaCost(samplePolyAreaGround, 1.0)
+		filter.SetAreaCost(samplePolyAreaWater, 10.0)
+		filter.SetAreaCost(samplePolyAreaRoad, 1.0)
+		filter.SetAreaCost(samplePolyAreaDoor, 1.0)
+		filter.SetAreaCost(samplePolyAreaGrass, 2.0)
+		filter.SetAreaCost(samplePolyAreaJump, 1.5)
 
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
