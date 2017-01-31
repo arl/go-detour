@@ -276,14 +276,12 @@ func TestAddSpan(t *testing.T) {
 	)
 
 	testSetup := func() {
-
 		hf = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 		x, y = 0, 0
 		smin, smax = 0, 1
 		area = 42
 		flagMergeThr = 1
 	}
-	//ok, so the test setUp state is not clearly reset because when we run the test that was failing before alone, its not failing anymore...
 
 	t.Run("Add a span to an empty heightfield.", func(t *testing.T) {
 		testSetup()
