@@ -28,7 +28,7 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 	return bytes.Equal(f1, f2), nil
 }
 
-func testCreateSoloMesh(t *testing.T, meshName string) {
+func testCreateSoloMesh(t *testing.T, objName string) {
 	var (
 		path, meshBinPath string
 		outBin            string
@@ -39,8 +39,8 @@ func testCreateSoloMesh(t *testing.T, meshName string) {
 		ok       bool
 	)
 
-	path = "testdata/" + meshName + ".obj"
-	meshBinPath = "testdata/" + meshName + ".org.bin"
+	path = "testdata/" + objName + ".obj"
+	meshBinPath = "testdata/" + objName + ".org.bin"
 	outBin = "out.bin"
 
 	ctx = recast.NewBuildContext(true)
@@ -52,11 +52,11 @@ func testCreateSoloMesh(t *testing.T, meshName string) {
 	navMesh, ok := soloMesh.Build()
 	if !ok {
 		ctx.DumpLog("")
-		t.Fatalf("couldn't build navmesh for %v", meshName)
+		t.Fatalf("couldn't build navmesh for %v", objName)
 	}
 
 	navMesh.SaveToFile(outBin)
-	t.Logf("%v navmesh successfully built", meshName)
+	t.Logf("%v navmesh successfully built", objName)
 	ok, err = compareFiles(outBin, meshBinPath)
 	if err != nil {
 		t.Fatalf("couldn't compare %v and %v, %v", outBin, meshBinPath, err)
