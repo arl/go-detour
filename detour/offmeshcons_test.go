@@ -9,6 +9,7 @@ import (
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
+// FIXME: this test is disabled for now
 func _TestOffMeshConnections(t *testing.T) {
 	var (
 		mesh *NavMesh
