@@ -1,7 +1,9 @@
 package detour
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"unsafe"
@@ -26,6 +28,68 @@ type NavMesh struct {
 	saltBits              uint32        // Number of salt bits in the tile ID.
 	tileBits              uint32        // Number of tile bits in the tile ID.
 	polyBits              uint32        // Number of poly bits in the tile ID.
+}
+
+// Decode reads a tiled navigation mesh from r and returns it.
+//
+// returned error will be different from nil in case of failure.
+func Decode(r io.Reader) (*NavMesh, error) {
+	// Read header.
+	var (
+		hdr navMeshSetHeader
+		err error
+	)
+
+	err = binary.Read(r, binary.LittleEndian, &hdr)
+	if err != nil {
+		return nil, err
+	}
+
+	if hdr.Magic != navMeshSetMagic {
+		return nil, fmt.Errorf("wrong magic number: %x", hdr.Magic)
+	}
+
+	if hdr.Version != navMeshSetVersion {
+		return nil, fmt.Errorf("wrong version: %d", hdr.Version)
+	}
+
+	var mesh NavMesh
+	status := mesh.Init(&hdr.Params)
+	if StatusFailed(status) {
+		return nil, fmt.Errorf("status failed 0x%x", status)
+	}
+
+	// Read tiles.
+	var i int32
+	for i = 0; i < hdr.NumTiles; i++ {
+
+		var (
+			tileHdr navMeshTileHeader
+			err     error
+		)
+		err = binary.Read(r, binary.LittleEndian, &tileHdr)
+		if err != nil {
+			return nil, err
+		}
+
+		if tileHdr.TileRef == 0 || tileHdr.DataSize == 0 {
+			break
+		}
+
+		data := make([]byte, tileHdr.DataSize)
+		if data == nil {
+			break
+		}
+		_, err = r.Read(data)
+		if err != nil {
+			return nil, err
+		}
+		status, _ := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef)
+		if status&Failure != 0 {
+			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
+		}
+	}
+	return &mesh, nil
 }
 
 // SaveToFile saves the navigation mesh as a binary file.
@@ -85,7 +149,7 @@ func (m *NavMesh) SaveToFile(fn string) error {
 //  see CreateNavMeshData
 func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	var header MeshHeader
-	header.Unserialize(data)
+	header.unserialize(data)
 
 	// Make sure the data is in right format.
 	if header.Magic != navMeshMagic {
@@ -185,7 +249,7 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 // see CreateNavMeshData, removeTileBvTree
 func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status, TileRef) {
 	var hdr MeshHeader
-	hdr.Unserialize(data)
+	hdr.unserialize(data)
 
 	// Make sure the data is in right format.
 	if hdr.Magic != navMeshMagic {
@@ -251,7 +315,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	tile.Next = m.posLookup[h]
 	m.posLookup[h] = tile
 
-	tile.Unserialize(&hdr, data[hdr.Size():])
+	tile.unserialize(&hdr, data[hdr.size():])
 
 	// If there are no items in the bvtree, reset the tree pointer.
 	if len(tile.BvTree) == 0 {
@@ -310,7 +374,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	}
 
 	// rewrite the modified tile into the data pointer
-	tile.Serialize(data[tile.Header.Size():])
+	tile.serialize(data[tile.Header.size():])
 	return Success, m.TileRef(tile)
 }
 

@@ -13,12 +13,12 @@ type navMeshSetHeader struct {
 	Params   NavMeshParams
 }
 
-func (s *navMeshSetHeader) Size() int {
-	return 12 + s.Params.Size()
+func (s *navMeshSetHeader) size() int {
+	return 12 + s.Params.size()
 }
 
-func (s *navMeshSetHeader) Serialize(dst []byte) {
-	if len(dst) < s.Size() {
+func (s *navMeshSetHeader) serialize(dst []byte) {
+	if len(dst) < s.size() {
 		panic("undersized buffer for navMeshSetHeader")
 	}
 	var (
@@ -30,12 +30,12 @@ func (s *navMeshSetHeader) Serialize(dst []byte) {
 	little.PutUint32(dst[off:], uint32(s.Magic))
 	little.PutUint32(dst[off+4:], uint32(s.Version))
 	little.PutUint32(dst[off+8:], uint32(s.NumTiles))
-	s.Params.Serialize(dst[off+12:])
+	s.Params.serialize(dst[off+12:])
 }
 
 func (s *navMeshSetHeader) WriteTo(w io.Writer) (int64, error) {
-	buf := make([]byte, s.Size())
-	s.Serialize(buf)
+	buf := make([]byte, s.size())
+	s.serialize(buf)
 
 	n, err := w.Write(buf)
 	return int64(n), err
@@ -55,16 +55,16 @@ type NavMeshParams struct {
 	MaxPolys   uint32     // The maximum number of polygons each tile can contain.
 }
 
-// Size returns the size of the serialized structure.
-func (s *NavMeshParams) Size() int {
+// size returns the size of the serialized structure.
+func (s *NavMeshParams) size() int {
 	return 28
 }
 
-// Serialize encodes the structure content into dst.
+// serialize encodes the structure content into dst.
 //
 // The function panics is the destination slice is too small.
-func (s *NavMeshParams) Serialize(dst []byte) {
-	if len(dst) < s.Size() {
+func (s *NavMeshParams) serialize(dst []byte) {
+	if len(dst) < s.size() {
 		panic("destination slice is too small")
 	}
 	var (
@@ -107,12 +107,12 @@ type MeshHeader struct {
 	BvQuantFactor   float32    // The bounding volume quantization factor.
 }
 
-func (s *MeshHeader) Size() int {
+func (s *MeshHeader) size() int {
 	return 100
 }
 
-func (s *MeshHeader) Serialize(dst []byte) {
-	if len(dst) < s.Size() {
+func (s *MeshHeader) serialize(dst []byte) {
+	if len(dst) < s.size() {
 		panic("undersized buffer for MeshHeader")
 	}
 	var (
@@ -148,8 +148,8 @@ func (s *MeshHeader) Serialize(dst []byte) {
 	little.PutUint32(dst[off+96:], uint32(math.Float32bits(s.BvQuantFactor)))
 }
 
-func (s *MeshHeader) Unserialize(src []byte) {
-	if len(src) < s.Size() {
+func (s *MeshHeader) unserialize(src []byte) {
+	if len(src) < s.size() {
 		panic("undersized buffer for MeshHeader")
 	}
 	var (
@@ -183,63 +183,4 @@ func (s *MeshHeader) Unserialize(src []byte) {
 	s.Bmax[1] = math.Float32frombits(little.Uint32(src[off+88:]))
 	s.Bmax[2] = math.Float32frombits(little.Uint32(src[off+92:]))
 	s.BvQuantFactor = math.Float32frombits(little.Uint32(src[off+96:]))
-}
-
-// MeshTile defines a navigation mesh tile.
-type MeshTile struct {
-
-	// Counter describing modifications to the tile.
-	Salt uint32
-
-	// Index to the next free link.
-	LinksFreeList uint32
-
-	// The tile header.
-	Header *MeshHeader
-
-	// The tile polygons.
-	// [Size: MeshHeader.PolyCount]
-	Polys []Poly
-
-	// The tile vertices.
-	// [Size: MeshHeader.VertCount]
-	Verts []float32
-
-	// The tile links.
-	// [Size: MeshHeader.MaxLinkCount]
-	Links []Link
-
-	// The tile's detail sub-meshes.
-	// [Size: MeshHeader.DetailMeshCount]
-	DetailMeshes []PolyDetail
-
-	// The detail mesh's unique vertices.
-	// [(x, y, z) * MeshHeader.DetailVertCount]
-	DetailVerts []float32
-
-	// The detail mesh's triangles.
-	// [(vertA, vertB, vertC) * MeshHeader.DetailTriCount]
-	DetailTris []uint8
-
-	// The tile bounding volume nodes.
-	// [Size: MeshHeader.BvNodeCount]
-	// (Will be null if bounding volumes are disabled.)
-	BvTree []BvNode
-
-	// The tile off-mesh connections.
-	// [Size: MeshHeader.OffMeshConCount]
-	OffMeshCons []OffMeshConnection
-
-	// The tile data.
-	// Not directly accessed under normal situations.
-	Data []uint8
-
-	// Size of the tile data.
-	DataSize int32
-
-	// Tile flags. (See: tileFlags)
-	Flags int32
-
-	// The next free tile, or the next tile in the spatial grid.
-	Next *MeshTile
 }

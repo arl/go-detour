@@ -740,7 +740,7 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	)
 
 	// Calculate data size in order to allocate buffer
-	headerSize := hdr.Size()
+	headerSize := hdr.size()
 	vertsSize := 4 * 3 * totVertCount
 	polysSize := int(unsafe.Sizeof(Poly{})) * totPolyCount
 	linksSize := int(unsafe.Sizeof(Link{})) * int(maxLinkCount)
@@ -964,8 +964,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	}
 
 	buf := make([]byte, dataSize)
-	hdr.Serialize(buf)
-	err := SerializeTileData(buf[hdr.Size():],
+	hdr.serialize(buf)
+	err := serializeTileData(buf[hdr.size():],
 		navVerts,
 		navPolys,
 		make([]Link, maxLinkCount),

@@ -2,7 +2,6 @@ package detour
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"math"
 )
@@ -41,72 +40,70 @@ func (s *navMeshTileHeader) Serialize(dst []byte) {
 	little.PutUint32(dst[off+4:], uint32(s.DataSize))
 }
 
-// Decode reads a tiled navigation mesh from r and returns the loaded NavMesh
-// object or nil and an error in case of failure.
-func Decode(r io.Reader) (*NavMesh, error) {
-	// Read header.
-	var (
-		hdr navMeshSetHeader
-		err error
-	)
+// MeshTile defines a navigation mesh tile.
+type MeshTile struct {
 
-	err = binary.Read(r, binary.LittleEndian, &hdr)
-	if err != nil {
-		return nil, err
-	}
+	// Counter describing modifications to the tile.
+	Salt uint32
 
-	if hdr.Magic != navMeshSetMagic {
-		return nil, fmt.Errorf("wrong magic number: %x", hdr.Magic)
-	}
+	// Index to the next free link.
+	LinksFreeList uint32
 
-	if hdr.Version != navMeshSetVersion {
-		return nil, fmt.Errorf("wrong version: %d", hdr.Version)
-	}
+	// The tile header.
+	Header *MeshHeader
 
-	var mesh NavMesh
-	status := mesh.Init(&hdr.Params)
-	if StatusFailed(status) {
-		return nil, fmt.Errorf("status failed 0x%x", status)
-	}
+	// The tile polygons.
+	// [Size: MeshHeader.PolyCount]
+	Polys []Poly
 
-	// Read tiles.
-	var i int32
-	for i = 0; i < hdr.NumTiles; i++ {
+	// The tile vertices.
+	// [Size: MeshHeader.VertCount]
+	Verts []float32
 
-		var (
-			tileHdr navMeshTileHeader
-			err     error
-		)
-		err = binary.Read(r, binary.LittleEndian, &tileHdr)
-		if err != nil {
-			return nil, err
-		}
+	// The tile links.
+	// [Size: MeshHeader.MaxLinkCount]
+	Links []Link
 
-		if tileHdr.TileRef == 0 || tileHdr.DataSize == 0 {
-			break
-		}
+	// The tile's detail sub-meshes.
+	// [Size: MeshHeader.DetailMeshCount]
+	DetailMeshes []PolyDetail
 
-		data := make([]byte, tileHdr.DataSize)
-		if data == nil {
-			break
-		}
-		_, err = r.Read(data)
-		if err != nil {
-			return nil, err
-		}
-		status, _ := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef)
-		if status&Failure != 0 {
-			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
-		}
-	}
-	return &mesh, nil
+	// The detail mesh's unique vertices.
+	// [(x, y, z) * MeshHeader.DetailVertCount]
+	DetailVerts []float32
+
+	// The detail mesh's triangles.
+	// [(vertA, vertB, vertC) * MeshHeader.DetailTriCount]
+	DetailTris []uint8
+
+	// The tile bounding volume nodes.
+	// [Size: MeshHeader.BvNodeCount]
+	// (Will be null if bounding volumes are disabled.)
+	BvTree []BvNode
+
+	// The tile off-mesh connections.
+	// [Size: MeshHeader.OffMeshConCount]
+	OffMeshCons []OffMeshConnection
+
+	// The tile data.
+	// Not directly accessed under normal situations.
+	Data []uint8
+
+	// Size of the tile data.
+	DataSize int32
+
+	// Tile flags. (See: tileFlags)
+	Flags int32
+
+	// The next free tile, or the next tile in the spatial grid.
+	Next *MeshTile
 }
 
-func (s *MeshTile) Serialize(dst []byte) {
-	SerializeTileData(dst, s.Verts, s.Polys, s.Links, s.DetailMeshes, s.DetailVerts, s.DetailTris, s.BvTree, s.OffMeshCons)
+func (s *MeshTile) serialize(dst []byte) {
+	serializeTileData(dst, s.Verts, s.Polys, s.Links, s.DetailMeshes, s.DetailVerts, s.DetailTris, s.BvTree, s.OffMeshCons)
 }
 
-func (s *MeshTile) Unserialize(hdr *MeshHeader, src []byte) {
+func (s *MeshTile) unserialize(hdr *MeshHeader, src []byte) {
 	var (
 		little = binary.LittleEndian
 		i, off int
@@ -202,7 +199,7 @@ func (s *MeshTile) Unserialize(hdr *MeshHeader, src []byte) {
 	}
 }
 
-func SerializeTileData(dst []byte,
+func serializeTileData(dst []byte,
 	verts []float32,
 	polys []Poly,
 	links []Link,
