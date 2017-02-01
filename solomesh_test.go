@@ -28,88 +28,89 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 	return bytes.Equal(f1, f2), nil
 }
 
-func testCreateSoloNavMesh(t *testing.T, meshname string) {
+func testCreateSoloMesh(t *testing.T, meshName string) {
 	var (
-		meshName, orgNavMeshName string
-		tmpBin                   string
-		ctx                      *recast.BuildContext
-		soloMesh                 *SoloMesh
-		err                      error
-		ok                       bool
+		path, meshBinPath string
+		outBin            string
+		ctx               *recast.BuildContext
+
+		soloMesh *SoloMesh
+		err      error
+		ok       bool
 	)
 
-	meshName = "testdata/" + meshname + ".obj"
-	orgNavMeshName = "testdata/" + meshname + ".org.bin"
-	tmpBin = "out.bin"
+	path = "testdata/" + meshName + ".obj"
+	meshBinPath = "testdata/" + meshName + ".org.bin"
+	outBin = "out.bin"
 
 	ctx = recast.NewBuildContext(true)
 	soloMesh = NewSoloMesh(ctx)
-	if err = soloMesh.LoadGeometry(meshName); err != nil {
+	if err = soloMesh.LoadGeometry(path); err != nil {
 		ctx.DumpLog("")
-		t.Fatalf("couldn't load mesh %v", meshName)
+		t.Fatalf("couldn't load mesh %v", path)
 	}
 	navMesh, ok := soloMesh.Build()
 	if !ok {
 		ctx.DumpLog("")
-		t.Fatalf("couldn't build navmesh for %v", meshname)
+		t.Fatalf("couldn't build navmesh for %v", meshName)
 	}
 
-	navMesh.SaveToFile(tmpBin)
-	t.Logf("%v navmesh successfully built", meshname)
-	ok, err = compareFiles(tmpBin, orgNavMeshName)
+	navMesh.SaveToFile(outBin)
+	t.Logf("%v navmesh successfully built", meshName)
+	ok, err = compareFiles(outBin, meshBinPath)
 	if err != nil {
-		t.Fatalf("couldn't compare %v and %v, %v", tmpBin, orgNavMeshName, err)
+		t.Fatalf("couldn't compare %v and %v, %v", outBin, meshBinPath, err)
 	}
 	if !ok {
-		t.Fatalf("%v and %v are different", tmpBin, orgNavMeshName)
+		t.Fatalf("%v and %v are different", outBin, meshBinPath)
 	}
 }
 
 func TestCreateDevelerNavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "develer")
+	testCreateSoloMesh(t, "develer")
 }
 
 func TestCreateDungeonNavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "dungeon")
+	testCreateSoloMesh(t, "dungeon")
 }
 
 func TestCreateCubeNavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "cube")
+	testCreateSoloMesh(t, "cube")
 }
 
 func TestCreateCube5DegreesNavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "cube5xdeg")
+	testCreateSoloMesh(t, "cube5xdeg")
 }
 
 func TestCreateCube45DegreesNavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "cube45xdeg")
+	testCreateSoloMesh(t, "cube45xdeg")
 }
 
 func TestCreateStair2NavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "stair2")
+	testCreateSoloMesh(t, "stair2")
 }
 
 func TestCreateStair3NavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "stair3")
+	testCreateSoloMesh(t, "stair3")
 }
 
 func TestCreateHillNavMesh(t *testing.T) {
-	testCreateSoloNavMesh(t, "hill")
+	testCreateSoloMesh(t, "hill")
 }
 
-func benchmarkCreateNavMesh(b *testing.B, meshname string) {
-	meshName := "testdata/" + meshname + ".obj"
+func benchmarkCreateNavMesh(b *testing.B, meshName string) {
+	path := "testdata/" + meshName + ".obj"
 
 	soloMesh := NewSoloMesh(recast.NewBuildContext(false))
-	if err := soloMesh.LoadGeometry(meshName); err != nil {
-		b.Fatalf("couldn't load mesh %v: %v", meshName, err)
+	if err := soloMesh.LoadGeometry(path); err != nil {
+		b.Fatalf("couldn't load mesh %v: %v", path, err)
 	}
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		_, ok := soloMesh.Build()
 		if !ok {
-			b.Fatalf("couldn't build navmesh for %v", meshname)
+			b.Fatalf("couldn't build navmesh for %v", path)
 		}
 	}
 }
