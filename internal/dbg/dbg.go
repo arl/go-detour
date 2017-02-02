@@ -93,10 +93,10 @@ func findPath(mesh *detour.NavMesh, org, dst d3.Vec3) ([]detour.PolyRef, error) 
 
 	// FindPath
 	var (
-		pathCount int32
+		pathCount int
 	)
 	path = make([]detour.PolyRef, 100)
-	st = query.FindPath(orgRef, dstRef, org[:], dst[:], filter, &path, &pathCount, 100)
+	pathCount, st = query.FindPath(orgRef, dstRef, org[:], dst[:], filter, path)
 	if detour.StatusFailed(st) {
 		return path, fmt.Errorf("query.FindPath failed with %v\n", st)
 	}

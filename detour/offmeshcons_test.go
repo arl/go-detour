@@ -155,10 +155,10 @@ func _TestOffMeshConnections(t *testing.T) {
 
 		// FindPath
 		var (
-			pathCount int32
+			pathCount int
 		)
 		path = make([]PolyRef, 100)
-		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
+		pathCount, st = query.FindPath(orgRef, dstRef, org, dst, filter, path)
 		if StatusFailed(st) {
 			t.Fatal("query.FindPath failed:", st)
 		}
@@ -184,7 +184,7 @@ func _TestOffMeshConnections(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]PolyRef, maxStraightPath)
 
-		st, straightPathCount = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
+		st, straightPathCount = query.FindStraightPath(tt.org, tt.dst, path, int32(pathCount), straightPath, straightPathFlags, straightPathRefs, 100, 0)
 		if StatusFailed(st) {
 			t.Fatal("query.FindStraightPath failed:", st)
 		}
@@ -204,7 +204,7 @@ func _TestOffMeshConnections(t *testing.T) {
 		for i := int32(0); i < straightPathCount; i++ {
 			log.Printf("straightPath[%d].Flags = 0x%x\n", i, straightPathFlags[i])
 		}
-		for i := int32(0); i < pathCount; i++ {
+		for i := 0; i < pathCount; i++ {
 			if !straightPath[i].Approx(tt.wantStraightPath[i]) {
 				t.Errorf("straightPath[%d] = %v, want %v", i, straightPath[i], tt.wantStraightPath[i])
 			}

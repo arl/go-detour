@@ -366,14 +366,15 @@ func NewNavMeshQuery(nav *NavMesh, maxNodes int32) (Status, *NavMeshQuery) {
 //   startPos  A position within the start polygon. [(x, y, z)]
 //   endPos    A position within the end polygon. [(x, y, z)]
 //   filter    The polygon filter to apply to the query.
-//   path      An ordered list of polygon references representing the path.
-//             (Start to end.) [(polyRef) * pathCount]
-//   pathCount The number of polygons returned in the path array.
-//   maxPath   The maximum number of polygons the path array can hold.
-//             [Limit: >= 1]
+//   path      This slice will be filled with an ordered list of polygon
+//             references representing the path. (Start to end.)
+//
+//  Returns:
+//   pathCount the number of polygons in the found path slice.
+//   st        status code (may be a partial result)
 //
 // If the end polygon cannot be reached through the navigation graph, the last
-// polygon in the path will be the nearest the end polygon.  If the path array
+// polygon in the path will be the nearest to the end polygon. If the path array
 // is to small to hold the full result, it will be filled as far as possible
 // from the start polygon toward the end polygon.
 //
@@ -385,30 +386,16 @@ func (q *NavMeshQuery) FindPath(
 	startRef, endRef PolyRef,
 	startPos, endPos d3.Vec3,
 	filter QueryFilter,
-	path *[]PolyRef,
-	pathCount *int32,
-	maxPath int32) Status {
-
-	if len(*path) < int(maxPath) {
-		// immediately check the provided slice
-		// is big enough to store maxPath nodes
-		return Failure | InvalidParam
-	}
-
-	if pathCount != nil {
-		*pathCount = 0
-	}
-
+	path []PolyRef) (pathCount int, st Status) {
 	// Validate input
 	if !q.nav.IsValidPolyRef(startRef) || !q.nav.IsValidPolyRef(endRef) ||
-		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
-		return Failure | InvalidParam
+		len(startPos) < 3 || len(endPos) < 3 || filter == nil || path == nil || len(path) == 0 {
+		return pathCount, Failure | InvalidParam
 	}
 
 	if startRef == endRef {
-		(*path)[0] = startRef
-		*pathCount = 1
-		return Success
+		path[0] = startRef
+		return 1, Success
 	}
 
 	q.nodePool.Clear()
@@ -580,7 +567,7 @@ func (q *NavMeshQuery) FindPath(
 		}
 	}
 
-	status := q.pathToNode(lastBestNode, path, pathCount, maxPath)
+	pathCount, status := q.pathToNode(lastBestNode, path)
 
 	if lastBestNode.ID != endRef {
 		status |= PartialResult
@@ -590,7 +577,7 @@ func (q *NavMeshQuery) FindPath(
 		status |= OutOfNodes
 	}
 
-	return status
+	return pathCount, status
 }
 
 // Vertex flags returned by NavMeshQuery.FindStraightPath.
@@ -1117,13 +1104,11 @@ func (q *NavMeshQuery) getPortalPoints8(
 // pathToNode gets the path leading to the specified end node.
 func (q *NavMeshQuery) pathToNode(
 	endNode *Node,
-	path *[]PolyRef,
-	pathCount *int32,
-	maxPath int32) Status {
+	path []PolyRef) (pathCount int, st Status) {
 
 	var (
 		curNode *Node
-		length  int32
+		length  int
 	)
 	// Find the length of the entire path.
 	curNode = endNode
@@ -1138,8 +1123,8 @@ func (q *NavMeshQuery) pathToNode(
 
 	// If the path cannot be fully stored then advance to the last node we will be able to store.
 	curNode = endNode
-	var writeCount int32
-	for writeCount = length; writeCount > maxPath; writeCount-- {
+	var writeCount int
+	for writeCount = length; writeCount > len(path); writeCount-- {
 		assert.True(curNode != nil, "curNode should not be nil")
 		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 	}
@@ -1147,21 +1132,25 @@ func (q *NavMeshQuery) pathToNode(
 	// Write path
 	for i := writeCount - 1; i >= 0; i-- {
 		assert.True(curNode != nil, "curNode should not be nil")
-		assert.True(int(i) < len(*path), "i:%d should be < len(*path):%d", i, len(*path))
+		assert.True(int(i) < len(path), "i:%d should be < len(path):%d", i, len(path))
 
-		(*path)[i] = curNode.ID
+		path[i] = curNode.ID
 		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 	}
 
 	assert.True(curNode == nil, "curNode should be nil")
 
-	*pathCount = math32.MinInt32(length, maxPath)
-
-	if length > maxPath {
-		return Success | BufferTooSmall
+	if length <= len(path) {
+		pathCount = length
+	} else {
+		pathCount = len(path)
 	}
 
-	return Success
+	if length > len(path) {
+		return pathCount, Success | BufferTooSmall
+	}
+
+	return pathCount, Success
 }
 
 // closestPointOnPoly uses the detail polygons to find the surface height.
