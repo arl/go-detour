@@ -129,7 +129,7 @@ func TestFindPathFindStraightPath(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]PolyRef, maxStraightPath)
 
-		st, straightPathCount = query.FindStraightPath(tt.org, tt.dst, path, int32(pathCount), straightPath, straightPathFlags, straightPathRefs, 100, 0)
+		straightPathCount, st = query.FindStraightPath(tt.org, tt.dst, path, int32(pathCount), straightPath, straightPathFlags, straightPathRefs, 100, 0)
 		if StatusFailed(st) {
 			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
 		}

@@ -631,18 +631,18 @@ func (q *NavMeshQuery) FindStraightPath(
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
 	maxStraightPath int32,
-	options int32) (st Status, StraightPathCount int32) {
+	options int32) (StraightPathCount int32, st Status) {
 
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
 	if maxStraightPath == 0 {
 		fmt.Println("maxStraightPath == 0")
-		return Failure | InvalidParam, 0
+		return 0, Failure | InvalidParam
 	}
 
 	if len(path) == 0 {
 		fmt.Println("len(path) == 0")
-		return Failure | InvalidParam, 0
+		return 0, Failure | InvalidParam
 	}
 
 	var (
@@ -653,12 +653,12 @@ func (q *NavMeshQuery) FindStraightPath(
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
 	if StatusFailed(q.closestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
-		return Failure | InvalidParam, 0
+		return 0, Failure | InvalidParam
 	}
 
 	closestEndPos := d3.NewVec3()
 	if StatusFailed(q.closestPointOnPolyBoundary(path[pathSize-1], endPos, closestEndPos)) {
-		return Failure | InvalidParam, 0
+		return 0, Failure | InvalidParam
 	}
 
 	// Add start point.
@@ -667,7 +667,7 @@ func (q *NavMeshQuery) FindStraightPath(
 		&count, maxStraightPath)
 	if stat != InProgress {
 		fmt.Println("FindStraightPath returns", stat, count)
-		return stat, count
+		return count, stat
 	}
 
 	if pathSize > 1 {
@@ -699,7 +699,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					// Clamp the end point to path[i], and return the path so far.
 					if StatusFailed(q.closestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
 						// This should only happen when the first polygon is invalid.
-						return Failure | InvalidParam, 0
+						return 0, Failure | InvalidParam
 					}
 
 					// Apeend portals along the current straight path segment.
@@ -720,7 +720,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						stat |= BufferTooSmall
 					}
 					fmt.Println("FindStraightPath 2 returns", stat, count)
-					return stat, count
+					return count, stat
 				}
 
 				// If starting really close the portal, advance.
@@ -756,7 +756,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							&count, maxStraightPath, options)
 						if stat != InProgress {
 							fmt.Println("FindStraightPath 3 returns", stat, count)
-							return stat, count
+							return count, stat
 						}
 					}
 
@@ -777,7 +777,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						&count, maxStraightPath)
 					if stat != InProgress {
 						fmt.Println("FindStraightPath 4 returns", stat, count)
-						return stat, count
+						return count, stat
 					}
 
 					portalLeft.Assign(portalApex)
@@ -811,7 +811,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							&count, maxStraightPath, options)
 						if stat != InProgress {
 							fmt.Println("FindStraightPath 5 returns", stat, count)
-							return stat, count
+							return count, stat
 						}
 					}
 
@@ -832,7 +832,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						&count, maxStraightPath)
 					if stat != InProgress {
 						fmt.Println("FindStraightPath 6 returns", stat, count)
-						return stat, count
+						return count, stat
 					}
 
 					portalLeft.Assign(portalApex)
@@ -855,7 +855,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				&count, maxStraightPath, options)
 			if stat != InProgress {
 				fmt.Println("FindStraightPath 7 returns", stat, count)
-				return stat, count
+				return count, stat
 			}
 		}
 	}
@@ -870,7 +870,7 @@ func (q *NavMeshQuery) FindStraightPath(
 		stat |= BufferTooSmall
 	}
 	fmt.Println("FindStraightPath 8 returns", stat, count)
-	return stat, count
+	return count, stat
 }
 
 // appendPortals appends intermediate portal points to a straight path.
