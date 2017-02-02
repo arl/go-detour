@@ -606,37 +606,33 @@ const (
 //   endPos            Path end position. [(x, y, z)]
 //   path              An array of polygon references that represent the
 //                     path corridor.
-//   pathSize          The number of polygons in the path array.
 //   straightPath      Points describing the straight path
 //                     [Length: == straightPathCount].
 //   straightPathFlags Flags describing each point.
 //                     (See: StraightPathFlags)
 //   straightPathRefs  The reference id of the polygon that is being
 //                     entered at each point.
-//   maxStraightPath   The maximum number of points the straight path
-//                     arrays can hold. [Limit: > 0]
 //   options           Query options. (see: StraightPathOptions)
 //
 // Returns The status flags for the query and the number of point in the
 // straight path.
 //
 // The straightPath, straightPathFlags and straightPathRefs slices must already
-// be allocated and contain at least maxStraightPath elements.
+// be allocated and contain the same number of elements.
 //
 // Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindStraightPath(
 	startPos, endPos d3.Vec3,
-	path []PolyRef, pathSize int32,
+	path []PolyRef,
 	straightPath []d3.Vec3,
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
-	maxStraightPath int32,
-	options int32) (StraightPathCount int32, st Status) {
+	options int32) (StraightPathCount int, st Status) {
 
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
-	if maxStraightPath == 0 {
-		fmt.Println("maxStraightPath == 0")
+	if len(straightPath) == 0 {
+		fmt.Println("len(straightPath) == 0")
 		return 0, Failure | InvalidParam
 	}
 
@@ -647,7 +643,7 @@ func (q *NavMeshQuery) FindStraightPath(
 
 	var (
 		stat  Status
-		count int32
+		count int
 	)
 
 	// TODO: Should this be callers responsibility?
@@ -657,27 +653,27 @@ func (q *NavMeshQuery) FindStraightPath(
 	}
 
 	closestEndPos := d3.NewVec3()
-	if StatusFailed(q.closestPointOnPolyBoundary(path[pathSize-1], endPos, closestEndPos)) {
+	if StatusFailed(q.closestPointOnPolyBoundary(path[len(path)-1], endPos, closestEndPos)) {
 		return 0, Failure | InvalidParam
 	}
 
 	// Add start point.
 	stat = q.appendVertex(closestStartPos, StraightPathStart, path[0],
 		straightPath, straightPathFlags, straightPathRefs,
-		&count, maxStraightPath)
+		&count)
 	if stat != InProgress {
 		fmt.Println("FindStraightPath returns", stat, count)
 		return count, stat
 	}
 
-	if pathSize > 1 {
+	if len(path) > 1 {
 		portalApex := d3.NewVec3From(closestStartPos)
 		portalLeft := d3.NewVec3From(portalApex)
 		portalRight := d3.NewVec3From(portalApex)
 		var (
-			apexIndex     int32
-			leftIndex     int32
-			rightIndex    int32
+			apexIndex     int
+			leftIndex     int
+			rightIndex    int
 			leftPolyType  uint8
 			rightPolyType uint8
 		)
@@ -685,12 +681,12 @@ func (q *NavMeshQuery) FindStraightPath(
 		leftPolyRef := path[0]
 		rightPolyRef := path[0]
 
-		for i := int32(0); i < pathSize; i++ {
+		for i := 0; i < len(path); i++ {
 			left := d3.NewVec3()
 			right := d3.NewVec3()
 			var toType uint8
 
-			if i+1 < pathSize {
+			if i+1 < len(path) {
 				var fromType uint8 // fromType is ignored.
 
 				// Next portal.
@@ -707,16 +703,16 @@ func (q *NavMeshQuery) FindStraightPath(
 						// Ignore status return value as we're just about to return anyway.
 						q.appendPortals(apexIndex, i, closestEndPos, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							&count, maxStraightPath, options)
+							&count, options)
 					}
 
 					// Ignore status return value as we're just about to return anyway.
 					q.appendVertex(closestEndPos, 0, path[i],
 						straightPath, straightPathFlags, straightPathRefs,
-						&count, maxStraightPath)
+						&count)
 
 					stat = Success | PartialResult
-					if count >= maxStraightPath {
+					if count >= len(straightPath) {
 						stat |= BufferTooSmall
 					}
 					fmt.Println("FindStraightPath 2 returns", stat, count)
@@ -741,7 +737,7 @@ func (q *NavMeshQuery) FindStraightPath(
 			if TriArea2D(portalApex, portalRight, right) <= 0.0 {
 				if portalApex.Approx(portalRight) || TriArea2D(portalApex, portalLeft, right) > 0.0 {
 					portalRight.Assign(right)
-					if i+1 < pathSize {
+					if i+1 < len(path) {
 						rightPolyRef = path[i+1]
 					} else {
 						rightPolyRef = 0
@@ -753,7 +749,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					if (options & int32(StraightPathAreaCrossings|StraightPathAllCrossings)) != 0 {
 						stat = q.appendPortals(apexIndex, leftIndex, portalLeft, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							&count, maxStraightPath, options)
+							&count, options)
 						if stat != InProgress {
 							fmt.Println("FindStraightPath 3 returns", stat, count)
 							return count, stat
@@ -774,7 +770,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					// Append or update vertex
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
-						&count, maxStraightPath)
+						&count)
 					if stat != InProgress {
 						fmt.Println("FindStraightPath 4 returns", stat, count)
 						return count, stat
@@ -796,7 +792,7 @@ func (q *NavMeshQuery) FindStraightPath(
 			if TriArea2D(portalApex, portalLeft, left) >= 0.0 {
 				if portalApex.Approx(portalLeft) || TriArea2D(portalApex, portalRight, left) < 0.0 {
 					portalLeft.Assign(left)
-					if i+1 < pathSize {
+					if i+1 < len(path) {
 						leftPolyRef = path[i+1]
 					} else {
 						leftPolyRef = 0
@@ -808,7 +804,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					if (options & int32(StraightPathAreaCrossings|StraightPathAllCrossings)) != 0 {
 						stat = q.appendPortals(apexIndex, rightIndex, portalRight, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							&count, maxStraightPath, options)
+							&count, options)
 						if stat != InProgress {
 							fmt.Println("FindStraightPath 5 returns", stat, count)
 							return count, stat
@@ -829,7 +825,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					// Append or update vertex
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
-						&count, maxStraightPath)
+						&count)
 					if stat != InProgress {
 						fmt.Println("FindStraightPath 6 returns", stat, count)
 						return count, stat
@@ -850,9 +846,9 @@ func (q *NavMeshQuery) FindStraightPath(
 
 		// Append portals along the current straight path segment.
 		if (options & int32(StraightPathAreaCrossings|StraightPathAllCrossings)) != 0 {
-			stat = q.appendPortals(apexIndex, pathSize-1, closestEndPos, path,
+			stat = q.appendPortals(apexIndex, len(path)-1, closestEndPos, path,
 				straightPath, straightPathFlags, straightPathRefs,
-				&count, maxStraightPath, options)
+				&count, options)
 			if stat != InProgress {
 				fmt.Println("FindStraightPath 7 returns", stat, count)
 				return count, stat
@@ -863,10 +859,10 @@ func (q *NavMeshQuery) FindStraightPath(
 	// Ignore status return value as we're just about to return anyway.
 	q.appendVertex(closestEndPos, StraightPathEnd, 0,
 		straightPath, straightPathFlags, straightPathRefs,
-		&count, maxStraightPath)
+		&count)
 
 	stat = Success
-	if count >= maxStraightPath {
+	if count >= len(straightPath) {
 		stat |= BufferTooSmall
 	}
 	fmt.Println("FindStraightPath 8 returns", stat, count)
@@ -875,14 +871,13 @@ func (q *NavMeshQuery) FindStraightPath(
 
 // appendPortals appends intermediate portal points to a straight path.
 func (q *NavMeshQuery) appendPortals(
-	startIdx, endIdx int32,
+	startIdx, endIdx int,
 	endPos d3.Vec3,
 	path []PolyRef,
 	straightPath []d3.Vec3,
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
-	straightPathCount *int32,
-	maxStraightPath,
+	straightPathCount *int,
 	options int32) Status {
 
 	startPos := straightPath[*straightPathCount-1]
@@ -929,7 +924,7 @@ func (q *NavMeshQuery) appendPortals(
 
 			stat = q.appendVertex(pt, 0, path[i+1],
 				straightPath, straightPathFlags, straightPathRefs,
-				straightPathCount, maxStraightPath)
+				straightPathCount)
 			if stat != InProgress {
 				return stat
 			}
@@ -946,8 +941,7 @@ func (q *NavMeshQuery) appendVertex(
 	straightPath []d3.Vec3,
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
-	straightPathCount *int32,
-	maxStraightPath int32) Status {
+	straightPathCount *int) Status {
 
 	if (*straightPathCount) > 0 && pos.Approx(straightPath[*straightPathCount-1]) {
 		// The vertices are equal, update flags and poly.
@@ -969,7 +963,7 @@ func (q *NavMeshQuery) appendVertex(
 		(*straightPathCount)++
 
 		// If there is no space to append more vertices, return.
-		if (*straightPathCount) >= maxStraightPath {
+		if (*straightPathCount) >= len(straightPath) {
 			return Success | BufferTooSmall
 		}
 

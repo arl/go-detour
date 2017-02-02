@@ -172,7 +172,7 @@ func _TestOffMeshConnections(t *testing.T) {
 			straightPath      []d3.Vec3
 			straightPathFlags []uint8
 			straightPathRefs  []PolyRef
-			straightPathCount int32
+			straightPathCount int
 			maxStraightPath   int32
 		)
 		// slices that receive the straight path
@@ -184,7 +184,7 @@ func _TestOffMeshConnections(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]PolyRef, maxStraightPath)
 
-		straightPathCount, st = query.FindStraightPath(tt.org, tt.dst, path, int32(pathCount), straightPath, straightPathFlags, straightPathRefs, 100, 0)
+		straightPathCount, st = query.FindStraightPath(tt.org, tt.dst, path[:pathCount], straightPath, straightPathFlags, straightPathRefs, 0)
 		if StatusFailed(st) {
 			t.Fatal("query.FindStraightPath failed:", st)
 		}
@@ -201,7 +201,7 @@ func _TestOffMeshConnections(t *testing.T) {
 		if int(straightPathCount) != len(tt.wantStraightPath) {
 			t.Fatalf("found path and wanted path do not have the same length (%d != %d)", straightPathCount, len(tt.wantStraightPath))
 		}
-		for i := int32(0); i < straightPathCount; i++ {
+		for i := 0; i < straightPathCount; i++ {
 			log.Printf("straightPath[%d].Flags = 0x%x\n", i, straightPathFlags[i])
 		}
 		for i := 0; i < pathCount; i++ {
