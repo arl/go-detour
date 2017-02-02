@@ -18,6 +18,20 @@ const (
 
 // NavMeshQuery provides the ability to perform pathfinding related queries
 // against a navigation mesh.
+//
+// For methods that support undersized slices, if the slices is too small to
+// hold the entire result set the return status of the method will include the
+// BufferTooSmall flag.
+//
+// Some methods can be used by multiple clients without side effects. (E.g. No
+// change to the closed list. No impact on an in-progress sliced path query.
+// Etc.). When that is the case it will be clearly stated in the method comment.
+//
+// Walls and portals: A wall is a polygon segment that is considered impassable.
+// A portal is a passable segment between polygons. A portal may be treated as a
+// wall based on the QueryFilter used for a query.
+//
+// see NavMesh, QueryFilter, NewNavMeshQuery()
 type NavMeshQuery struct {
 
 	/////@}
@@ -347,25 +361,26 @@ func NewNavMeshQuery(nav *NavMesh, maxNodes int32) (Status, *NavMeshQuery) {
 // FindPath finds a path from the start polygon to the end polygon.
 //
 //  Arguments:
-//   [in]startRef    The reference id of the start polygon.
-//   [in]endRef      The reference id of the end polygon.
-//   [in]startPos    A position within the start polygon. [(x, y, z)]
-//   [in]endPos      A position within the end polygon. [(x, y, z)]
-//   [in]filter      The polygon filter to apply to the query.
-//   [out]path       An ordered list of polygon references representing the
-//                   path. (Start to end.) [(polyRef) * pathCount]
-//   [out]pathCount  The number of polygons returned in the path array.
-//   [in]maxPath     The maximum number of polygons the path array can hold.
-//                   [Limit: >= 1]
+//   startRef  The reference id of the start polygon.
+//   endRef    The reference id of the end polygon.
+//   startPos  A position within the start polygon. [(x, y, z)]
+//   endPos    A position within the end polygon. [(x, y, z)]
+//   filter    The polygon filter to apply to the query.
+//   path      An ordered list of polygon references representing the path.
+//             (Start to end.) [(polyRef) * pathCount]
+//   pathCount The number of polygons returned in the path array.
+//   maxPath   The maximum number of polygons the path array can hold.
+//             [Limit: >= 1]
 //
 // If the end polygon cannot be reached through the navigation graph, the last
-// polygon in the path will be the nearest the end polygon.
-//
-// If the path array is to small to hold the full result, it will be filled as
-// far as possible from the start polygon toward the end polygon.
+// polygon in the path will be the nearest the end polygon.  If the path array
+// is to small to hold the full result, it will be filled as far as possible
+// from the start polygon toward the end polygon.
 //
 // The start and end positions are used to calculate traversal costs.
 // (The y-values impact the result.)
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindPath(
 	startRef, endRef PolyRef,
 	startPos, endPos d3.Vec3,
@@ -600,26 +615,28 @@ const (
 // within the polygon corridor
 //
 //  Arguments:
-//   [in]startPos            Path start position. [(x, y, z)]
-//   [in]endPos              Path end position. [(x, y, z)]
-//   [in]path                An array of polygon references that represent the
-//                           path corridor.
-//   [in]pathSize            The number of polygons in the path array.
-//   [out] straightPath      Points describing the straight path
-//                           [Length: == straightPathCount].
-//   [out] straightPathFlags Flags describing each point.
-//                           (See: StraightPathFlags)
-//   [out] straightPathRefs  The reference id of the polygon that is being
-//                           entered at each point.
-//   [in]  maxStraightPath   The maximum number of points the straight path
-//                           arrays can hold.  [Limit: > 0]
-//   [in]  options           Query options. (see: StraightPathOptions)
+//   startPos          Path start position. [(x, y, z)]
+//   endPos            Path end position. [(x, y, z)]
+//   path              An array of polygon references that represent the
+//                     path corridor.
+//   pathSize          The number of polygons in the path array.
+//   straightPath      Points describing the straight path
+//                     [Length: == straightPathCount].
+//   straightPathFlags Flags describing each point.
+//                     (See: StraightPathFlags)
+//   straightPathRefs  The reference id of the polygon that is being
+//                     entered at each point.
+//   maxStraightPath   The maximum number of points the straight path
+//                     arrays can hold. [Limit: > 0]
+//   options           Query options. (see: StraightPathOptions)
 //
 // Returns The status flags for the query and the number of point in the
 // straight path.
 //
 // The straightPath, straightPathFlags and straightPathRefs slices must already
 // be allocated and contain at least maxStraightPath elements.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindStraightPath(
 	startPos, endPos d3.Vec3,
 	path []PolyRef, pathSize int32,
@@ -1152,6 +1169,8 @@ func (q *NavMeshQuery) pathToNode(
 //
 // pos does not have to be within the bounds of the polygon or navigation mesh.
 // See closestPointOnPolyBoundary() for a limited but faster option.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
@@ -1263,8 +1282,9 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 // If the provided position lies within the polygon's xz-bounds (above or
 // below), then pos and closest will be equal. The height of closest will be the
 // polygon boundary. The height detail is not used. pos does not have to be
-// within the bounds of the polybon or the navigation
-// mesh.
+// within the bounds of the polybon or the navigation mesh.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.Vec3) Status {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 
@@ -1324,8 +1344,11 @@ func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 //   ref      The reference id of the nearest polygon.
 //   pt       The nearest point on the polygon. [(x, y, z)]
 //
-// Note: If the search box does not intersect any polygons st will be
-// Success, but ref will be zero. So if in doubt, check ref before using pt.
+// Note: If the search box does not intersect any polygons the returned status
+// will be 'Success', but ref will be zero. So if in doubt, check ref before
+// using pt.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 	filter QueryFilter) (st Status, ref PolyRef, pt d3.Vec3) {
 
@@ -1349,21 +1372,22 @@ func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 // queryPolygons6 finds polygons that overlap the search box.
 //
 //  Arguments:
-//   [in] center     The center of the search box.
-//   [in] extents    The search distance along each axis.
-//   [in] filter     The polygon filter to apply to the query.
-//   [out]polys      The reference ids of the polygons that overlap the query box.
-//   [out]polyCount  The number of polygons in the search result.
-//   [in] maxPolys   The maximum number of polygons the search result can hold.
+//   center     The center of the search box.
+//   extents    The search distance along each axis.
+//   filter     The polygon filter to apply to the query.
+//   polys      The reference ids of the polygons that overlap the query box.
+//   polyCount  The number of polygons in the search result.
+//   maxPolys   The maximum number of polygons the search result can hold.
 //
 //  Return values:
 //   The status flags for the query.
 //
-// If no polygons are found, the function will return Success with a
-// polyCount of zero.
-// If polys is too small to hold the entire result set, then the array will be
-// filled to capacity. The method of choosing which polygons from the full set
-// are included in the partial result set is undefined.
+// If no polygons are found, the function will return Success with a polyCount
+// of zero.  If polys is too small to hold the entire result set, then the array
+// will be filled to capacity. The method of choosing which polygons from the
+// full set are included in the partial result set is undefined.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) queryPolygons6(
 	center, extents []float32,
 	filter QueryFilter,
@@ -1400,8 +1424,10 @@ func (q *NavMeshQuery) queryPolygons6(
 //
 // The query will be invoked with batches of polygons. Polygons passed to the
 // query have bounding boxes that overlap with the center and extents passed to
-// this function. The polyQuery.process function is invoked multiple times
-// until all overlapping polygons have been processed.
+// this function. The polyQuery.process function is invoked multiple times until
+// all overlapping polygons have been processed.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) queryPolygons4(
 	center, extents d3.Vec3,
 	filter QueryFilter,
@@ -1571,4 +1597,28 @@ func (q *NavMeshQuery) NodePool() *NodePool {
 // AttachedNavMesh returns the navigation mesh the query object is using.
 func (q *NavMeshQuery) AttachedNavMesh() *NavMesh {
 	return q.nav
+}
+
+// IsValidPolyRef returns true if the polygon reference is valid and passes the
+// filter restrictions.
+//  Arguments:
+//   ref      The polygon reference to check.
+//   filter   The filter to apply.
+//
+// Note: this method may be used by multiple clients without side effects.
+func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
+	var (
+		tile *MeshTile
+		poly *Poly
+	)
+	status := q.nav.TileAndPolyByRef(ref, &tile, &poly)
+	// If cannot get polygon, assume it does not exists and boundary is invalid.
+	if StatusFailed(status) {
+		return false
+	}
+	// If cannot pass filter, assume flags has changed and boundary is invalid.
+	if !filter.PassFilter(ref, tile, poly) {
+		return false
+	}
+	return true
 }
