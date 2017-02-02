@@ -50,6 +50,11 @@ func (sm *SoloMesh) LoadGeometry(path string) error {
 	return nil
 }
 
+// InputGeom returns the nav mesh input geometry.
+func (sm *SoloMesh) InputGeom() *recast.InputGeom {
+	return &sm.geom
+}
+
 // Build builds the navigation mesh for the input geometry provided
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	bmin := sm.geom.NavMeshBoundsMin()
