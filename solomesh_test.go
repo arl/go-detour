@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 func compareFiles(fn1, fn2 string) (bool, error) {
@@ -125,4 +127,87 @@ func BenchmarkCreateDevelerNavMesh(b *testing.B) {
 
 func BenchmarkCreateCubeNavMesh(b *testing.B) {
 	benchmarkCreateNavMesh(b, "cube")
+}
+
+func BenchmarkPathFindSoloMesh(b *testing.B) {
+	benchs := []struct {
+		xstart, ystart, zstart float32
+		xend, yend, zend       float32
+		incFlags, excFlags     uint16
+	}{
+		{18.138550, -2.370003, -21.319118, -19.206181, -2.369133, 24.802742, 0x3, 0x0},
+		{18.252758, -2.368240, -7.000238, -19.206181, -2.369133, 24.802742, 0x3, 0x0},
+		{18.252758, -2.368240, -7.000238, -22.759071, -2.369453, 2.003946, 0x3, 0x0},
+		{18.252758, -2.368240, -7.000238, -24.483898, -2.369728, -6.778278, 0x3, 0x0},
+		{18.252758, -2.368240, -7.000238, -24.068850, -2.370285, -18.879251, 0x3, 0x0},
+		{18.252758, -2.368240, -7.000238, 12.124170, -2.369637, -21.222471, 0x3, 0x0},
+		{10.830146, -2.366791, 19.002508, 12.124170, -2.369637, -21.222471, 0x3, 0x0},
+		{10.830146, -2.366791, 19.002508, -7.146484, -2.368736, -16.031403, 0x3, 0x0},
+		{10.830146, -2.366791, 19.002508, -21.615391, -2.368706, -3.264029, 0x3, 0x0},
+		{10.830146, -2.366791, 19.002508, -22.651268, -2.369354, 1.053217, 0x3, 0x0},
+		{10.830146, -2.366791, 19.002508, 19.181122, -2.368134, 3.011776, 0x3, 0x0},
+		{10.830146, -2.366791, 19.002508, 19.041592, -2.368713, -7.404587, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, 19.041592, -2.368713, -7.404587, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, 21.846087, -2.368568, 17.918859, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, 0.967449, -2.368439, 25.767756, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, -17.518076, -2.368477, 26.569633, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, -22.141787, -2.369209, 2.440046, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, -23.296972, -2.369797, -17.411043, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, -1.564062, -2.369926, -20.452827, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, 16.905643, -2.370193, -21.811655, 0x3, 0x0},
+		{6.054083, -2.365402, 3.330421, 19.289761, -2.368813, -6.954918, 0x3, 0x0},
+	}
+
+	var (
+		err error
+	)
+
+	objName := "nav_test"
+	path := "testdata/" + objName + ".obj"
+
+	ctx := recast.NewBuildContext(false)
+	soloMesh := NewSoloMesh(ctx)
+	if err = soloMesh.LoadGeometry(path); err != nil {
+		b.Fatalf("couldn't load mesh '%v': %s", path, err)
+	}
+	navMesh, ok := soloMesh.Build()
+	if !ok {
+		b.Fatalf("couldn't build navmesh for %v", objName)
+	}
+
+	st, query := detour.NewNavMeshQuery(navMesh, 2048)
+	if detour.StatusFailed(st) {
+		b.Fatalf("creation of navmesh query failed: %s", st)
+	}
+
+	const maxPolys = 256
+	var (
+		polys       [maxPolys]detour.PolyRef
+		straight    [maxPolys]d3.Vec3
+		polyPickExt = d3.NewVec3XYZ(2, 4, 2)
+		spos, epos  d3.Vec3
+	)
+
+	spos, epos = d3.NewVec3(), d3.NewVec3()
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		for _, bb := range benchs {
+			spos[0], spos[1], spos[2] = bb.xstart, bb.ystart, bb.zstart
+			epos[0], epos[1], epos[2] = bb.xend, bb.yend, bb.zend
+
+			filter := detour.NewStandardQueryFilter()
+			filter.SetIncludeFlags(bb.incFlags)
+			filter.SetExcludeFlags(bb.excFlags)
+			var startRef, endRef detour.PolyRef
+			_, startRef, _ = query.FindNearestPoly(spos, polyPickExt, filter)
+			_, endRef, _ = query.FindNearestPoly(epos, polyPickExt, filter)
+
+			npolys, _ := query.FindPath(startRef, endRef, spos, epos, filter, polys[:])
+			// find straight path
+			if npolys != 0 {
+				query.FindStraightPath(spos, epos, polys[:], straight[:], nil, nil, 0)
+			}
+		}
+	}
 }
