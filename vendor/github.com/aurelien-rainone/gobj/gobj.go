@@ -47,13 +47,16 @@ func (of *OBJFile) parseVertex(kw string, data []string) error {
 func (of *OBJFile) parseFace(kw string, data []string) error {
 	var p Polygon // polygonal face currently filled
 	for _, s := range data {
-		// read the indices of the face vertices
-		sidx := strings.Split(s, "/")[0]
-		vidx, err := strconv.Atoi(sidx)
-		if err != nil {
-			return fmt.Errorf("invalid vertex coordinate value \"%s\"", s)
+		s = strings.TrimSpace(s)
+		if len(s) > 0 {
+			// read the indices of the face vertices
+			sidx := strings.Split(s, "/")[0]
+			vidx, err := strconv.Atoi(sidx)
+			if err != nil {
+				return fmt.Errorf("invalid vertex coordinate value \"%s\"", s)
+			}
+			p = append(p, int32(vidx-1))
 		}
-		p = append(p, int32(vidx-1))
 	}
 
 	// extend the mesh aabb with the polygon's one
