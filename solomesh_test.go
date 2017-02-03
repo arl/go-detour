@@ -98,6 +98,10 @@ func TestCreateHillNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "hill")
 }
 
+func TestCreateTestNavMesh(t *testing.T) {
+	testCreateSoloMesh(t, "nav_test")
+}
+
 func benchmarkCreateNavMesh(b *testing.B, meshName string) {
 	path := "testdata/" + meshName + ".obj"
 
