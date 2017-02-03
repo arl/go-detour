@@ -99,7 +99,7 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 
 	ig.mesh = NewMeshLoaderObj()
 	if err = ig.mesh.Load(path); err != nil {
-		return fmt.Errorf("could not load '%s'", err)
+		return err
 	}
 
 	CalcBounds(ig.mesh.Verts(), ig.mesh.VertCount(), ig.meshBMin[:], ig.meshBMax[:])
