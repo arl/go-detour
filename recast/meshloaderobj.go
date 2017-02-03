@@ -1,8 +1,6 @@
 package recast
 
 import (
-	"errors"
-
 	"github.com/aurelien-rainone/gobj"
 	"github.com/aurelien-rainone/math32"
 )
@@ -19,7 +17,10 @@ type MeshLoaderObj struct {
 
 func NewMeshLoaderObj() *MeshLoaderObj {
 	return &MeshLoaderObj{
-		m_scale: 1.0,
+		m_scale:   1.0,
+		m_verts:   make([]float32, 0),
+		m_tris:    make([]int32, 0),
+		m_normals: make([]float32, 0),
 	}
 }
 
@@ -33,23 +34,6 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 		return err
 	}
 
-	// check all polys are triangles
-	for _, p := range obj.Polys() {
-		if len(p) > 3 {
-			return errors.New("meshLoaderObj supports only triangle faces")
-		}
-	}
-
-	// copy triangles vertices indices from OBJ
-	polys := obj.Polys()
-	mlo.m_triCount = int32(len(polys))
-	mlo.m_tris = make([]int32, mlo.m_triCount*3)
-	for i := int32(0); i < mlo.m_triCount*3; i += 3 {
-		mlo.m_tris[i] = polys[i/3][0]
-		mlo.m_tris[i+1] = polys[i/3][1]
-		mlo.m_tris[i+2] = polys[i/3][2]
-	}
-
 	// copy vertices indices from OBJ,
 	// multiplying them by the scale factor
 	verts := obj.Verts()
@@ -61,6 +45,20 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 		mlo.m_verts[i+2] = float32(verts[i/3][2]) * mlo.m_scale
 	}
 	mlo.m_vertCount = int32(len(verts))
+
+	// add polygons
+	for _, p := range obj.Polys() {
+		for i := 2; i < len(p); i++ {
+			a := p[0]
+			b := p[i-1]
+			c := p[i]
+			if a < 0 || a >= mlo.m_vertCount || b < 0 || b >= mlo.m_vertCount || c < 0 || c >= mlo.m_vertCount {
+				continue
+			}
+			mlo.m_tris = append(mlo.m_tris, a, b, c)
+			mlo.m_triCount++
+		}
+	}
 
 	// Calculate normals.
 	// TODO: factor this with recast.calcTriNormal
