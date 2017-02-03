@@ -1436,8 +1436,6 @@ func (q *NavMeshQuery) queryPolygons4(
 		for x := minx; x <= maxx; x++ {
 			nneis := q.nav.TilesAt(x, y, neis, maxNeis)
 			for j := int32(0); j < nneis; j++ {
-				fmt.Println("offmeshcons in tile:", neis[j].OffMeshCons)
-				fmt.Println("q.queryPolygonsInTile(", neis[j].OffMeshCons, bmin[:], bmax[:], filter, query, ")")
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
 		}
