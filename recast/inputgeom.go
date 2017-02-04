@@ -187,3 +187,22 @@ func (ig *InputGeom) OffMeshConnectionDirs() []uint8 {
 func (ig *InputGeom) OffMeshConnectionCount() int32 {
 	return ig.offMeshConCount
 }
+
+func (ig *InputGeom) addConvexVolume(verts []float32, nverts int, minh, maxh float32, area uint8) {
+	if ig.volumeCount >= maxVolumes {
+		return
+	}
+	vol := &ig.volumes[ig.volumeCount]
+	ig.volumeCount++
+	copy(vol.Verts[:], verts[3*nverts:])
+	vol.HMin = minh
+	vol.HMax = maxh
+	vol.NVerts = int32(nverts)
+	vol.Area = int32(area)
+}
+
+func (ig *InputGeom) deleteConvexVolume(i int) {
+	ig.volumeCount--
+	// copy last volume over the deleted one
+	ig.volumes[i] = ig.volumes[ig.volumeCount]
+}
