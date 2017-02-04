@@ -23,7 +23,7 @@ import "github.com/aurelien-rainone/assertgo"
 // see Heightfield, Config
 func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_FILTER_LOW_OBSTACLES)
+	ctx.StartTimer(TimerFilterLowObstacles)
 
 	w := solid.Width
 	h := solid.Height
@@ -76,7 +76,7 @@ func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, s
 // see Heightfield, Config
 func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_FILTER_BORDER)
+	ctx.StartTimer(TimerFilterBorder)
 
 	w := solid.Width
 	h := solid.Height
@@ -186,7 +186,7 @@ func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, so
 // see Heightfield, Config
 func FilterWalkableLowHeightSpans(ctx *BuildContext, walkableHeight int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_FILTER_WALKABLE)
+	ctx.StartTimer(TimerFilterWalkable)
 
 	w := solid.Width
 	h := solid.Height

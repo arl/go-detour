@@ -333,8 +333,8 @@ func getTriFlags(va, vb, vc, vpoly []float32, npoly int32) uint8 {
 func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfield, sampleDist, sampleMaxError float32) (*PolyMeshDetail, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_BUILD_POLYMESHDETAIL)
-	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESHDETAIL)
+	ctx.StartTimer(TimerBuildPolyMeshDetail)
+	defer ctx.StopTimer(TimerBuildPolyMeshDetail)
 
 	var dmesh PolyMeshDetail
 	if mesh.NVerts == 0 || mesh.NPolys == 0 {

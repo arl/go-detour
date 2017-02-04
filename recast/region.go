@@ -39,8 +39,8 @@ import "github.com/aurelien-rainone/assertgo"
 // BuildRegionsMonotone, Config
 func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS)
-	defer ctx.StopTimer(RC_TIMER_BUILD_REGIONS)
+	ctx.StartTimer(TimerBuildRegions)
+	defer ctx.StopTimer(TimerBuildRegions)
 
 	w := chf.Width
 	h := chf.Height
@@ -151,7 +151,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	}
 
 	{
-		ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StartTimer(TimerBuildRegionsFilter)
 
 		// Merge regions and filter out small regions.
 		overlaps := make([]int32, 0)
@@ -160,7 +160,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 			return false
 		}
 		// Monotone partitioning does not generate overlapping regions.
-		ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StopTimer(TimerBuildRegionsFilter)
 	}
 
 	// Store the result out.
@@ -214,14 +214,14 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 	panic("untested")
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS)
-	defer ctx.StopTimer(RC_TIMER_BUILD_REGIONS)
+	ctx.StartTimer(TimerBuildRegions)
+	defer ctx.StopTimer(TimerBuildRegions)
 
 	w := chf.Width
 	h := chf.Height
 
 	buf := make([]uint16, chf.SpanCount*4)
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS_WATERSHED)
+	ctx.StartTimer(TimerBuildRegionsWatershed)
 
 	const (
 		LOG_NB_STACKS = 3
@@ -298,7 +298,7 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 		//		ctx->stopTimer(RC_TIMER_DIVIDE_TO_LEVELS);
 
 		{
-			ctx.StartTimer(RC_TIMER_BUILD_REGIONS_EXPAND)
+			ctx.StartTimer(TimerBuildRegionsExpand)
 
 			// Expand current regions until no empty connected cells found.
 			// TODO: CHECK THIS
@@ -306,11 +306,11 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 				srcReg, dstReg = dstReg, srcReg
 				srcDist, dstDist = dstDist, srcDist
 			}
-			ctx.StopTimer(RC_TIMER_BUILD_REGIONS_EXPAND)
+			ctx.StopTimer(TimerBuildRegionsExpand)
 		}
 
 		{
-			ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FLOOD)
+			ctx.StartTimer(TimerBuildRegionsFlood)
 
 			// Mark new regions with IDs.
 			for j := 0; j < len(lvlStacks[sID]); j += 3 {
@@ -328,7 +328,7 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 					}
 				}
 			}
-			ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FLOOD)
+			ctx.StopTimer(TimerBuildRegionsFlood)
 		}
 	}
 
@@ -338,10 +338,10 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 		srcDist, dstDist = dstDist, srcDist
 	}
 
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS_WATERSHED)
+	ctx.StartTimer(TimerBuildRegionsWatershed)
 
 	{
-		ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StartTimer(TimerBuildRegionsFilter)
 
 		// Merge regions and filter out smalle regions.
 		var overlaps []int32
@@ -354,7 +354,7 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 		if len(overlaps) > 0 {
 			ctx.Errorf("rcBuildRegions: %d overlapping regions.", len(overlaps))
 		}
-		ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StopTimer(TimerBuildRegionsFilter)
 	}
 
 	// Write the result out.

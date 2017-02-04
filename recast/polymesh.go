@@ -53,8 +53,8 @@ func (pm *PolyMesh) Free() {
 func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_BUILD_POLYMESH)
-	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESH)
+	ctx.StartTimer(TimerBuildPolymesh)
+	defer ctx.StopTimer(TimerBuildPolymesh)
 
 	var (
 		maxVertices     int32

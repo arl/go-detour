@@ -26,8 +26,8 @@ func RasterizeTriangle(ctx *BuildContext, v0, v1, v2 d3.Vec3,
 	flagMergeThr int32) bool {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_RASTERIZE_TRIANGLES)
-	defer ctx.StopTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+	ctx.StartTimer(TimerRasterizeTriangles)
+	defer ctx.StopTimer(TimerRasterizeTriangles)
 
 	ics := 1.0 / solid.Cs
 	ich := 1.0 / solid.Ch
@@ -65,8 +65,8 @@ func RasterizeTriangles(ctx *BuildContext, verts []float32, nv int32,
 
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_RASTERIZE_TRIANGLES)
-	defer ctx.StopTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+	ctx.StartTimer(TimerRasterizeTriangles)
+	defer ctx.StopTimer(TimerRasterizeTriangles)
 
 	ics := 1.0 / solid.Cs
 	ich := 1.0 / solid.Ch
@@ -107,8 +107,8 @@ func RasterizeTriangles2(ctx *BuildContext, verts []float32, areas []uint8, nt i
 
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_RASTERIZE_TRIANGLES)
-	defer ctx.StopTimer(RC_TIMER_RASTERIZE_TRIANGLES)
+	ctx.StartTimer(TimerRasterizeTriangles)
+	defer ctx.StopTimer(TimerRasterizeTriangles)
 
 	ics := float32(1.0 / solid.Cs)
 	ich := float32(1.0 / solid.Ch)

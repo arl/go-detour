@@ -267,7 +267,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	hf *Heightfield, chf *CompactHeightfield) bool {
 
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_BUILD_COMPACTHEIGHTFIELD)
+	ctx.StartTimer(TimerBuildCompactHeightfield)
 
 	w := hf.Width
 	h := hf.Height

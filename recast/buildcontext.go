@@ -20,8 +20,8 @@ const maxMessages = 1000
 // BuildContext provides an interface for optional logging and performance
 // tracking of the recast build process.
 type BuildContext struct {
-	startTime [RC_MAX_TIMERS]time.Time
-	accTime   [RC_MAX_TIMERS]time.Duration
+	startTime [maxTimers]time.Time
+	accTime   [maxTimers]time.Duration
 
 	messages    [maxMessages]string
 	numMessages int
@@ -63,7 +63,7 @@ func (ctx *BuildContext) ResetLog() {
 // ResetTimers clears all peformance timers. (Resets all to unused.)
 func (ctx *BuildContext) ResetTimers() {
 	if ctx.timerEnabled {
-		for i := 0; i < RC_MAX_TIMERS; i++ {
+		for i := 0; i < maxTimers; i++ {
 			ctx.accTime[i] = time.Duration(0)
 		}
 	}

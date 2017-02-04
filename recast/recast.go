@@ -130,63 +130,63 @@ type TimerLabel int
 
 const (
 	// The user defined total time of the build.
-	RC_TIMER_TOTAL = iota
+	TimerTotal = iota
 	// A user defined build time.
-	RC_TIMER_TEMP
+	TimerTemp
 	// The time to rasterize the triangles. (See: RasterizeTriangle)
-	RC_TIMER_RASTERIZE_TRIANGLES
+	TimerRasterizeTriangles
 	// The time to build the compact heightfield. (See: BuildCompactHeightfield)
-	RC_TIMER_BUILD_COMPACTHEIGHTFIELD
+	TimerBuildCompactHeightfield
 	// The total time to build the contours. (See: BuildContours)
-	RC_TIMER_BUILD_CONTOURS
+	TimerBuildContours
 	// The time to trace the boundaries of the contours. (See: BuildContours)
-	RC_TIMER_BUILD_CONTOURS_TRACE
+	TimerBuildContoursTrace
 	// The time to simplify the contours. (See: BuildContours)
-	RC_TIMER_BUILD_CONTOURS_SIMPLIFY
+	TimerBuildContoursSimplify
 	// The time to filter ledge spans. (See: FilterLedgeSpans)
-	RC_TIMER_FILTER_BORDER
+	TimerFilterBorder
 	// The time to filter low height spans. (See: FilterWalkableLowHeightSpans)
-	RC_TIMER_FILTER_WALKABLE
+	TimerFilterWalkable
 	// The time to apply the median filter. (See: MedianFilterWalkableArea)
-	RC_TIMER_MEDIAN_AREA
+	TimerMedianArea
 	// The time to filter low obstacles. (See: FilterLowHangingWalkableObstacles)
-	RC_TIMER_FILTER_LOW_OBSTACLES
+	TimerFilterLowObstacles
 	// The time to build the polygon mesh. (See: BuildPolyMesh)
-	RC_TIMER_BUILD_POLYMESH
+	TimerBuildPolymesh
 	// The time to merge polygon meshes. (See: MergePolyMeshes)
-	RC_TIMER_MERGE_POLYMESH
+	TimerMergePolymesh
 	// The time to erode the walkable area. (See: ErodeWalkableArea)
-	RC_TIMER_ERODE_AREA
+	TimerErodeArea
 	// The time to mark a box area. (See: MarkBoxArea)
-	RC_TIMER_MARK_BOX_AREA
+	TimerMarkBoxArea
 	// The time to mark a cylinder area. (See: MarkCylinderArea)
-	RC_TIMER_MARK_CYLINDER_AREA
+	TimerMarkCylinderArea
 	// The time to mark a convex polygon area. (See: MarkConvexPolyArea)
-	RC_TIMER_MARK_CONVEXPOLY_AREA
+	TimerMarkConvexPolyArea
 	// The total time to build the distance field. (See: BuildDistanceField)
-	RC_TIMER_BUILD_DISTANCEFIELD
+	TimerBuildDistanceField
 	// The time to build the distances of the distance field. (See: BuildDistanceField)
-	RC_TIMER_BUILD_DISTANCEFIELD_DIST
+	TimerBuildDistanceFieldDist
 	// The time to blur the distance field. (See: BuildDistanceField)
-	RC_TIMER_BUILD_DISTANCEFIELD_BLUR
+	TimerBuildDistanceFieldBlur
 	// The total time to build the regions. (See: BuildRegions, BuildRegionsMonotone)
-	RC_TIMER_BUILD_REGIONS
+	TimerBuildRegions
 	// The total time to apply the watershed algorithm. (See: BuildRegions)
-	RC_TIMER_BUILD_REGIONS_WATERSHED
+	TimerBuildRegionsWatershed
 	// The time to expand regions while applying the watershed algorithm. (See: BuildRegions)
-	RC_TIMER_BUILD_REGIONS_EXPAND
+	TimerBuildRegionsExpand
 	// The time to flood regions while applying the watershed algorithm. (See: BuildRegions)
-	RC_TIMER_BUILD_REGIONS_FLOOD
+	TimerBuildRegionsFlood
 	// The time to filter out small regions. (See: BuildRegions, BuildRegionsMonotone)
-	RC_TIMER_BUILD_REGIONS_FILTER
+	TimerBuildRegionsFilter
 	// The time to build heightfield layers. (See: BuildHeightfieldLayers)
-	RC_TIMER_BUILD_LAYERS
+	TimerBuildLayers
 	// The time to build the polygon mesh detail. (See: BuildPolyMeshDetail)
-	RC_TIMER_BUILD_POLYMESHDETAIL
+	TimerBuildPolyMeshDetail
 	// The time to merge polygon mesh details. (See: MergePolyMeshDetails)
-	RC_TIMER_MERGE_POLYMESHDETAIL
-	// The maximum number of timers.  (Used for iterating timers.)
-	RC_MAX_TIMERS
+	TimerMergePolyMeshDetail
+	// The maximum number of timers. (Used for iterating timers.)
+	maxTimers
 )
 
 var (

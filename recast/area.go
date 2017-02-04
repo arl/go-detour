@@ -27,8 +27,8 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 	w := chf.Width
 	h := chf.Height
 
-	ctx.StartTimer(RC_TIMER_ERODE_AREA)
-	defer ctx.StopTimer(RC_TIMER_ERODE_AREA)
+	ctx.StartTimer(TimerErodeArea)
+	defer ctx.StopTimer(TimerErodeArea)
 
 	dist := make([]uint8, chf.SpanCount)
 
@@ -217,8 +217,8 @@ func MarkConvexPolyArea(ctx *BuildContext, verts []float32, nverts int32,
 
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
-	defer ctx.StopTimer(RC_TIMER_MARK_CONVEXPOLY_AREA)
+	ctx.StartTimer(TimerMarkConvexPolyArea)
+	defer ctx.StopTimer(TimerMarkConvexPolyArea)
 	var bmin, bmax [3]float32
 	copy(bmin[:], verts[:3])
 	copy(bmax[:], verts[:3])

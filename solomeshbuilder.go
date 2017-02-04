@@ -127,7 +127,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	sm.ctx.ResetTimers()
 
 	// Start the build process.
-	sm.ctx.StartTimer(recast.RC_TIMER_TOTAL)
+	sm.ctx.StartTimer(recast.TimerTotal)
 
 	sm.ctx.Progressf("Building navigation:")
 	sm.ctx.Progressf(" - %d x %d cells", sm.cfg.Width, sm.cfg.Height)
@@ -378,9 +378,9 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		return nil, false
 	}
 
-	sm.ctx.StopTimer(recast.RC_TIMER_TOTAL)
+	sm.ctx.StopTimer(recast.TimerTotal)
 	// Log performance stats.
-	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.RC_TIMER_TOTAL))
+	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.TimerTotal))
 	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", pmesh.NVerts, pmesh.NPolys)
 
 	return &navMesh, true

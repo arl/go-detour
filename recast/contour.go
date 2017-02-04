@@ -210,8 +210,8 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 	h := chf.Height
 	borderSize := chf.BorderSize
 
-	ctx.StartTimer(RC_TIMER_BUILD_CONTOURS)
-	defer ctx.StopTimer(RC_TIMER_BUILD_CONTOURS)
+	ctx.StartTimer(TimerBuildContours)
+	defer ctx.StopTimer(TimerBuildContours)
 
 	copy(cset.BMin[:], chf.BMin[:])
 	copy(cset.BMax[:], chf.BMax[:])
@@ -236,7 +236,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 
 	flags := make([]uint8, chf.SpanCount)
 
-	ctx.StartTimer(RC_TIMER_BUILD_CONTOURS_TRACE)
+	ctx.StartTimer(TimerBuildContoursTrace)
 
 	// Mark boundaries.
 	for y := int32(0); y < h; y++ {
@@ -267,7 +267,7 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 		}
 	}
 
-	ctx.StopTimer(RC_TIMER_BUILD_CONTOURS_TRACE)
+	ctx.StopTimer(TimerBuildContoursTrace)
 
 	verts := make([]int32, 256)
 	simplified := make([]int32, 64)
@@ -290,14 +290,14 @@ func BuildContours(ctx *BuildContext, chf *CompactHeightfield,
 				verts = make([]int32, 0)
 				simplified = make([]int32, 0)
 
-				ctx.StartTimer(RC_TIMER_BUILD_CONTOURS_TRACE)
+				ctx.StartTimer(TimerBuildContoursTrace)
 				walkContour2(x, y, i, chf, flags, &verts)
-				ctx.StopTimer(RC_TIMER_BUILD_CONTOURS_TRACE)
+				ctx.StopTimer(TimerBuildContoursTrace)
 
-				ctx.StartTimer(RC_TIMER_BUILD_CONTOURS_SIMPLIFY)
+				ctx.StartTimer(TimerBuildContoursSimplify)
 				simplifyContour(&verts, &simplified, maxError, maxEdgeLen, buildFlags)
 				removeDegenerateSegments(&simplified)
-				ctx.StopTimer(RC_TIMER_BUILD_CONTOURS_SIMPLIFY)
+				ctx.StopTimer(TimerBuildContoursSimplify)
 
 				// Store region.contour remap info.
 				// Create contour.
