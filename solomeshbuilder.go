@@ -155,9 +155,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		return nil, false
 	}
 
-	// free memory as we do not need it anymore
-	triAreas = nil
-
 	//
 	// Step 3. Filter walkables surfaces.
 	//
@@ -177,9 +174,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
 		return nil, false
 	}
-
-	// free memory as we do not need it anymore
-	solid = nil
 
 	// Erode the walkable area by agent radius.
 	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, chf) {
@@ -297,10 +291,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
 		return nil, false
 	}
-
-	// free memory as we do not need it anymore
-	chf = nil
-	cset = nil
 
 	// At this point the navigation mesh data is ready, you can access it from m_pmesh.
 	// See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
