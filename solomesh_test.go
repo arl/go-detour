@@ -8,6 +8,7 @@ import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
 )
 
 func compareFiles(fn1, fn2 string) (bool, error) {
@@ -199,15 +200,108 @@ func BenchmarkPathFindSoloMesh(b *testing.B) {
 			filter := detour.NewStandardQueryFilter()
 			filter.SetIncludeFlags(bb.incFlags)
 			filter.SetExcludeFlags(bb.excFlags)
+
 			var startRef, endRef detour.PolyRef
 			_, startRef, _ = query.FindNearestPoly(spos, polyPickExt, filter)
 			_, endRef, _ = query.FindNearestPoly(epos, polyPickExt, filter)
 
+			// find path
 			npolys, _ := query.FindPath(startRef, endRef, spos, epos, filter, polys[:])
+
 			// find straight path
 			if npolys != 0 {
 				query.FindStraightPath(spos, epos, polys[:], straight[:], nil, nil, 0)
 			}
+		}
+	}
+}
+
+func TestRaycastSoloMesh(t *testing.T) {
+	type want struct {
+		t                float32
+		hitx, hity, hitz float32
+	}
+
+	tests := []struct {
+		xstart, ystart, zstart float32
+		xend, yend, zend       float32
+		incFlags, excFlags     uint16
+		want                   want
+	}{
+		{40.389084, 7.797607, 17.144299, 43.953857, 6.223053, 10.389969, 0xffef, 0x0,
+			want{0.287881, 41.415318, 7.344322, 15.199852}},
+		{40.389084, 7.797607, 17.144299, 45.056454, 7.418980, 12.680744, 0xffef, 0x0,
+			want{0.435627, 42.422318, 7.632667, 15.199852}},
+		{40.389084, 7.797607, 17.144299, 45.965542, 7.797607, 14.355331, 0xffef, 0x0,
+			want{math32.MaxFloat32, 45.965542, 7.797607, 14.355331}},
+		{0.631622, 12.705303, 2.767708, 3.878273, 11.266037, -0.112907, 0xffef, 0x0,
+			want{math32.MaxFloat32, 3.878273, 11.266037, -0.112907}},
+	}
+
+	var (
+		err error
+	)
+
+	objName := "nav_test"
+	path := "testdata/" + objName + ".obj"
+
+	ctx := recast.NewBuildContext(false)
+	soloMesh := NewSoloMesh(ctx)
+	if err = soloMesh.LoadGeometry(path); err != nil {
+		t.Fatalf("couldn't load mesh '%v': %s", path, err)
+	}
+	navMesh, ok := soloMesh.Build()
+	if !ok {
+		t.Fatalf("couldn't build navmesh for %v", objName)
+	}
+
+	st, query := detour.NewNavMeshQuery(navMesh, 2048)
+	if detour.StatusFailed(st) {
+		t.Fatalf("creation of navmesh query failed: %s", st)
+	}
+
+	const maxPolys = 256
+	var (
+		polyPickExt        = d3.NewVec3XYZ(2, 4, 2)
+		spos, epos, hitPos d3.Vec3
+	)
+
+	spos, epos, hitPos = d3.NewVec3(), d3.NewVec3(), d3.NewVec3()
+
+	for _, tt := range tests {
+		spos[0], spos[1], spos[2] = tt.xstart, tt.ystart, tt.zstart
+		epos[0], epos[1], epos[2] = tt.xend, tt.yend, tt.zend
+
+		filter := detour.NewStandardQueryFilter()
+		filter.SetIncludeFlags(tt.incFlags)
+		filter.SetExcludeFlags(tt.excFlags)
+
+		var startRef detour.PolyRef
+		_, startRef, _ = query.FindNearestPoly(spos, polyPickExt, filter)
+
+		hit, st := query.Raycast(startRef, spos, epos, filter, 0, 0)
+		if detour.StatusFailed(st) {
+			t.Fatalf("Raycast (s:%f %f %f|e:%f %f %f |flags:%x %x) failed with status %s",
+				tt.xstart, tt.ystart, tt.zstart, tt.xend, tt.yend, tt.zend, tt.incFlags, tt.excFlags, st)
+		}
+
+		if !math32.Approx(hit.T, tt.want.t) {
+			t.Fatalf("Raycast (s:%f %f %f|e:%f %f %f |flags:%x %x) got t = %f want %f",
+				tt.xstart, tt.ystart, tt.zstart, tt.xend, tt.yend, tt.zend, tt.incFlags, tt.excFlags, hit.T, tt.want.t)
+		}
+
+		if hit.T > 1.0 {
+			// No hit
+			hitPos = d3.NewVec3From(epos)
+		} else {
+			// Hit
+			d3.Vec3Lerp(hitPos, spos, epos, hit.T)
+		}
+
+		wantHitPos := d3.NewVec3XYZ(tt.want.hitx, tt.want.hity, tt.want.hitz)
+		if !hitPos.Approx(wantHitPos) {
+			t.Fatalf("Raycast (s:%f %f %f|e:%f %f %f |flags:%x %x) got hit = %v want %v",
+				tt.xstart, tt.ystart, tt.zstart, tt.xend, tt.yend, tt.zend, tt.incFlags, tt.excFlags, hitPos, wantHitPos)
 		}
 	}
 }
