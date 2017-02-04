@@ -98,6 +98,58 @@ func distancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32)
 	return c
 }
 
+func IntersectSegmentPoly2D(p0, p1 d3.Vec3, verts []float32, nverts int) (tmin, tmax float32, segMin, segMax int, res bool) {
+	const eps float32 = 0.00000001
+
+	tmin = 0
+	tmax = 1
+	segMin = -1
+	segMax = -1
+
+	var dir d3.Vec3 = p1.Sub(p0)
+	j := nverts - 1
+	for i := 0; i < nverts; i++ {
+		edge := d3.Vec3(verts[i*3:]).Sub(d3.Vec3(verts[j*3:]))
+		diff := p0.Sub(d3.Vec3(verts[j*3:]))
+		n := edge.Perp2D(diff)
+		d := dir.Perp2D(edge)
+		if math32.Abs(d) < eps {
+			// S is nearly parallel to this edge
+			if n < 0 {
+				return
+			}
+			j = i
+			continue
+		}
+		t := n / d
+		if d < 0 {
+			// segment S is entering across this edge
+			if t > tmin {
+				tmin = t
+				segMin = j
+				// S enters after leaving polygon
+				if tmin > tmax {
+					return
+				}
+			}
+		} else {
+			// segment S is leaving across this edge
+			if t < tmax {
+				tmax = t
+				segMax = j
+				// S leaves before entering polygon
+				if tmax < tmin {
+					return
+				}
+			}
+		}
+		j = i
+	}
+
+	res = true
+	return
+}
+
 func distancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
 	pqx := q[0] - p[0]
 	pqz := q[2] - p[2]
