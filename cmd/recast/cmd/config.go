@@ -22,11 +22,27 @@ import (
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "create a build configuration",
-	Long:  `Create a build configuration file, prefilled with default values`,
+	Use:   "config FILE",
+	Short: "create a build settings file",
+	Long: `Create a build settings file in YAML format, prefilled with default values.
+
+If FILE is not provided, 'recast.yml' is used`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("config called")
+		// check user input
+		path := "recast.yml"
+		if len(args) >= 1 {
+			path = args[0]
+		}
+		if ok, err := confirmIfExists(path,
+			fmt.Sprintf("file name %s already exists, overwrite? [y/N]", path)); !ok {
+			if err == nil {
+				fmt.Println("aborted by user...")
+			} else {
+				fmt.Println("aborted,", err)
+			}
+			return
+		}
+		fmt.Printf("build settings written to '%s'\n", path)
 	},
 }
 
@@ -42,5 +58,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// configCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
 }
