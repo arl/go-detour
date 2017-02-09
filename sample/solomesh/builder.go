@@ -64,32 +64,30 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	//
 
 	// Rasterization settings
-	cellSize := float32(0.3)
-	cellHeight := float32(0.2)
+	cellSize := sm.settings.cellSize
+	cellHeight := sm.settings.cellHeight
 
 	// Agent properties
-	agentHeight := float32(2.0)
-	agentMaxClimb := float32(0.9)
-	// m_agentRadius := float32(0.0) // TODO; but should be different
-	agentRadius := float32(0.6) // TODO; but should be different
+	agentHeight := sm.settings.agentHeight
+	agentMaxClimb := sm.settings.agentMaxClimb
+	agentRadius := sm.settings.agentRadius
 
 	// Region
-	regionMinSize := int32(8)
-	regionMergeSize := int32(20)
+	regionMinSize := sm.settings.regionMinSize
+	regionMergeSize := sm.settings.regionMergeSize
 
 	// Polygonization
-	edgeMaxLen := int32(12)
-	// m_edgeMaxError := float32(.3)
-	edgeMaxError := float32(1.3)
-	vertsPerPoly := int32(6)
+	edgeMaxLen := sm.settings.edgeMaxLen
+	edgeMaxError := sm.settings.edgeMaxError
+	vertsPerPoly := sm.settings.vertsPerPoly
 
 	// Detail Mesh
-	detailSampleDist := float32(6)
-	detailSampleMaxError := float32(1)
+	detailSampleDist := sm.settings.detailSampleDist
+	detailSampleMaxError := sm.settings.detailSampleMaxError
 
 	sm.cfg.Cs = cellSize
 	sm.cfg.Ch = cellHeight
-	sm.cfg.WalkableSlopeAngle = float32(45)
+	sm.cfg.WalkableSlopeAngle = sm.settings.walkableSlopeAngle
 	sm.cfg.WalkableHeight = int32(math32.Ceil(agentHeight / sm.cfg.Ch))
 	sm.cfg.WalkableClimb = int32(math32.Floor(agentMaxClimb / sm.cfg.Ch))
 	sm.cfg.WalkableRadius = int32(math32.Ceil(agentRadius / sm.cfg.Cs))
