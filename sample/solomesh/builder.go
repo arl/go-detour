@@ -19,8 +19,8 @@ type SoloMesh struct {
 	partitionType sample.PartitionType
 }
 
-// NewSoloMesh creates a new solo mesh
-func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
+// New creates a new solo mesh
+func New(ctx *recast.BuildContext) *SoloMesh {
 	sm := &SoloMesh{}
 	sm.ctx = ctx
 	sm.partitionType = sample.PartitionMonotone

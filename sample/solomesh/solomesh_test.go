@@ -49,7 +49,7 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 	outBin = "out.bin"
 
 	ctx = recast.NewBuildContext(true)
-	soloMesh = NewSoloMesh(ctx)
+	soloMesh = New(ctx)
 	if err = soloMesh.LoadGeometry(path); err != nil {
 		ctx.DumpLog("")
 		t.Fatalf("couldn't load mesh %v", path)
@@ -110,7 +110,7 @@ func TestCreateTestNavMesh(t *testing.T) {
 func benchmarkCreateNavMesh(b *testing.B, meshName string) {
 	path := testDataDir + meshName + ".obj"
 
-	soloMesh := NewSoloMesh(recast.NewBuildContext(false))
+	soloMesh := New(recast.NewBuildContext(false))
 	if err := soloMesh.LoadGeometry(path); err != nil {
 		b.Fatalf("couldn't load mesh %v: %v", path, err)
 	}
@@ -169,7 +169,7 @@ func BenchmarkPathFindSoloMesh(b *testing.B) {
 	path := testDataDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
-	soloMesh := NewSoloMesh(ctx)
+	soloMesh := New(ctx)
 	if err = soloMesh.LoadGeometry(path); err != nil {
 		b.Fatalf("couldn't load mesh '%v': %s", path, err)
 	}
@@ -248,7 +248,7 @@ func TestRaycastSoloMesh(t *testing.T) {
 	path := testDataDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
-	soloMesh := NewSoloMesh(ctx)
+	soloMesh := New(ctx)
 	if err = soloMesh.LoadGeometry(path); err != nil {
 		t.Fatalf("couldn't load mesh '%v': %s", path, err)
 	}
