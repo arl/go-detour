@@ -1,47 +1,52 @@
 package solomesh
 
+import "github.com/aurelien-rainone/go-detour/sample"
+
 // Settings contains all the settings required for a SoloMesh.
 type Settings struct {
 	// Rasterization settings
-	cellSize   float32
-	cellHeight float32
+	CellSize   float32
+	CellHeight float32
 
 	// Agent properties
-	agentHeight   float32
-	agentMaxClimb float32
-	agentRadius   float32
+	AgentHeight   float32
+	AgentMaxClimb float32
+	AgentRadius   float32
 
 	// Region
-	regionMinSize   int32
-	regionMergeSize int32
+	RegionMinSize   int32
+	RegionMergeSize int32
 
 	// Polygonization
-	edgeMaxLen   int32
-	edgeMaxError float32
-	vertsPerPoly int32
+	EdgeMaxLen   int32
+	EdgeMaxError float32
+	VertsPerPoly int32
 
 	// Detail Mesh
-	detailSampleDist     float32
-	detailSampleMaxError float32
+	DetailSampleDist     float32
+	DetailSampleMaxError float32
 
-	walkableSlopeAngle float32
+	WalkableSlopeAngle float32
+
+	Partition sample.PartitionType
 }
 
 // NewSettings returns a new Settings struct filled with default values.
 func NewSettings() Settings {
 	return Settings{
-		cellSize:             float32(0.3),
-		cellHeight:           float32(0.2),
-		agentHeight:          float32(2.0),
-		agentMaxClimb:        float32(0.9),
-		agentRadius:          float32(0.6),
-		regionMinSize:        int32(8),
-		regionMergeSize:      int32(20),
-		edgeMaxLen:           int32(12),
-		edgeMaxError:         float32(1.3),
-		vertsPerPoly:         int32(6),
-		detailSampleDist:     float32(6),
-		detailSampleMaxError: float32(1),
-		walkableSlopeAngle:   float32(45),
+		CellSize:             float32(0.3),
+		CellHeight:           float32(0.2),
+		AgentHeight:          float32(2.0),
+		AgentMaxClimb:        float32(0.9),
+		AgentRadius:          float32(0.6),
+		RegionMinSize:        int32(8),
+		RegionMergeSize:      int32(20),
+		EdgeMaxLen:           int32(12),
+		EdgeMaxError:         float32(1.3),
+		VertsPerPoly:         int32(6),
+		DetailSampleDist:     float32(6),
+		DetailSampleMaxError: float32(1),
+		WalkableSlopeAngle:   float32(45),
+		Partition:            sample.PartitionMonotone,
 	}
 }
