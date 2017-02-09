@@ -7,18 +7,6 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-// SamplePartitionType represents a specific heightfield partitioning method.
-type SamplePartitionType int
-
-const (
-	// SamplePartitionWatershed uses the watershed partitioning method
-	SamplePartitionWatershed SamplePartitionType = iota
-	// SamplePartitionMonotone uses the monotone partitioning method
-	SamplePartitionMonotone
-	// SamplePartitionLayers uses the layer partitioning method
-	SamplePartitionLayers
-)
-
 // SoloMesh allows building of single tile navigation meshes.
 //
 // TODO: rename SoloMeshBuilder or something like that to show that this is
@@ -28,14 +16,14 @@ type SoloMesh struct {
 	geom          recast.InputGeom
 	meshName      string
 	cfg           recast.Config
-	partitionType SamplePartitionType
+	partitionType sample.PartitionType
 }
 
 // NewSoloMesh creates a new solo mesh
 func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
 	sm := &SoloMesh{}
 	sm.ctx = ctx
-	sm.partitionType = SamplePartitionMonotone
+	sm.partitionType = sample.PartitionMonotone
 	return sm
 }
 
@@ -226,7 +214,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	//   * good choice to use for tiled navmesh with medium and small sized
 	//     tiles
 
-	if sm.partitionType == SamplePartitionWatershed {
+	if sm.partitionType == sample.PartitionWatershed {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		//if (!rcBuildDistanceField(m_ctx, *m_chf))
 		//{
@@ -240,7 +228,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
 		//return navData, false
 		//}
-	} else if sm.partitionType == SamplePartitionMonotone {
+	} else if sm.partitionType == sample.PartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
 		if !recast.BuildRegionsMonotone(sm.ctx, chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
@@ -314,17 +302,17 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Update poly flags from areas.
 	for i := int32(0); i < pmesh.NPolys; i++ {
 		if pmesh.Areas[i] == recast.WalkableArea {
-			pmesh.Areas[i] = sample.SamplePolyAreaGround
+			pmesh.Areas[i] = sample.PolyAreaGround
 		}
 
-		if pmesh.Areas[i] == sample.SamplePolyAreaGround ||
-			pmesh.Areas[i] == sample.SamplePolyAreaGrass ||
-			pmesh.Areas[i] == sample.SamplePolyAreaRoad {
-			pmesh.Flags[i] = sample.SamplePolyFlagsWalk
-		} else if pmesh.Areas[i] == sample.SamplePolyAreaWater {
-			pmesh.Flags[i] = sample.SamplePolyFlagsSwim
-		} else if pmesh.Areas[i] == sample.SamplePolyAreaDoor {
-			pmesh.Flags[i] = sample.SamplePolyFlagsWalk | sample.SamplePolyFlagsDoor
+		if pmesh.Areas[i] == sample.PolyAreaGround ||
+			pmesh.Areas[i] == sample.PolyAreaGrass ||
+			pmesh.Areas[i] == sample.PolyAreaRoad {
+			pmesh.Flags[i] = sample.PolyFlagsWalk
+		} else if pmesh.Areas[i] == sample.PolyAreaWater {
+			pmesh.Flags[i] = sample.PolyFlagsSwim
+		} else if pmesh.Areas[i] == sample.PolyAreaDoor {
+			pmesh.Flags[i] = sample.PolyFlagsWalk | sample.PolyFlagsDoor
 		}
 	}
 
