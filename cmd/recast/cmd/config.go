@@ -13,13 +13,14 @@ import (
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config --type TYPE FILE",
-	Short: "generate a configuration file with default build settings",
-	Long: `Generate a configuration file, in YAML format, pre-filled with the
+	Short: "generate a config file with default build settings",
+	Long: `Generate a build config file in YAML format, pre-filled with the
 default settings to build a navmesh of type TYPE.
+
 If FILE is not provided, "recast.yml" is used.
 If TYPE is not provided, it defaults to "solo", single-tile navigation mesh.
 
-To use the generated file, simply call "recase build --cfg FILE".`,
+To use the generated file, simply call "recast build --cfg FILE".`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// check navmesh type
