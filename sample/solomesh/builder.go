@@ -17,14 +17,20 @@ type SoloMesh struct {
 	meshName      string
 	cfg           recast.Config
 	partitionType sample.PartitionType
+	settings      Settings
 }
 
-// New creates a new solo mesh
+// New creates a new solo mesh with default build settings.
 func New(ctx *recast.BuildContext) *SoloMesh {
-	sm := &SoloMesh{}
+	sm := &SoloMesh{settings: NewSettings()}
 	sm.ctx = ctx
 	sm.partitionType = sample.PartitionMonotone
 	return sm
+}
+
+// SetSettings sets the build settings for this solo mesh.
+func (sm *SoloMesh) SetSettings(s Settings) {
+	sm.settings = s
 }
 
 // LoadGeometry loads geometry from given geometry definition file.
@@ -56,11 +62,6 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	//
 	// Step 1. Initialize build config.
 	//
-
-	// Init build configuration from GUI
-	// TODO: original comment says gfrom GUI but it will be either from command
-	// line, from inifile or struct
-	// for now, settings are the ones that work for wallfloors.obj
 
 	// Rasterization settings
 	cellSize := float32(0.3)
