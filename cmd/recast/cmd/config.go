@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"github.com/aurelien-rainone/go-detour/sample/solomesh"
 	"github.com/spf13/cobra"
 )
 
@@ -68,41 +71,15 @@ var (
 func init() {
 	RootCmd.AddCommand(configCmd)
 
-	// navmesh type flag
-	typeVal = "solo"
 	configCmd.Flags().StringVar(&typeVal, "type", "solo", "Type of navigation mesh (solo, tiled)")
-	defaultCfgs[typeVal] = soloDefaultCfg
+
+	// register solo mesh configs
+	if buf, err := yaml.Marshal(solomesh.NewSettings()); err != nil {
+		fmt.Println("couldn't register solomesh default settings,", err)
+	} else {
+		defaultCfgs["solo"] = buf
+	}
+
+	// navmesh default type flag
+	typeVal = "solo"
 }
-
-// default build settings for Solo navmesh building (YAML format)
-var soloDefaultCfg = []byte(`
-# rasterization settings
-cell:
-- size: 0.3
-- height: 0.2
-
-# agent properties
-agent:
-- height: 2.0
-- maxClimb: 0.9
-- radius: 0.6
-
-# region
-region:
-  minSize: 8
-  mergeSize: 20
-
-# polygonization
-edgeMaxLen: 12
-edgeMaxError: 1.3
-vertsPerPoly: 6
-
-# detail mesh
-sampleDist: 6.0
-sampleMaxError: 1.0
-
-
-# TODO: those are missing:
-- walkableSlopAngle: 45
-- partitionType: 'monotone'
-`)
