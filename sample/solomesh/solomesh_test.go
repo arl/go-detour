@@ -1,4 +1,4 @@
-package recast
+package solomesh
 
 import (
 	"bytes"
@@ -31,6 +31,8 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 	return bytes.Equal(f1, f2), nil
 }
 
+const testDataDir = "../../testdata/"
+
 func testCreateSoloMesh(t *testing.T, objName string) {
 	var (
 		path, meshBinPath string
@@ -42,8 +44,8 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 		ok       bool
 	)
 
-	path = "testdata/" + objName + ".obj"
-	meshBinPath = "testdata/" + objName + ".org.bin"
+	path = testDataDir + objName + ".obj"
+	meshBinPath = testDataDir + objName + ".org.bin"
 	outBin = "out.bin"
 
 	ctx = recast.NewBuildContext(true)
@@ -106,7 +108,7 @@ func TestCreateTestNavMesh(t *testing.T) {
 }
 
 func benchmarkCreateNavMesh(b *testing.B, meshName string) {
-	path := "testdata/" + meshName + ".obj"
+	path := testDataDir + meshName + ".obj"
 
 	soloMesh := NewSoloMesh(recast.NewBuildContext(false))
 	if err := soloMesh.LoadGeometry(path); err != nil {
@@ -164,7 +166,7 @@ func BenchmarkPathFindSoloMesh(b *testing.B) {
 	)
 
 	objName := "nav_test"
-	path := "testdata/" + objName + ".obj"
+	path := testDataDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := NewSoloMesh(ctx)
@@ -243,7 +245,7 @@ func TestRaycastSoloMesh(t *testing.T) {
 	)
 
 	objName := "nav_test"
-	path := "testdata/" + objName + ".obj"
+	path := testDataDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := NewSoloMesh(ctx)

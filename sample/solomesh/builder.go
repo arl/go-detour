@@ -1,8 +1,9 @@
-package recast
+package solomesh
 
 import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
+	"github.com/aurelien-rainone/go-detour/sample"
 	"github.com/aurelien-rainone/math32"
 )
 
@@ -73,7 +74,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// line, from inifile or struct
 	// for now, settings are the ones that work for wallfloors.obj
 
-	// Rasterization settigs
+	// Rasterization settings
 	cellSize := float32(0.3)
 	cellHeight := float32(0.2)
 
@@ -313,17 +314,17 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Update poly flags from areas.
 	for i := int32(0); i < pmesh.NPolys; i++ {
 		if pmesh.Areas[i] == recast.WalkableArea {
-			pmesh.Areas[i] = samplePolyAreaGround
+			pmesh.Areas[i] = sample.SamplePolyAreaGround
 		}
 
-		if pmesh.Areas[i] == samplePolyAreaGround ||
-			pmesh.Areas[i] == samplePolyAreaGrass ||
-			pmesh.Areas[i] == samplePolyAreaRoad {
-			pmesh.Flags[i] = samplePolyFlagsWalk
-		} else if pmesh.Areas[i] == samplePolyAreaWater {
-			pmesh.Flags[i] = samplePolyFlagsSwim
-		} else if pmesh.Areas[i] == samplePolyAreaDoor {
-			pmesh.Flags[i] = samplePolyFlagsWalk | samplePolyFlagsDoor
+		if pmesh.Areas[i] == sample.SamplePolyAreaGround ||
+			pmesh.Areas[i] == sample.SamplePolyAreaGrass ||
+			pmesh.Areas[i] == sample.SamplePolyAreaRoad {
+			pmesh.Flags[i] = sample.SamplePolyFlagsWalk
+		} else if pmesh.Areas[i] == sample.SamplePolyAreaWater {
+			pmesh.Flags[i] = sample.SamplePolyFlagsSwim
+		} else if pmesh.Areas[i] == sample.SamplePolyAreaDoor {
+			pmesh.Flags[i] = sample.SamplePolyFlagsWalk | sample.SamplePolyFlagsDoor
 		}
 	}
 
