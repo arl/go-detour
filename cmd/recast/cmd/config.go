@@ -18,47 +18,7 @@ var configCmd = &cobra.Command{
 default settings to build a navmesh of type TYPE.
 
 To use the generated file, call "recast build --cfg FILE".`,
-	Run: func(cmd *cobra.Command, args []string) {
-
-		// check navmesh type
-		var cfg []byte
-		var ok bool
-		if cfg, ok = defaultCfgs[typeVal]; !ok {
-			fmt.Printf("aborted, can't generate default config for '%s' navmesh\n", typeVal)
-			return
-		}
-
-		// check file name
-		path := "recast.yml"
-		if len(args) >= 1 {
-			path = args[0]
-		}
-		if ok, err := confirmIfExists(path,
-			fmt.Sprintf("file name %s already exists, overwrite? [y/N]", path)); !ok {
-			if err == nil {
-				fmt.Println("aborted...")
-			} else {
-				fmt.Println("aborted,", err)
-			}
-			return
-		}
-
-		// write config
-		f, err := os.Create(path)
-		if err != nil {
-			fmt.Println("error:", err)
-			return
-		}
-		defer f.Close()
-
-		_, err = f.Write(cfg)
-		if err != nil {
-			fmt.Println("error:", err)
-			return
-		}
-
-		fmt.Printf("build settings for %s navmesh generated to '%s'\n", typeVal, path)
-	},
+	Run: doConfig,
 }
 
 var (
@@ -68,7 +28,6 @@ var (
 
 func init() {
 	RootCmd.AddCommand(configCmd)
-
 	configCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tiled'")
 
 	// register solo mesh configs
@@ -80,4 +39,41 @@ func init() {
 
 	// navmesh default type flag
 	typeVal = "solo"
+}
+
+func doConfig(cmd *cobra.Command, args []string) {
+	// check navmesh type
+	var (
+		cfg []byte
+		ok  bool
+		err error
+	)
+
+	if cfg, ok = defaultCfgs[typeVal]; !ok {
+		fmt.Sprintf("error, unknown navmesh type '%v' (or not implemented)\n", typeVal)
+		return
+	}
+
+	// check file name
+	path := "recast.yml"
+	if len(args) >= 1 {
+		path = args[0]
+	}
+	if err = fileExists(path); err == nil {
+		msg := fmt.Sprintf("'%v' already exists, overwrite? [y/N]", path)
+		if overwrite := askForConfirmation(msg); !overwrite {
+			fmt.Println("aborted")
+			return
+		}
+	}
+
+	// write config
+	f, err := os.Create(path)
+	check(err)
+	defer f.Close()
+	_, err = f.Write(cfg)
+	check(err)
+
+	fmt.Printf("success")
+	fmt.Printf("build settings for '%v' navmesh generated to '%v'\n", typeVal, path)
 }

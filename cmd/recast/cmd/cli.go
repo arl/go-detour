@@ -6,28 +6,20 @@ import (
 	"os"
 )
 
-// confirmIfExists checks that a file exists, and ask the user confirmation to
-// do go forward.
-//
-// It returns true if the file doesn't exist, or if the user answered yes to the
-// confirmation msg showed on command line. If ok is false or err is not nil,
-// the operation on path should be aborted.
-func confirmIfExists(path, msg string) (ok bool, err error) {
-	if _, err := os.Stat(path); err != nil {
+// convenience function that returns nil if file exists, or an error if it
+// doesn't or if file can't be stat'ed
+func fileExists(path string) (err error) {
+	if _, err = os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			// file does not exist
-			return true, nil
-		} else {
-			// other error
-			fmt.Println("other error", err)
-			return false, err
+			err = fmt.Errorf("no such file '%v'", path)
 		}
 	}
-	return askForConfirmation(msg), nil
+	return err
 }
 
-// askForConfirmation show msg and ask for the user to type y or n (typing ENTER
-// default to no)
+// askForConfirmation show msg and ask for the user to type y or n
+// (typing ENTER defaults to no)
 func askForConfirmation(msg string) bool {
 	fmt.Println(msg)
 	reader := bufio.NewReader(os.Stdin)
@@ -46,5 +38,12 @@ func askForConfirmation(msg string) bool {
 		case 'N', 'n':
 			return false
 		}
+	}
+}
+
+func check(err error) {
+	if err != nil {
+		fmt.Printf("error, %v\n", err)
+		os.Exit(-1)
 	}
 }
