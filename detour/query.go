@@ -3,6 +3,7 @@ package detour
 import (
 	"fmt"
 	"log"
+	"math"
 	"unsafe"
 
 	"github.com/aurelien-rainone/assertgo"
@@ -16,260 +17,52 @@ const (
 	HScale float32 = 0.999
 )
 
+// Raycast should calculate movement cost along the ray and fill RaycastHit.Cost
+// RaycastOptions
+const RaycastUseCosts int = 0x01
+
+// RaycastHit provides information about a raycast hit
+// filled by NavMeshQuery.Raycast
+type RaycastHit struct {
+	// The hit parameter. (math.MaxFloat32 if no wall hit.)
+	T float32
+
+	// The normal of the nearest wall hit. [(x, y, z)]
+	HitNormal d3.Vec3
+
+	// The index of the edge on the final polygon where the wall was hit.
+	HitEdgeIndex int
+
+	// Pointer to an array of reference ids of the visited polygons. [opt]
+	Path []PolyRef
+
+	// The number of visited polygons. [opt]
+	PathCount int
+
+	// The maximum number of polygons the @p path array can hold.
+	MaxPath int
+
+	//  The cost of the path until hit.
+	PathCost float32
+}
+
 // NavMeshQuery provides the ability to perform pathfinding related queries
 // against a navigation mesh.
+//
+// For methods that support undersized slices, if the slices is too small to
+// hold the entire result set the return status of the method will include the
+// BufferTooSmall flag.
+//
+// Some methods can be used by multiple clients without side effects. (E.g. No
+// change to the closed list. No impact on an in-progress sliced path query.
+// Etc.). When that is the case it will be clearly stated in the method comment.
+//
+// Walls and portals: A wall is a polygon segment that is considered impassable.
+// A portal is a passable segment between polygons. A portal may be treated as a
+// wall based on the QueryFilter used for a query.
+//
+// see NavMesh, QueryFilter, NewNavMeshQuery()
 type NavMeshQuery struct {
-
-	/////@}
-	///// @name Sliced Pathfinding Functions
-	///// Common use case:
-	/////	-# Call initSlicedFindPath() to initialize the sliced path query.
-	/////	-# Call updateSlicedFindPath() until it returns complete.
-	/////	-# Call finalizeSlicedFindPath() to get the path.
-	/////@{
-
-	///// Intializes a sliced path query.
-	/////  @param[in]		startRef	The refrence id of the start polygon.
-	/////  @param[in]		endRef		The reference id of the end polygon.
-	/////  @param[in]		startPos	A position within the start polygon. [(x, y, z)]
-	/////  @param[in]		endPos		A position within the end polygon. [(x, y, z)]
-	/////  @param[in]		filter		The polygon filter to apply to the query.
-	/////  @param[in]		options		query options (see: #dtFindPathOptions)
-	///// @returns The status flags for the query.
-	//Status initSlicedFindPath(PolyRef startRef, PolyRef endRef,
-	//const float* startPos, const float* endPos,
-	//const QueryFilter* filter, const unsigned int options = 0);
-
-	///// Updates an in-progress sliced path query.
-	/////  @param[in]		maxIter		The maximum number of iterations to perform.
-	/////  @param[out]	doneIters	The actual number of iterations completed. [opt]
-	///// @returns The status flags for the query.
-	//Status updateSlicedFindPath(const int maxIter, int* doneIters);
-
-	///// Finalizes and returns the results of a sliced path query.
-	/////  @param[out]	path		An ordered list of polygon references representing the path. (Start to end.)
-	/////  							[(polyRef) * @p pathCount]
-	/////  @param[out]	pathCount	The number of polygons returned in the @p path array.
-	/////  @param[in]		maxPath		The max number of polygons the path array can hold. [Limit: >= 1]
-	///// @returns The status flags for the query.
-	//Status finalizeSlicedFindPath(PolyRef* path, int* pathCount, const int maxPath);
-
-	///// Finalizes and returns the results of an incomplete sliced path query, returning the path to the furthest
-	///// polygon on the existing path that was visited during the search.
-	/////  @param[in]		existing		An array of polygon references for the existing path.
-	/////  @param[in]		existingSize	The number of polygon in the @p existing array.
-	/////  @param[out]	path			An ordered list of polygon references representing the path. (Start to end.)
-	/////  								[(polyRef) * @p pathCount]
-	/////  @param[out]	pathCount		The number of polygons returned in the @p path array.
-	/////  @param[in]		maxPath			The max number of polygons the @p path array can hold. [Limit: >= 1]
-	///// @returns The status flags for the query.
-	//Status finalizeSlicedFindPathPartial(const PolyRef* existing, const int existingSize,
-	//PolyRef* path, int* pathCount, const int maxPath);
-
-	/////@}
-	///// @name Dijkstra Search Functions
-	///// @{
-
-	///// Finds the polygons along the navigation graph that touch the specified circle.
-	/////  @param[in]		startRef		The reference id of the polygon where the search starts.
-	/////  @param[in]		centerPos		The center of the search circle. [(x, y, z)]
-	/////  @param[in]		radius			The radius of the search circle.
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[out]	resultRef		The reference ids of the polygons touched by the circle. [opt]
-	/////  @param[out]	resultParent	The reference ids of the parent polygons for each result.
-	/////  								Zero if a result polygon has no parent. [opt]
-	/////  @param[out]	resultCost		The search cost from @p centerPos to the polygon. [opt]
-	/////  @param[out]	resultCount		The number of polygons found. [opt]
-	/////  @param[in]		maxResult		The maximum number of polygons the result arrays can hold.
-	///// @returns The status flags for the query.
-	//Status findPolysAroundCircle(PolyRef startRef, const float* centerPos, const float radius,
-	//const QueryFilter* filter,
-	//PolyRef* resultRef, PolyRef* resultParent, float* resultCost,
-	//int* resultCount, const int maxResult) const;
-
-	///// Finds the polygons along the naviation graph that touch the specified convex polygon.
-	/////  @param[in]		startRef		The reference id of the polygon where the search starts.
-	/////  @param[in]		verts			The vertices describing the convex polygon. (CCW)
-	/////  								[(x, y, z) * @p nverts]
-	/////  @param[in]		nverts			The number of vertices in the polygon.
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[out]	resultRef		The reference ids of the polygons touched by the search polygon. [opt]
-	/////  @param[out]	resultParent	The reference ids of the parent polygons for each result. Zero if a
-	/////  								result polygon has no parent. [opt]
-	/////  @param[out]	resultCost		The search cost from the centroid point to the polygon. [opt]
-	/////  @param[out]	resultCount		The number of polygons found.
-	/////  @param[in]		maxResult		The maximum number of polygons the result arrays can hold.
-	///// @returns The status flags for the query.
-	//Status findPolysAroundShape(PolyRef startRef, const float* verts, const int nverts,
-	//const QueryFilter* filter,
-	//PolyRef* resultRef, PolyRef* resultParent, float* resultCost,
-	//int* resultCount, const int maxResult) const;
-
-	///// Gets a path from the explored nodes in the previous search.
-	/////  @param[in]		endRef		The reference id of the end polygon.
-	/////  @param[out]	path		An ordered list of polygon references representing the path. (Start to end.)
-	/////  							[(polyRef) * @p pathCount]
-	/////  @param[out]	pathCount	The number of polygons returned in the @p path array.
-	/////  @param[in]		maxPath		The maximum number of polygons the @p path array can hold. [Limit: >= 0]
-	/////  @returns		The status flags. Returns DT_FAILURE | DT_INVALID_PARAM if any parameter is wrong, or if
-	/////  				@p endRef was not explored in the previous search. Returns Success | DT_BUFFER_TOO_SMALL
-	/////  				if @p path cannot contain the entire path. In this case it is filled to capacity with a partial path.
-	/////  				Otherwise returns Success.
-	/////  @remarks		The result of this function depends on the state of the query object. For that reason it should only
-	/////  				be used immediately after one of the two Dijkstra searches, findPolysAroundCircle or findPolysAroundShape.
-	//Status getPathFromDijkstraSearch(PolyRef endRef, PolyRef* path, int* pathCount, int maxPath) const;
-
-	///// @}
-	///// @name Local Query Functions
-	/////@{
-
-	///// Finds the polygon nearest to the specified center point.
-	/////  @param[in]		center		The center of the search box. [(x, y, z)]
-	/////  @param[in]		extents		The search distance along each axis. [(x, y, z)]
-	/////  @param[in]		filter		The polygon filter to apply to the query.
-	/////  @param[out]	nearestRef	The reference id of the nearest polygon.
-	/////  @param[out]	nearestPt	The nearest point on the polygon. [opt] [(x, y, z)]
-	///// @returns The status flags for the query.
-	//Status findNearestPoly(const float* center, const float* extents,
-	//const QueryFilter* filter,
-	//PolyRef* nearestRef, float* nearestPt) const;
-
-	///// Finds the non-overlapping navigation polygons in the local neighbourhood around the center position.
-	/////  @param[in]		startRef		The reference id of the polygon where the search starts.
-	/////  @param[in]		centerPos		The center of the query circle. [(x, y, z)]
-	/////  @param[in]		radius			The radius of the query circle.
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[out]	resultRef		The reference ids of the polygons touched by the circle.
-	/////  @param[out]	resultParent	The reference ids of the parent polygons for each result.
-	/////  								Zero if a result polygon has no parent. [opt]
-	/////  @param[out]	resultCount		The number of polygons found.
-	/////  @param[in]		maxResult		The maximum number of polygons the result arrays can hold.
-	///// @returns The status flags for the query.
-	//Status findLocalNeighbourhood(PolyRef startRef, const float* centerPos, const float radius,
-	//const QueryFilter* filter,
-	//PolyRef* resultRef, PolyRef* resultParent,
-	//int* resultCount, const int maxResult) const;
-
-	///// Moves from the start to the end position constrained to the navigation mesh.
-	/////  @param[in]		startRef		The reference id of the start polygon.
-	/////  @param[in]		startPos		A position of the mover within the start polygon. [(x, y, x)]
-	/////  @param[in]		endPos			The desired end position of the mover. [(x, y, z)]
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[out]	resultPos		The result position of the mover. [(x, y, z)]
-	/////  @param[out]	visited			The reference ids of the polygons visited during the move.
-	/////  @param[out]	visitedCount	The number of polygons visited during the move.
-	/////  @param[in]		maxVisitedSize	The maximum number of polygons the @p visited array can hold.
-	///// @returns The status flags for the query.
-	//Status moveAlongSurface(PolyRef startRef, const float* startPos, const float* endPos,
-	//const QueryFilter* filter,
-	//float* resultPos, PolyRef* visited, int* visitedCount, const int maxVisitedSize) const;
-
-	///// Casts a 'walkability' ray along the surface of the navigation mesh from
-	///// the start position toward the end position.
-	///// @note A wrapper around raycast(..., RaycastHit*). Retained for backward compatibility.
-	/////  @param[in]		startRef	The reference id of the start polygon.
-	/////  @param[in]		startPos	A position within the start polygon representing
-	/////  							the start of the ray. [(x, y, z)]
-	/////  @param[in]		endPos		The position to cast the ray toward. [(x, y, z)]
-	/////  @param[out]	t			The hit parameter. (FLT_MAX if no wall hit.)
-	/////  @param[out]	hitNormal	The normal of the nearest wall hit. [(x, y, z)]
-	/////  @param[in]		filter		The polygon filter to apply to the query.
-	/////  @param[out]	path		The reference ids of the visited polygons. [opt]
-	/////  @param[out]	pathCount	The number of visited polygons. [opt]
-	/////  @param[in]		maxPath		The maximum number of polygons the @p path array can hold.
-	///// @returns The status flags for the query.
-	//Status raycast(PolyRef startRef, const float* startPos, const float* endPos,
-	//const QueryFilter* filter,
-	//float* t, float* hitNormal, PolyRef* path, int* pathCount, const int maxPath) const;
-
-	///// Casts a 'walkability' ray along the surface of the navigation mesh from
-	///// the start position toward the end position.
-	/////  @param[in]		startRef	The reference id of the start polygon.
-	/////  @param[in]		startPos	A position within the start polygon representing
-	/////  							the start of the ray. [(x, y, z)]
-	/////  @param[in]		endPos		The position to cast the ray toward. [(x, y, z)]
-	/////  @param[in]		filter		The polygon filter to apply to the query.
-	/////  @param[in]		flags		govern how the raycast behaves. See dtRaycastOptions
-	/////  @param[out]	hit			Pointer to a raycast hit structure which will be filled by the results.
-	/////  @param[in]		prevRef		parent of start ref. Used during for cost calculation [opt]
-	///// @returns The status flags for the query.
-	//Status raycast(PolyRef startRef, const float* startPos, const float* endPos,
-	//const QueryFilter* filter, const unsigned int options,
-	//dtRaycastHit* hit, PolyRef prevRef = 0) const;
-
-	///// Finds the distance from the specified position to the nearest polygon wall.
-	/////  @param[in]		startRef		The reference id of the polygon containing @p centerPos.
-	/////  @param[in]		centerPos		The center of the search circle. [(x, y, z)]
-	/////  @param[in]		maxRadius		The radius of the search circle.
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[out]	hitDist			The distance to the nearest wall from @p centerPos.
-	/////  @param[out]	hitPos			The nearest position on the wall that was hit. [(x, y, z)]
-	/////  @param[out]	hitNormal		The normalized ray formed from the wall point to the
-	/////  								source point. [(x, y, z)]
-	///// @returns The status flags for the query.
-	//Status findDistanceToWall(PolyRef startRef, const float* centerPos, const float maxRadius,
-	//const QueryFilter* filter,
-	//float* hitDist, float* hitPos, float* hitNormal) const;
-
-	///// Returns the segments for the specified polygon, optionally including portals.
-	/////  @param[in]		ref				The reference id of the polygon.
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[out]	segmentVerts	The segments. [(ax, ay, az, bx, by, bz) * segmentCount]
-	/////  @param[out]	segmentRefs		The reference ids of each segment's neighbor polygon.
-	/////  								Or zero if the segment is a wall. [opt] [(parentRef) * @p segmentCount]
-	/////  @param[out]	segmentCount	The number of segments returned.
-	/////  @param[in]		maxSegments		The maximum number of segments the result arrays can hold.
-	///// @returns The status flags for the query.
-	//Status getPolyWallSegments(PolyRef ref, const QueryFilter* filter,
-	//float* segmentVerts, PolyRef* segmentRefs, int* segmentCount,
-	//const int maxSegments) const;
-
-	///// Returns random location on navmesh.
-	///// Polygons are chosen weighted by area. The search runs in linear related to number of polygon.
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[in]		frand			Function returning a random number [0..1).
-	/////  @param[out]	randomRef		The reference id of the random location.
-	/////  @param[out]	randomPt		The random location.
-	///// @returns The status flags for the query.
-	//Status findRandomPoint(const QueryFilter* filter, float (*frand)(),
-	//PolyRef* randomRef, float* randomPt) const;
-
-	///// Returns random location on navmesh within the reach of specified location.
-	///// Polygons are chosen weighted by area. The search runs in linear related to number of polygon.
-	///// The location is not exactly constrained by the circle, but it limits the visited polygons.
-	/////  @param[in]		startRef		The reference id of the polygon where the search starts.
-	/////  @param[in]		centerPos		The center of the search circle. [(x, y, z)]
-	/////  @param[in]		filter			The polygon filter to apply to the query.
-	/////  @param[in]		frand			Function returning a random number [0..1).
-	/////  @param[out]	randomRef		The reference id of the random location.
-	/////  @param[out]	randomPt		The random location. [(x, y, z)]
-	///// @returns The status flags for the query.
-	//Status findRandomPointAroundCircle(PolyRef startRef, const float* centerPos, const float maxRadius,
-	//const QueryFilter* filter, float (*frand)(),
-	//PolyRef* randomRef, float* randomPt) const;
-
-	///// Gets the height of the polygon at the provided position using the height detail. (Most accurate.)
-	/////  @param[in]		ref			The reference id of the polygon.
-	/////  @param[in]		pos			A position within the xz-bounds of the polygon. [(x, y, z)]
-	/////  @param[out]	height		The height at the surface of the polygon.
-	///// @returns The status flags for the query.
-	//Status getPolyHeight(PolyRef ref, const float* pos, float* height) const;
-
-	///// @}
-	///// @name Miscellaneous Functions
-	///// @{
-
-	///// Returns true if the polygon reference is valid and passes the filter restrictions.
-	/////  @param[in]		ref			The polygon reference to check.
-	/////  @param[in]		filter		The filter to apply.
-	//bool isValidPolyRef(PolyRef ref, const QueryFilter* filter) const;
-
-	///// Returns true if the polygon reference is in the closed list.
-	/////  @param[in]		ref		The reference id of the polygon to check.
-	///// @returns True if the polygon is in closed list.
-	//bool isInClosedList(PolyRef ref) const;
-	///// @}
-
 	nav          *NavMesh   // Pointer to navmesh data.
 	query        queryData  // Sliced query state.
 	tinyNodePool *NodePool  // Pointer to small node pool.
@@ -347,53 +140,41 @@ func NewNavMeshQuery(nav *NavMesh, maxNodes int32) (Status, *NavMeshQuery) {
 // FindPath finds a path from the start polygon to the end polygon.
 //
 //  Arguments:
-//   [in]startRef    The reference id of the start polygon.
-//   [in]endRef      The reference id of the end polygon.
-//   [in]startPos    A position within the start polygon. [(x, y, z)]
-//   [in]endPos      A position within the end polygon. [(x, y, z)]
-//   [in]filter      The polygon filter to apply to the query.
-//   [out]path       An ordered list of polygon references representing the
-//                   path. (Start to end.) [(polyRef) * pathCount]
-//   [out]pathCount  The number of polygons returned in the path array.
-//   [in]maxPath     The maximum number of polygons the path array can hold.
-//                   [Limit: >= 1]
+//   startRef  The reference id of the start polygon.
+//   endRef    The reference id of the end polygon.
+//   startPos  A position within the start polygon. [(x, y, z)]
+//   endPos    A position within the end polygon. [(x, y, z)]
+//   filter    The polygon filter to apply to the query.
+//   path      This slice will be filled with an ordered list of polygon
+//             references representing the path. (Start to end.)
+//
+//  Returns:
+//   pathCount the number of polygons in the found path slice.
+//   st        status code (may be a partial result)
 //
 // If the end polygon cannot be reached through the navigation graph, the last
-// polygon in the path will be the nearest the end polygon.
-//
-// If the path array is to small to hold the full result, it will be filled as
-// far as possible from the start polygon toward the end polygon.
+// polygon in the path will be the nearest to the end polygon. If the path array
+// is to small to hold the full result, it will be filled as far as possible
+// from the start polygon toward the end polygon.
 //
 // The start and end positions are used to calculate traversal costs.
 // (The y-values impact the result.)
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindPath(
 	startRef, endRef PolyRef,
 	startPos, endPos d3.Vec3,
 	filter QueryFilter,
-	path *[]PolyRef,
-	pathCount *int32,
-	maxPath int32) Status {
-
-	if len(*path) < int(maxPath) {
-		// immediately check the provided slice
-		// is big enough to store maxPath nodes
-		return Failure | InvalidParam
-	}
-
-	if pathCount != nil {
-		*pathCount = 0
-	}
-
+	path []PolyRef) (pathCount int, st Status) {
 	// Validate input
 	if !q.nav.IsValidPolyRef(startRef) || !q.nav.IsValidPolyRef(endRef) ||
-		len(startPos) < 3 || len(endPos) < 3 || filter == nil || maxPath <= 0 || path == nil || pathCount == nil {
-		return Failure | InvalidParam
+		len(startPos) < 3 || len(endPos) < 3 || filter == nil || path == nil || len(path) == 0 {
+		return pathCount, Failure | InvalidParam
 	}
 
 	if startRef == endRef {
-		(*path)[0] = startRef
-		*pathCount = 1
-		return Success
+		path[0] = startRef
+		return 1, Success
 	}
 
 	q.nodePool.Clear()
@@ -495,7 +276,7 @@ func (q *NavMeshQuery) FindPath(
 			// If the node is visited the first time, calculate node position.
 			if neighbourNode.Flags == 0 {
 
-				status := q.getEdgeMidPoint(bestRef, bestPoly, bestTile,
+				status := q.edgeMidPoint(bestRef, bestPoly, bestTile,
 					neighbourRef, neighbourPoly, neighbourTile,
 					neighbourNode.Pos[:])
 				if StatusFailed(status) {
@@ -565,7 +346,7 @@ func (q *NavMeshQuery) FindPath(
 		}
 	}
 
-	status := q.pathToNode(lastBestNode, path, pathCount, maxPath)
+	pathCount, status := q.pathToNode(lastBestNode, path)
 
 	if lastBestNode.ID != endRef {
 		status |= PartialResult
@@ -575,7 +356,7 @@ func (q *NavMeshQuery) FindPath(
 		status |= OutOfNodes
 	}
 
-	return status
+	return pathCount, status
 }
 
 // Vertex flags returned by NavMeshQuery.FindStraightPath.
@@ -600,80 +381,76 @@ const (
 // within the polygon corridor
 //
 //  Arguments:
-//   [in]startPos            Path start position. [(x, y, z)]
-//   [in]endPos              Path end position. [(x, y, z)]
-//   [in]path                An array of polygon references that represent the
-//                           path corridor.
-//   [in]pathSize            The number of polygons in the path array.
-//   [out] straightPath      Points describing the straight path
-//                           [Length: == straightPathCount].
-//   [out] straightPathFlags Flags describing each point.
-//                           (See: StraightPathFlags)
-//   [out] straightPathRefs  The reference id of the polygon that is being
-//                           entered at each point.
-//   [in]  maxStraightPath   The maximum number of points the straight path
-//                           arrays can hold.  [Limit: > 0]
-//   [in]  options           Query options. (see: StraightPathOptions)
+//   startPos          Path start position. [(x, y, z)]
+//   endPos            Path end position. [(x, y, z)]
+//   path              An array of polygon references that represent the
+//                     path corridor.
+//   straightPath      Points describing the straight path
+//                     [Length: == straightPathCount].
+//   straightPathFlags Flags describing each point.
+//                     (See: StraightPathFlags)
+//   straightPathRefs  The reference id of the polygon that is being
+//                     entered at each point.
+//   options           Query options. (see: StraightPathOptions)
 //
 // Returns The status flags for the query and the number of point in the
 // straight path.
 //
 // The straightPath, straightPathFlags and straightPathRefs slices must already
-// be allocated and contain at least maxStraightPath elements.
+// be allocated and contain the same number of elements.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindStraightPath(
 	startPos, endPos d3.Vec3,
-	path []PolyRef, pathSize int32,
+	path []PolyRef,
 	straightPath []d3.Vec3,
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
-	maxStraightPath int32,
-	options int32) (st Status, StraightPathCount int32) {
+	options int32) (straightPathCount int, st Status) {
 
-	assert.True(q.nav != nil, "NavMesh should not be nil")
-
-	if maxStraightPath == 0 {
-		fmt.Println("maxStraightPath == 0")
-		return Failure | InvalidParam, 0
+	// parameter check
+	if len(straightPath) == 0 {
+		fmt.Println("len(straightPath) == 0")
+		return 0, Failure | InvalidParam
 	}
-
 	if len(path) == 0 {
 		fmt.Println("len(path) == 0")
-		return Failure | InvalidParam, 0
+		return 0, Failure | InvalidParam
 	}
 
 	var (
 		stat  Status
-		count int32
+		count int
 	)
 
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
 	if StatusFailed(q.closestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
-		return Failure | InvalidParam, 0
+		return 0, Failure | InvalidParam
 	}
 
 	closestEndPos := d3.NewVec3()
-	if StatusFailed(q.closestPointOnPolyBoundary(path[pathSize-1], endPos, closestEndPos)) {
-		return Failure | InvalidParam, 0
+	if StatusFailed(q.closestPointOnPolyBoundary(path[len(path)-1], endPos, closestEndPos)) {
+		return 0, Failure | InvalidParam
 	}
 
 	// Add start point.
 	stat = q.appendVertex(closestStartPos, StraightPathStart, path[0],
 		straightPath, straightPathFlags, straightPathRefs,
-		&count, maxStraightPath)
+		&count)
 	if stat != InProgress {
 		fmt.Println("FindStraightPath returns", stat, count)
-		return stat, count
+		return count, stat
 	}
 
-	if pathSize > 1 {
+	if len(path) > 1 {
 		portalApex := d3.NewVec3From(closestStartPos)
 		portalLeft := d3.NewVec3From(portalApex)
 		portalRight := d3.NewVec3From(portalApex)
 		var (
-			apexIndex     int32
-			leftIndex     int32
-			rightIndex    int32
+			apexIndex     int
+			leftIndex     int
+			rightIndex    int
 			leftPolyType  uint8
 			rightPolyType uint8
 		)
@@ -681,21 +458,21 @@ func (q *NavMeshQuery) FindStraightPath(
 		leftPolyRef := path[0]
 		rightPolyRef := path[0]
 
-		for i := int32(0); i < pathSize; i++ {
+		for i := 0; i < len(path); i++ {
 			left := d3.NewVec3()
 			right := d3.NewVec3()
 			var toType uint8
 
-			if i+1 < pathSize {
+			if i+1 < len(path) {
 				var fromType uint8 // fromType is ignored.
 
 				// Next portal.
-				if StatusFailed(q.getPortalPoints6(path[i], path[i+1], left, right, &fromType, &toType)) {
+				if StatusFailed(q.portalPoints6(path[i], path[i+1], left, right, &fromType, &toType)) {
 					// Failed to get portal points, in practice this means that path[i+1] is invalid polygon.
 					// Clamp the end point to path[i], and return the path so far.
 					if StatusFailed(q.closestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
 						// This should only happen when the first polygon is invalid.
-						return Failure | InvalidParam, 0
+						return 0, Failure | InvalidParam
 					}
 
 					// Apeend portals along the current straight path segment.
@@ -703,20 +480,20 @@ func (q *NavMeshQuery) FindStraightPath(
 						// Ignore status return value as we're just about to return anyway.
 						q.appendPortals(apexIndex, i, closestEndPos, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							&count, maxStraightPath, options)
+							&count, options)
 					}
 
 					// Ignore status return value as we're just about to return anyway.
 					q.appendVertex(closestEndPos, 0, path[i],
 						straightPath, straightPathFlags, straightPathRefs,
-						&count, maxStraightPath)
+						&count)
 
 					stat = Success | PartialResult
-					if count >= maxStraightPath {
+					if count >= len(straightPath) {
 						stat |= BufferTooSmall
 					}
 					fmt.Println("FindStraightPath 2 returns", stat, count)
-					return stat, count
+					return count, stat
 				}
 
 				// If starting really close the portal, advance.
@@ -737,7 +514,7 @@ func (q *NavMeshQuery) FindStraightPath(
 			if TriArea2D(portalApex, portalRight, right) <= 0.0 {
 				if portalApex.Approx(portalRight) || TriArea2D(portalApex, portalLeft, right) > 0.0 {
 					portalRight.Assign(right)
-					if i+1 < pathSize {
+					if i+1 < len(path) {
 						rightPolyRef = path[i+1]
 					} else {
 						rightPolyRef = 0
@@ -749,10 +526,10 @@ func (q *NavMeshQuery) FindStraightPath(
 					if (options & int32(StraightPathAreaCrossings|StraightPathAllCrossings)) != 0 {
 						stat = q.appendPortals(apexIndex, leftIndex, portalLeft, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							&count, maxStraightPath, options)
+							&count, options)
 						if stat != InProgress {
 							fmt.Println("FindStraightPath 3 returns", stat, count)
-							return stat, count
+							return count, stat
 						}
 					}
 
@@ -770,10 +547,10 @@ func (q *NavMeshQuery) FindStraightPath(
 					// Append or update vertex
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
-						&count, maxStraightPath)
+						&count)
 					if stat != InProgress {
 						fmt.Println("FindStraightPath 4 returns", stat, count)
-						return stat, count
+						return count, stat
 					}
 
 					portalLeft.Assign(portalApex)
@@ -792,7 +569,7 @@ func (q *NavMeshQuery) FindStraightPath(
 			if TriArea2D(portalApex, portalLeft, left) >= 0.0 {
 				if portalApex.Approx(portalLeft) || TriArea2D(portalApex, portalRight, left) < 0.0 {
 					portalLeft.Assign(left)
-					if i+1 < pathSize {
+					if i+1 < len(path) {
 						leftPolyRef = path[i+1]
 					} else {
 						leftPolyRef = 0
@@ -804,10 +581,10 @@ func (q *NavMeshQuery) FindStraightPath(
 					if (options & int32(StraightPathAreaCrossings|StraightPathAllCrossings)) != 0 {
 						stat = q.appendPortals(apexIndex, rightIndex, portalRight, path,
 							straightPath, straightPathFlags, straightPathRefs,
-							&count, maxStraightPath, options)
+							&count, options)
 						if stat != InProgress {
 							fmt.Println("FindStraightPath 5 returns", stat, count)
-							return stat, count
+							return count, stat
 						}
 					}
 
@@ -825,10 +602,10 @@ func (q *NavMeshQuery) FindStraightPath(
 					// Append or update vertex
 					stat = q.appendVertex(portalApex, flags, ref,
 						straightPath, straightPathFlags, straightPathRefs,
-						&count, maxStraightPath)
+						&count)
 					if stat != InProgress {
 						fmt.Println("FindStraightPath 6 returns", stat, count)
-						return stat, count
+						return count, stat
 					}
 
 					portalLeft.Assign(portalApex)
@@ -846,12 +623,12 @@ func (q *NavMeshQuery) FindStraightPath(
 
 		// Append portals along the current straight path segment.
 		if (options & int32(StraightPathAreaCrossings|StraightPathAllCrossings)) != 0 {
-			stat = q.appendPortals(apexIndex, pathSize-1, closestEndPos, path,
+			stat = q.appendPortals(apexIndex, len(path)-1, closestEndPos, path,
 				straightPath, straightPathFlags, straightPathRefs,
-				&count, maxStraightPath, options)
+				&count, options)
 			if stat != InProgress {
 				fmt.Println("FindStraightPath 7 returns", stat, count)
-				return stat, count
+				return count, stat
 			}
 		}
 	}
@@ -859,26 +636,25 @@ func (q *NavMeshQuery) FindStraightPath(
 	// Ignore status return value as we're just about to return anyway.
 	q.appendVertex(closestEndPos, StraightPathEnd, 0,
 		straightPath, straightPathFlags, straightPathRefs,
-		&count, maxStraightPath)
+		&count)
 
 	stat = Success
-	if count >= maxStraightPath {
+	if count >= len(straightPath) {
 		stat |= BufferTooSmall
 	}
 	fmt.Println("FindStraightPath 8 returns", stat, count)
-	return stat, count
+	return count, stat
 }
 
 // appendPortals appends intermediate portal points to a straight path.
 func (q *NavMeshQuery) appendPortals(
-	startIdx, endIdx int32,
+	startIdx, endIdx int,
 	endPos d3.Vec3,
 	path []PolyRef,
 	straightPath []d3.Vec3,
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
-	straightPathCount *int32,
-	maxStraightPath,
+	straightPathCount *int,
 	options int32) Status {
 
 	startPos := straightPath[*straightPathCount-1]
@@ -907,7 +683,7 @@ func (q *NavMeshQuery) appendPortals(
 
 		left := d3.NewVec3()
 		right := d3.NewVec3()
-		if StatusFailed(q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
+		if StatusFailed(q.portalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
 			break
 		}
 
@@ -925,7 +701,7 @@ func (q *NavMeshQuery) appendPortals(
 
 			stat = q.appendVertex(pt, 0, path[i+1],
 				straightPath, straightPathFlags, straightPathRefs,
-				straightPathCount, maxStraightPath)
+				straightPathCount)
 			if stat != InProgress {
 				return stat
 			}
@@ -942,8 +718,7 @@ func (q *NavMeshQuery) appendVertex(
 	straightPath []d3.Vec3,
 	straightPathFlags []uint8,
 	straightPathRefs []PolyRef,
-	straightPathCount *int32,
-	maxStraightPath int32) Status {
+	straightPathCount *int) Status {
 
 	if (*straightPathCount) > 0 && pos.Approx(straightPath[*straightPathCount-1]) {
 		// The vertices are equal, update flags and poly.
@@ -965,7 +740,7 @@ func (q *NavMeshQuery) appendVertex(
 		(*straightPathCount)++
 
 		// If there is no space to append more vertices, return.
-		if (*straightPathCount) >= maxStraightPath {
+		if (*straightPathCount) >= len(straightPath) {
 			return Success | BufferTooSmall
 		}
 
@@ -977,15 +752,15 @@ func (q *NavMeshQuery) appendVertex(
 	return InProgress
 }
 
-// getEdgeMidPoint returns the edge mid point between two polygons.
-func (q *NavMeshQuery) getEdgeMidPoint(
+// edgeMidPoint returns the edge mid point between two polygons.
+func (q *NavMeshQuery) edgeMidPoint(
 	from PolyRef, fromPoly *Poly, fromTile *MeshTile,
 	to PolyRef, toPoly *Poly, toTile *MeshTile,
 	mid d3.Vec3) Status {
 
 	left, right := d3.NewVec3(), d3.NewVec3()
 
-	if StatusFailed(q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
+	if StatusFailed(q.portalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)) {
 		return Failure | InvalidParam
 	}
 	mid[0] = (left[0] + right[0]) * 0.5
@@ -994,14 +769,11 @@ func (q *NavMeshQuery) getEdgeMidPoint(
 	return Success
 }
 
-// getPortalPoints6 returns portal points between two polygons.
-func (q *NavMeshQuery) getPortalPoints6(
+// portalPoints6 returns portal points between two polygons.
+func (q *NavMeshQuery) portalPoints6(
 	from, to PolyRef,
 	left, right d3.Vec3,
 	fromType, toType *uint8) Status {
-
-	assert.True(q.nav != nil, "NavMesh should not be nil")
-
 	var (
 		fromTile *MeshTile
 		fromPoly *Poly
@@ -1020,11 +792,11 @@ func (q *NavMeshQuery) getPortalPoints6(
 	}
 	*toType = toPoly.Type()
 
-	return q.getPortalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)
+	return q.portalPoints8(from, fromPoly, fromTile, to, toPoly, toTile, left, right)
 }
 
-// getPortalPoints8 returns portal points between two polygons.
-func (q *NavMeshQuery) getPortalPoints8(
+// portalPoints8 returns portal points between two polygons.
+func (q *NavMeshQuery) portalPoints8(
 	from PolyRef, fromPoly *Poly, fromTile *MeshTile,
 	to PolyRef, toPoly *Poly, toTile *MeshTile,
 	left, right d3.Vec3) Status {
@@ -1100,13 +872,11 @@ func (q *NavMeshQuery) getPortalPoints8(
 // pathToNode gets the path leading to the specified end node.
 func (q *NavMeshQuery) pathToNode(
 	endNode *Node,
-	path *[]PolyRef,
-	pathCount *int32,
-	maxPath int32) Status {
+	path []PolyRef) (pathCount int, st Status) {
 
 	var (
 		curNode *Node
-		length  int32
+		length  int
 	)
 	// Find the length of the entire path.
 	curNode = endNode
@@ -1121,8 +891,8 @@ func (q *NavMeshQuery) pathToNode(
 
 	// If the path cannot be fully stored then advance to the last node we will be able to store.
 	curNode = endNode
-	var writeCount int32
-	for writeCount = length; writeCount > maxPath; writeCount-- {
+	var writeCount int
+	for writeCount = length; writeCount > len(path); writeCount-- {
 		assert.True(curNode != nil, "curNode should not be nil")
 		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 	}
@@ -1130,21 +900,25 @@ func (q *NavMeshQuery) pathToNode(
 	// Write path
 	for i := writeCount - 1; i >= 0; i-- {
 		assert.True(curNode != nil, "curNode should not be nil")
-		assert.True(int(i) < len(*path), "i:%d should be < len(*path):%d", i, len(*path))
+		assert.True(int(i) < len(path), "i:%d should be < len(path):%d", i, len(path))
 
-		(*path)[i] = curNode.ID
+		path[i] = curNode.ID
 		curNode = q.nodePool.NodeAtIdx(int32(curNode.PIdx))
 	}
 
 	assert.True(curNode == nil, "curNode should be nil")
 
-	*pathCount = math32.MinInt32(length, maxPath)
-
-	if length > maxPath {
-		return Success | BufferTooSmall
+	if length <= len(path) {
+		pathCount = length
+	} else {
+		pathCount = len(path)
 	}
 
-	return Success
+	if length > len(path) {
+		return pathCount, Success | BufferTooSmall
+	}
+
+	return pathCount, Success
 }
 
 // closestPointOnPoly uses the detail polygons to find the surface height.
@@ -1152,6 +926,8 @@ func (q *NavMeshQuery) pathToNode(
 //
 // pos does not have to be within the bounds of the polygon or navigation mesh.
 // See closestPointOnPolyBoundary() for a limited but faster option.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
@@ -1263,11 +1039,10 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 // If the provided position lies within the polygon's xz-bounds (above or
 // below), then pos and closest will be equal. The height of closest will be the
 // polygon boundary. The height detail is not used. pos does not have to be
-// within the bounds of the polybon or the navigation
-// mesh.
+// within the bounds of the polybon or the navigation mesh.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.Vec3) Status {
-	assert.True(q.nav != nil, "NavMesh should not be nil")
-
 	var (
 		tile *MeshTile
 		poly *Poly
@@ -1324,8 +1099,11 @@ func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 //   ref      The reference id of the nearest polygon.
 //   pt       The nearest point on the polygon. [(x, y, z)]
 //
-// Note: If the search box does not intersect any polygons st will be
-// Success, but ref will be zero. So if in doubt, check ref before using pt.
+// Note: If the search box does not intersect any polygons the returned status
+// will be 'Success', but ref will be zero. So if in doubt, check ref before
+// using pt.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 	filter QueryFilter) (st Status, ref PolyRef, pt d3.Vec3) {
 
@@ -1349,44 +1127,46 @@ func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 // queryPolygons6 finds polygons that overlap the search box.
 //
 //  Arguments:
-//   [in] center     The center of the search box.
-//   [in] extents    The search distance along each axis.
-//   [in] filter     The polygon filter to apply to the query.
-//   [out]polys      The reference ids of the polygons that overlap the query box.
-//   [out]polyCount  The number of polygons in the search result.
-//   [in] maxPolys   The maximum number of polygons the search result can hold.
+//   center     The center of the search box.
+//   extents    The search distance along each axis.
+//   filter     The polygon filter to apply to the query.
+//   polys      The reference ids of the polygons that overlap the query box.
+//   polyCount  The number of polygons in the search result.
+//   maxPolys   The maximum number of polygons the search result can hold.
 //
 //  Return values:
 //   The status flags for the query.
 //
-// If no polygons are found, the function will return Success with a
-// polyCount of zero.
-// If polys is too small to hold the entire result set, then the array will be
-// filled to capacity. The method of choosing which polygons from the full set
-// are included in the partial result set is undefined.
+// If no polygons are found, the function will return Success with a polyCount
+// of zero. If polys is too small to hold the entire result set, then the array
+// will be filled to capacity. The method of choosing which polygons from the
+// full set are included in the partial result set is undefined.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) queryPolygons6(
 	center, extents []float32,
 	filter QueryFilter,
 	polys []PolyRef,
-	polyCount *int32,
-	maxPolys int32) Status {
+	maxPolys int32) (polyCount int32, st Status) {
 
-	if polys == nil || polyCount == nil || maxPolys < 0 {
-		return Failure | InvalidParam
+	if polys == nil || maxPolys < 0 {
+		st = Failure | InvalidParam
+		return
 	}
 
 	collector := newCollectPolysQuery(polys, maxPolys)
 
-	status := q.queryPolygons4(center, extents, filter, collector)
-	if StatusFailed(status) {
-		return status
+	st = q.queryPolygons4(center, extents, filter, collector)
+	if StatusFailed(st) {
+		return
 	}
 
-	*polyCount = collector.numCollected
+	polyCount = collector.numCollected
+	st = Success
 	if collector.overflow {
-		return Success | BufferTooSmall
+		st |= BufferTooSmall
 	}
-	return Success
+	return
 }
 
 // queryPolygons4 finds polygons that overlap the search box.
@@ -1400,15 +1180,15 @@ func (q *NavMeshQuery) queryPolygons6(
 //
 // The query will be invoked with batches of polygons. Polygons passed to the
 // query have bounding boxes that overlap with the center and extents passed to
-// this function. The polyQuery.process function is invoked multiple times
-// until all overlapping polygons have been processed.
+// this function. The polyQuery.process function is invoked multiple times until
+// all overlapping polygons have been processed.
+//
+// Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) queryPolygons4(
 	center, extents d3.Vec3,
 	filter QueryFilter,
 	query polyQuery) Status {
-
-	assert.True(q.nav != nil, "navmesh should not be nill")
-
+	// parameter check
 	if len(center) != 3 || len(extents) != 3 || filter == nil || query == nil {
 		return Failure | InvalidParam
 	}
@@ -1427,8 +1207,6 @@ func (q *NavMeshQuery) queryPolygons4(
 		for x := minx; x <= maxx; x++ {
 			nneis := q.nav.TilesAt(x, y, neis, maxNeis)
 			for j := int32(0); j < nneis; j++ {
-				fmt.Println("offmeshcons in tile:", neis[j].OffMeshCons)
-				fmt.Println("q.queryPolygonsInTile(", neis[j].OffMeshCons, bmin[:], bmax[:], filter, query, ")")
 				q.queryPolygonsInTile(neis[j], bmin[:], bmax[:], filter, query)
 			}
 		}
@@ -1571,4 +1349,310 @@ func (q *NavMeshQuery) NodePool() *NodePool {
 // AttachedNavMesh returns the navigation mesh the query object is using.
 func (q *NavMeshQuery) AttachedNavMesh() *NavMesh {
 	return q.nav
+}
+
+// IsValidPolyRef returns true if the polygon reference is valid and passes the
+// filter restrictions.
+//
+//  Arguments:
+//   ref      The polygon reference to check.
+//   filter   The filter to apply.
+//
+// Note: this method may be used by multiple clients without side effects.
+func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
+	var (
+		tile *MeshTile
+		poly *Poly
+	)
+	status := q.nav.TileAndPolyByRef(ref, &tile, &poly)
+	// If cannot get polygon, assume it does not exists and boundary is invalid.
+	if StatusFailed(status) {
+		return false
+	}
+	// If cannot pass filter, assume flags has changed and boundary is invalid.
+	if !filter.PassFilter(ref, tile, poly) {
+		return false
+	}
+	return true
+}
+
+// Casts a 'walkability' ray along the surface of the navigation mesh from
+// the start position toward the end position.
+//
+//  Arguments:
+//   startRef  The reference id of the start polygon.
+//   startPos  A position within the start polygon representing
+//             the start of the ray. [(x, y, z)]
+//   endPos    The position to cast the ray toward. [(x, y, z)]
+//   filter    The polygon filter to apply to the query.
+//   options   Govern how the raycast behaves. See RaycastOptions
+//   prevRef   Parent of start ref. Used during for cost calculation [opt]
+//
+//  Returns:
+//   hit       Raycast hit structure which will be filled with the results.
+//   st        status flags for the query.
+//
+// This method is meant to be used for quick, short distance checks.
+//
+// If the path array is too small to hold the result, it will be filled as
+// far as possible from the start postion toward the end position.
+//
+// # Using the Hit Parameter t of RaycastHit
+//
+// If the hit parameter is a very high value (math.MaxFloat32), then the ray has
+// hit the end position. In this case the path represents a valid corridor to
+// the end position and the value of hitNormal is undefined.
+//
+// If the hit parameter is zero, then the start position is on the wall that was
+// hit and the value of hitNormal is undefined.
+//
+// If 0 < t < 1.0 then the following applies:
+//
+// Example:
+//  distanceToHitBorder = distanceToEndPosition * t
+//  hitPoint = startPos + (endPos - startPos) * t
+//
+// # Use Case Restriction
+//
+// The raycast ignores the y-value of the end position. (2D check.) This places
+// significant limits on how it can be used. For example:
+//
+// Consider a scene where there is a main floor with a second floor balcony that
+// hangs over the main floor. So the first floor mesh extends below the balcony
+// mesh. The start position is somewhere on the first floor. The end position is
+// on the balcony.
+//
+// The raycast will search toward the end position along the first floor mesh.
+// If it reaches the end position's xz-coordinates it will indicate
+// math.MaxFloat32 (no wall hit), meaning it reached the end position. This is
+// one example of why this method is meant for short distance checks.
+func (q *NavMeshQuery) Raycast(
+	startRef PolyRef,
+	startPos, endPos d3.Vec3,
+	filter QueryFilter,
+	options int,
+	prevRef PolyRef) (hit RaycastHit, st Status) {
+
+	// Validate input
+	if startRef == 0 || !q.nav.IsValidPolyRef(startRef) {
+		st = Failure | InvalidParam
+		return
+	}
+	if prevRef != 0 && !q.nav.IsValidPolyRef(prevRef) {
+		st = Failure | InvalidParam
+		return
+	}
+
+	var (
+		dir, curPos, lastPos d3.Vec3
+		verts                [VertsPerPolygon*3 + 3]float32
+		n                    int
+	)
+
+	curPos = d3.NewVec3From(startPos)
+	dir = endPos.Sub(startPos)
+	hit.HitNormal = d3.NewVec3()
+
+	st = Success
+
+	var (
+		prevTile, tile, nextTile *MeshTile
+		prevPoly, poly, nextPoly *Poly
+		curRef                   PolyRef
+	)
+
+	// The API input has been checked already, skip checking internal data.
+	curRef = startRef
+	q.nav.TileAndPolyByRefUnsafe(curRef, &tile, &poly)
+	prevTile = tile
+	prevPoly = poly
+	nextTile = prevTile
+	nextPoly = prevPoly
+	if prevRef != 0 {
+		q.nav.TileAndPolyByRefUnsafe(prevRef, &prevTile, &prevPoly)
+	}
+
+	for curRef != 0 {
+		// Cast ray against current polygon.
+
+		// Collect vertices.
+		var nv int
+		for i := 0; i < int(poly.VertCount); i++ {
+			copy(verts[nv*3:], tile.Verts[poly.Verts[i]*3:3+poly.Verts[i]*3])
+			nv++
+		}
+
+		var (
+			tmax   float32
+			segMax int
+			res    bool
+		)
+		if _, tmax, _, segMax, res = IntersectSegmentPoly2D(startPos, endPos, verts[:], nv); !res {
+			// Could not hit the polygon, keep the old t and report hit.
+			hit.PathCount = n
+			return
+		}
+
+		hit.HitEdgeIndex = segMax
+
+		// Keep track of furthest t so far.
+		if tmax > hit.T {
+			hit.T = tmax
+		}
+
+		// Store visited polygons.
+		if n < hit.MaxPath {
+			hit.Path[n] = curRef
+			n++
+		} else {
+			st |= BufferTooSmall
+		}
+
+		// Ray end is completely inside the polygon.
+		if segMax == -1 {
+			hit.T = math.MaxFloat32
+			hit.PathCount = n
+
+			// add the cost
+			if (options & RaycastUseCosts) != 0 {
+				hit.PathCost += filter.Cost(curPos, endPos, prevRef, prevTile, prevPoly, curRef, tile, poly, curRef, tile, poly)
+			}
+			return
+		}
+
+		// Follow neighbours.
+		var nextRef PolyRef
+
+		for i := uint32(poly.FirstLink); i != nullLink; i = tile.Links[i].Next {
+			link := &tile.Links[i]
+
+			// Find link which contains this edge.
+			if int(link.Edge) != segMax {
+				continue
+			}
+
+			// Get pointer to the next polygon.
+			nextTile = nil
+			nextPoly = nil
+			q.nav.TileAndPolyByRefUnsafe(link.Ref, &nextTile, &nextPoly)
+
+			// Skip off-mesh connections.
+			if nextPoly.Type() == polyTypeOffMeshConnection {
+				continue
+			}
+
+			// Skip links based on filter.
+			if !filter.PassFilter(link.Ref, nextTile, nextPoly) {
+				continue
+			}
+
+			// If the link is internal, just return the ref.
+			if link.Side == 0xff {
+				nextRef = link.Ref
+				break
+			}
+
+			// If the link is at tile boundary,
+
+			// Check if the link spans the whole edge, and accept.
+			if link.Bmin == 0 && link.Bmax == 255 {
+				nextRef = link.Ref
+				break
+			}
+
+			// Check for partial edge links.
+			v0 := poly.Verts[link.Edge]
+			v1 := poly.Verts[(link.Edge+1)%poly.VertCount]
+			left := tile.Verts[v0*3 : 3+v0*3]
+			right := tile.Verts[v1*3 : 3+v1*3]
+
+			// Check that the intersection lies inside the link portal.
+			if link.Side == 0 || link.Side == 4 {
+				// Calculate link size.
+				var s float32 = 1.0 / 255.0
+				lmin := left[2] + (right[2]-left[2])*(float32(link.Bmin)*s)
+				lmax := left[2] + (right[2]-left[2])*(float32(link.Bmax)*s)
+				if lmin > lmax {
+					lmin, lmax = lmax, lmin
+				}
+
+				// Find Z intersection.
+				z := startPos[2] + (endPos[2]-startPos[2])*tmax
+				if z >= lmin && z <= lmax {
+					nextRef = link.Ref
+					break
+				}
+			} else if link.Side == 2 || link.Side == 6 {
+				// Calculate link size.
+				var s float32 = 1.0 / 255.0
+				lmin := left[0] + (right[0]-left[0])*(float32(link.Bmin)*s)
+				lmax := left[0] + (right[0]-left[0])*(float32(link.Bmax)*s)
+				if lmin > lmax {
+					lmin, lmax = lmax, lmin
+				}
+
+				// Find X intersection.
+				x := startPos[0] + (endPos[0]-startPos[0])*tmax
+				if x >= lmin && x <= lmax {
+					nextRef = link.Ref
+					break
+				}
+			}
+		}
+
+		// add the cost
+		if (options & RaycastUseCosts) != 0 {
+			// compute the intersection point at the furthest end of the polygon
+			// and correct the height (since the raycast moves in 2d)
+			copy(lastPos, curPos[:3])
+			d3.Vec3Mad(curPos, startPos, dir, hit.T)
+			e1 := verts[segMax*3 : 3+segMax*3]
+			var e2 d3.Vec3 = verts[((segMax+1)%nv)*3 : 3+((segMax+1)%nv)*3]
+			var eDir, diff [3]float32
+			d3.Vec3Sub(eDir[:], e2, e1)
+			d3.Vec3Sub(diff[:], curPos, e1)
+			var s float32
+			if math32.Sqr(eDir[0]) > math32.Sqr(eDir[2]) {
+				s = diff[0] / eDir[0]
+			} else {
+				s = diff[2] / eDir[2]
+			}
+			curPos[1] = e1[1] + eDir[1]*s
+
+			hit.PathCost += filter.Cost(lastPos, curPos, prevRef, prevTile, prevPoly, curRef, tile, poly, nextRef, nextTile, nextPoly)
+		}
+
+		if nextRef == 0 {
+			// No neighbour, we hit a wall.
+
+			// Calculate hit normal.
+			a := segMax
+			var b int
+			if segMax+1 < nv {
+				b = segMax + 1
+			}
+			va := verts[a*3 : 3+a*3]
+			vb := verts[b*3 : 3+b*3]
+			dx := vb[0] - va[0]
+			dz := vb[2] - va[2]
+			hit.HitNormal[0] = dz
+			hit.HitNormal[1] = 0
+			hit.HitNormal[2] = -dx
+			hit.HitNormal.Normalize()
+
+			hit.PathCount = n
+			return
+		}
+
+		// No hit, advance to neighbour polygon.
+		prevRef = curRef
+		curRef = nextRef
+		prevTile = tile
+		tile = nextTile
+		prevPoly = poly
+		poly = nextPoly
+	}
+
+	hit.PathCount = n
+	return
 }

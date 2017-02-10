@@ -56,7 +56,7 @@ type BuildSettings struct {
 }
 
 type InputGeom struct {
-	chunkyMesh *ChunkyTriMesh
+	chunkyMesh *chunkyTriMesh
 	mesh       *MeshLoaderObj
 
 	meshBMin, meshBMax [3]float32
@@ -99,13 +99,13 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 
 	ig.mesh = NewMeshLoaderObj()
 	if err = ig.mesh.Load(path); err != nil {
-		return fmt.Errorf("could not load '%s'", err)
+		return err
 	}
 
 	CalcBounds(ig.mesh.Verts(), ig.mesh.VertCount(), ig.meshBMin[:], ig.meshBMax[:])
 
-	ig.chunkyMesh = new(ChunkyTriMesh)
-	if !CreateChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
+	ig.chunkyMesh = new(chunkyTriMesh)
+	if !createChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
 		return fmt.Errorf("failed to build chunky mesh for '%s'", path)
 	}
 
@@ -141,7 +141,7 @@ func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
 	}
 }
 
-func (ig *InputGeom) ChunkyMesh() *ChunkyTriMesh {
+func (ig *InputGeom) ChunkyMesh() *chunkyTriMesh {
 	return ig.chunkyMesh
 }
 
@@ -186,4 +186,23 @@ func (ig *InputGeom) OffMeshConnectionDirs() []uint8 {
 
 func (ig *InputGeom) OffMeshConnectionCount() int32 {
 	return ig.offMeshConCount
+}
+
+func (ig *InputGeom) addConvexVolume(verts []float32, nverts int, minh, maxh float32, area uint8) {
+	if ig.volumeCount >= maxVolumes {
+		return
+	}
+	vol := &ig.volumes[ig.volumeCount]
+	ig.volumeCount++
+	copy(vol.Verts[:], verts[3*nverts:])
+	vol.HMin = minh
+	vol.HMax = maxh
+	vol.NVerts = int32(nverts)
+	vol.Area = int32(area)
+}
+
+func (ig *InputGeom) deleteConvexVolume(i int) {
+	ig.volumeCount--
+	// copy last volume over the deleted one
+	ig.volumes[i] = ig.volumes[ig.volumeCount]
 }

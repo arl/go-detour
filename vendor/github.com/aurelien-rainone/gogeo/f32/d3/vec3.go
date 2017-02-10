@@ -127,6 +127,18 @@ func Vec3Max(mx, v Vec3) {
 	mx[2] = math32.Max(mx[2], v[2])
 }
 
+// Vec3Mad performs a scaled vector addition. v1 + (v2 * s)
+//
+//     dest  [out]  The result vector. [(x, y, z)]
+//     v1    [in]   The base vector. [(x, y, z)]
+//     v2    [in]   The vector to scale and add to @p v1. [(x, y, z)]
+//     s     [in]   The amount to scale v2 by before adding to v1.
+func Vec3Mad(dest, v1, v2 Vec3, s float32) {
+	dest[0] = v1[0] + v2[0]*s
+	dest[1] = v1[1] + v2[1]*s
+	dest[2] = v1[2] + v2[2]*s
+}
+
 // Vec3Lerp performs a linear interpolation between two vectors. v1 toward v2
 //
 //     dest  [out]  The result vector.

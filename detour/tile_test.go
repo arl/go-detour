@@ -13,8 +13,8 @@ func TestFindNearestPolyInTile(t *testing.T) {
 	)
 
 	pathTests := []struct {
-		pt   d3.Vec3   // point
-		ext  d3.Vec3   // search extents
+		pt   d3.Vec3 // point
+		ext  d3.Vec3 // search extents
 		want PolyRef // wanted poly ref
 	}{
 		{

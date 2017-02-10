@@ -34,15 +34,27 @@ func (pm *PolyMesh) Free() {
 	pm = nil
 }
 
-// Note: If the mesh data is to be used to construct a Detour navigation mesh, then the upper
+// BuildPolyMesh builds a polygon mesh from the provided contours.
+//
+//  Arguments:
+//  ctx     The build context to use during the operation.
+//  cset    A fully built contour set.
+//  nvp     The maximum number of vertices allowed for polygons generated during
+//          the contour to polygon conversion process. [Limit: >= 3]
+//  mesh    The resulting polygon mesh. (Must be re-allocated.)
+//
+// Returns True if the operation completed successfully.
+//
+// Note: If the mesh data is to be used to construct a Detour navigation mesh,
+// then the upper
 // limit must be retricted to <= VertsPerPolygon.
 //
-// @see ContourSet, PolyMesh, Config
+// see ContourSet, PolyMesh, Config
 func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_BUILD_POLYMESH)
-	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESH)
+	ctx.StartTimer(TimerBuildPolymesh)
+	defer ctx.StopTimer(TimerBuildPolymesh)
 
 	var (
 		maxVertices     int32
@@ -137,7 +149,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 			v := cont.Verts[j*4:]
 			indices[j] = int64(addVertex(uint16(v[0]), uint16(v[1]), uint16(v[2]),
 				mesh.Verts, firstVert, nextVert, &mesh.NVerts))
-			if (v[3] & RC_BORDER_VERTEX) != 0 {
+			if (v[3] & borderVertex) != 0 {
 				// This vertex should be removed.
 				vflags[indices[j]] = 1
 			}
@@ -257,15 +269,15 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 		for i := int32(0); i < mesh.NPolys; i++ {
 			p := mesh.Polys[i*2*nvp:]
 			for j := int32(0); j < nvp; j++ {
-				if p[j] == RC_MESH_NULL_IDX {
+				if p[j] == meshNullIdx {
 					break
 				}
 				// Skip connected edges.
-				if p[nvp+j] != RC_MESH_NULL_IDX {
+				if p[nvp+j] != meshNullIdx {
 					continue
 				}
 				nj := j + 1
-				if nj >= nvp || p[nj] == RC_MESH_NULL_IDX {
+				if nj >= nvp || p[nj] == meshNullIdx {
 					nj = 0
 				}
 				va := mesh.Verts[p[j]*3:]
@@ -286,12 +298,6 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 
 	// Just allocate the mesh flags array. The user is resposible to fill it.
 	mesh.Flags = make([]uint16, mesh.NPolys)
-	//if (!mesh.flags) {
-	//ctx.Errorf"rcBuildPolyMesh: Out of memory 'mesh.flags' (%d).", mesh.npolys);
-	//return false;
-	//}
-	//memset(mesh.flags, 0, sizeof(unsigned short) * mesh.npolys);
-
 	if mesh.NVerts > 0xffff {
 		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many vertices %d (max %d). Data can be corrupted.", mesh.NVerts, 0xffff)
 	}

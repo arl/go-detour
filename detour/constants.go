@@ -6,7 +6,7 @@ const (
 )
 
 const (
-	// The maximum number of vertices per navigation polygon.
+	// VertsPerPolygon is the maximum number of vertices per navigation polygon.
 	VertsPerPolygon uint32 = 6
 
 	// A flag that indicates that an off-mesh connection can be traversed in both directions. (Is bidirectional.)

@@ -7,12 +7,12 @@ import (
 
 // Recast log categories.
 // see BuildContext
-type LogCategory int
+type logCategory int
 
 const (
-	RC_LOG_PROGRESS LogCategory = 1 + iota // A progress log entry.
-	RC_LOG_WARNING                         // A warning log entry.
-	RC_LOG_ERROR                           // An error log entry.
+	logProgress logCategory = 1 + iota // A progress log entry.
+	logWarning                         // A warning log entry.
+	logError                           // An error log entry.
 )
 
 const maxMessages = 1000
@@ -20,8 +20,8 @@ const maxMessages = 1000
 // BuildContext provides an interface for optional logging and performance
 // tracking of the recast build process.
 type BuildContext struct {
-	startTime [RC_MAX_TIMERS]time.Time
-	accTime   [RC_MAX_TIMERS]time.Duration
+	startTime [maxTimers]time.Time
+	accTime   [maxTimers]time.Duration
 
 	messages    [maxMessages]string
 	numMessages int
@@ -63,7 +63,7 @@ func (ctx *BuildContext) ResetLog() {
 // ResetTimers clears all peformance timers. (Resets all to unused.)
 func (ctx *BuildContext) ResetTimers() {
 	if ctx.timerEnabled {
-		for i := 0; i < RC_MAX_TIMERS; i++ {
+		for i := 0; i < maxTimers; i++ {
 			ctx.accTime[i] = time.Duration(0)
 		}
 	}
@@ -74,7 +74,7 @@ func (ctx *BuildContext) ResetTimers() {
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
 func (ctx *BuildContext) Progressf(format string, v ...interface{}) {
-	ctx.Log(RC_LOG_PROGRESS, format, v...)
+	ctx.log(logProgress, format, v...)
 }
 
 // Warningf writes a new log entry in the 'warning' category.
@@ -82,7 +82,7 @@ func (ctx *BuildContext) Progressf(format string, v ...interface{}) {
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
 func (ctx *BuildContext) Warningf(format string, v ...interface{}) {
-	ctx.Log(RC_LOG_WARNING, format, v...)
+	ctx.log(logWarning, format, v...)
 }
 
 // Errorf writes a new log entry in the 'error' category.
@@ -90,22 +90,22 @@ func (ctx *BuildContext) Warningf(format string, v ...interface{}) {
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
 func (ctx *BuildContext) Errorf(format string, v ...interface{}) {
-	ctx.Log(RC_LOG_ERROR, format, v...)
+	ctx.log(logError, format, v...)
 }
 
-// Log writes a new log entry in the specified category.
+// log writes a new log entry in the specified category.
 //
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
-func (ctx *BuildContext) Log(category LogCategory, format string, v ...interface{}) {
+func (ctx *BuildContext) log(category logCategory, format string, v ...interface{}) {
 	if ctx.logEnabled && ctx.numMessages < maxMessages {
 		// Store message
 		switch category {
-		case RC_LOG_PROGRESS:
+		case logProgress:
 			ctx.messages[ctx.numMessages] = "PROG " + fmt.Sprintf(format, v...)
-		case RC_LOG_WARNING:
+		case logWarning:
 			ctx.messages[ctx.numMessages] = "WARN " + fmt.Sprintf(format, v...)
-		case RC_LOG_ERROR:
+		case logError:
 			ctx.messages[ctx.numMessages] = "ERR " + fmt.Sprintf(format, v...)
 		}
 		ctx.numMessages++
@@ -117,7 +117,6 @@ func (ctx *BuildContext) Log(category LogCategory, format string, v ...interface
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
 func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
-
 	// Print header.
 	fmt.Printf(format+"\n", args...)
 
@@ -165,7 +164,6 @@ func (ctx *BuildContext) StopTimer(label TimerLabel) {
 func (ctx *BuildContext) AccumulatedTime(label TimerLabel) time.Duration {
 	if ctx.timerEnabled {
 		return ctx.accTime[label]
-	} else {
-		return time.Duration(0)
 	}
+	return time.Duration(0)
 }

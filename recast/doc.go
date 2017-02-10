@@ -15,9 +15,9 @@
 //
 // The general life-cycle of the main classes is as follows:
 //
-//  - Initialize or build the object. (E.g. #BuildPolyMesh)
-//  - Update the object as needed. (E.g. #RasterizeTriangles)
+//  - Initialize or build the object. (E.g. BuildPolyMesh)
+//  - Update the object as needed. (E.g. RasterizeTriangles)
 //  - Use the object as part of the pipeline.
 //  - Free the object if it has a Free() function and if it remains in scope but
-//    won't be used. (E.g. #rcFreeHeightField)
+//    won't be used. (E.g. FreeHeightField)
 package recast

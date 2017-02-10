@@ -2,6 +2,21 @@ package recast
 
 import "github.com/aurelien-rainone/assertgo"
 
+// BuildRegionsMonotone builds region data for the heightfield using simple
+// monotone partitioning.
+//
+//  Arguments:
+//   ctx             The build context to use during the operation.
+//   chf             A populated compact heightfield.
+//   borderSize      The size of the non-navigable border around the
+//                   heightfield. [Limit: >=0] [Units: vx]
+//   minRegionArea   The minimum number of cells allowed to form isolated island
+//                   areas. [Limit: >=0] [Units: vx].
+//   mergeRegionArea Any regions with a span count smaller than this value will,
+//                   if possible, be merged with larger regions.
+//                   [Limit: >=0] [Units: vx]
+//
+// Returns true if the operation completed successfully.
 // Non-null regions will consist of connected, non-overlapping walkable spans
 // that form a single contour.  Contours will form simple polygons.
 //
@@ -14,19 +29,18 @@ import "github.com/aurelien-rainone/assertgo"
 // See the Config documentation for more information on the configuration
 // parameters.
 //
-// The region data will be available via the CompactHeightfield.maxRegions
-// and CompactSpan.reg fields.
+// The region data will be available via the CompactHeightfield.maxRegions and
+// CompactSpan.reg fields.
 //
-// Warning: the distance field must be created using BuildDistanceField
-// before attempting to build regions.
+// Warning: the distance field must be created using BuildDistanceField before
+// attempting to build regions.
 //
-// see CompactHeightfield, CompactSpan, BuildDistanceField, BuildRegionsMonotone, Config
+// see CompactHeightfield, CompactSpan, BuildDistanceField,
+// BuildRegionsMonotone, Config
 func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
-	assert.True(ctx != nil, "ctx should not be nil")
-
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS)
-	defer ctx.StopTimer(RC_TIMER_BUILD_REGIONS)
+	ctx.StartTimer(TimerBuildRegions)
+	defer ctx.StopTimer(TimerBuildRegions)
 
 	w := chf.Width
 	h := chf.Height
@@ -42,13 +56,13 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 		bw := iMin(w, borderSize)
 		bh := iMin(h, borderSize)
 		// Paint regions
-		paintRectRegion(0, bw, 0, h, id|RC_BORDER_REG, chf, srcReg)
+		paintRectRegion(0, bw, 0, h, id|borderReg, chf, srcReg)
 		id++
-		paintRectRegion(w-bw, w, 0, h, id|RC_BORDER_REG, chf, srcReg)
+		paintRectRegion(w-bw, w, 0, h, id|borderReg, chf, srcReg)
 		id++
-		paintRectRegion(0, w, 0, bh, id|RC_BORDER_REG, chf, srcReg)
+		paintRectRegion(0, w, 0, bh, id|borderReg, chf, srcReg)
 		id++
-		paintRectRegion(0, w, h-bh, h, id|RC_BORDER_REG, chf, srcReg)
+		paintRectRegion(0, w, h-bh, h, id|borderReg, chf, srcReg)
 		id++
 
 		chf.BorderSize = borderSize
@@ -69,17 +83,17 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
 				s := &chf.Spans[i]
-				if chf.Areas[i] == RC_NULL_AREA {
+				if chf.Areas[i] == nullArea {
 					continue
 				}
 
 				// -x
 				previd := uint16(0)
-				if GetCon(s, 0) != RC_NOT_CONNECTED {
+				if GetCon(s, 0) != notConnected {
 					ax := x + GetDirOffsetX(0)
 					ay := y + GetDirOffsetY(0)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 0)
-					if (srcReg[ai]&RC_BORDER_REG) == 0 && chf.Areas[i] == chf.Areas[ai] {
+					if (srcReg[ai]&borderReg) == 0 && chf.Areas[i] == chf.Areas[ai] {
 
 						previd = srcReg[ai]
 					}
@@ -94,11 +108,11 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 				}
 
 				// -y
-				if GetCon(s, 3) != RC_NOT_CONNECTED {
+				if GetCon(s, 3) != notConnected {
 					ax := x + GetDirOffsetX(3)
 					ay := y + GetDirOffsetY(3)
 					ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(s, 3)
-					if (srcReg[ai] != 0) && (srcReg[ai]&RC_BORDER_REG) == 0 && chf.Areas[i] == chf.Areas[ai] {
+					if (srcReg[ai] != 0) && (srcReg[ai]&borderReg) == 0 && chf.Areas[i] == chf.Areas[ai] {
 						nr := uint16(srcReg[ai])
 						if (sweeps[previd].nei == 0) || sweeps[previd].nei == nr {
 							sweeps[previd].nei = nr
@@ -137,7 +151,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	}
 
 	{
-		ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StartTimer(TimerBuildRegionsFilter)
 
 		// Merge regions and filter out small regions.
 		overlaps := make([]int32, 0)
@@ -146,7 +160,7 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 			return false
 		}
 		// Monotone partitioning does not generate overlapping regions.
-		ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StopTimer(TimerBuildRegionsFilter)
 	}
 
 	// Store the result out.
@@ -157,38 +171,57 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 	return true
 }
 
-/// @par
-///
-/// Non-null regions will consist of connected, non-overlapping walkable spans that form a single contour.
-/// Contours will form simple polygons.
-///
-/// If multiple regions form an area that is smaller than @p minRegionArea, then all spans will be
-/// re-assigned to the zero (null) region.
-///
-/// Watershed partitioning can result in smaller than necessary regions, especially in diagonal corridors.
-/// @p mergeRegionArea helps reduce unecessarily small regions.
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// The region data will be available via the rcCompactHeightfield::maxRegions
-/// and rcCompactSpan::reg fields.
-///
-/// @warning The distance field must be created using #rcBuildDistanceField before attempting to build regions.
-///
-/// @see rcCompactHeightfield, rcCompactSpan, rcBuildDistanceField, rcBuildRegionsMonotone, rcConfig
+// BuildRegions builds region data for the heightfield using watershed
+// partitioning.
+//
+//  Arguments:
+//   ctx             The build context to use during the operation.
+//   chf             A populated compact heightfield.
+//   borderSize      The size of the non-navigable border around the
+//                   heightfield. [Limit: >=0] [Units: vx]
+//   minRegionArea   The minimum number of cells allowed to form isolated island
+//                   areas. [Limit: >=0] [Units: vx].
+//   mergeRegionArea Any regions with a span count smaller than this value will,
+//                   if possible, be merged with larger regions.
+//                   [Limit: >=0] [Units: vx]
+//
+// Returns True if the operation completed successfully.
+//
+// Non-null regions will consist of connected, non-overlapping walkable spans
+// that form a single contour.
+// Contours will form simple polygons.
+//
+// If multiple regions form an area that is smaller than @p minRegionArea, then
+// all spans will be re-assigned to the zero (null) region.
+//
+// Watershed partitioning can result in smaller than necessary regions,
+// especially in diagonal corridors. mergeRegionArea helps reduce
+// unecessarily small regions.
+//
+// See the Config documentation for more information on the configuration
+// parameters.
+//
+// The region data will be available via the CompactHeightfield::maxRegions and
+// CompactSpan::reg fields.
+//
+// Warning: The distance field must be created using BuildDistanceField
+// before attempting to build regions.
+//
+// see CompactHeightfield, CompactSpan, BuildDistanceField, BuildRegionsMonotone, Config
 func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 	borderSize, minRegionArea, mergeRegionArea int32) bool {
 
+	panic("untested")
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS)
-	defer ctx.StopTimer(RC_TIMER_BUILD_REGIONS)
+	ctx.StartTimer(TimerBuildRegions)
+	defer ctx.StopTimer(TimerBuildRegions)
 
 	w := chf.Width
 	h := chf.Height
 
 	buf := make([]uint16, chf.SpanCount*4)
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS_WATERSHED)
+	ctx.StartTimer(TimerBuildRegionsWatershed)
 
 	const (
 		LOG_NB_STACKS = 3
@@ -215,7 +248,7 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 	//memset(srcReg, 0, sizeof(unsigned short)*chf.spanCount);
 	//memset(srcDist, 0, sizeof(unsigned short)*chf.spanCount);
 
-	regionId := uint16(1)
+	regionID := uint16(1)
 	// original C code:
 	// level := uint16(chf.maxDistance+1) & ~1;
 	level := uint16(int(chf.MaxDistance+1) & int(^1))
@@ -232,70 +265,70 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 		bh := iMin(h, borderSize)
 
 		// Paint regions
-		paintRectRegion(0, bw, 0, h, regionId|RC_BORDER_REG, chf, srcReg)
-		regionId++
-		paintRectRegion(w-bw, w, 0, h, regionId|RC_BORDER_REG, chf, srcReg)
-		regionId++
-		paintRectRegion(0, w, 0, bh, regionId|RC_BORDER_REG, chf, srcReg)
-		regionId++
-		paintRectRegion(0, w, h-bh, h, regionId|RC_BORDER_REG, chf, srcReg)
-		regionId++
+		paintRectRegion(0, bw, 0, h, regionID|borderReg, chf, srcReg)
+		regionID++
+		paintRectRegion(w-bw, w, 0, h, regionID|borderReg, chf, srcReg)
+		regionID++
+		paintRectRegion(0, w, 0, bh, regionID|borderReg, chf, srcReg)
+		regionID++
+		paintRectRegion(0, w, h-bh, h, regionID|borderReg, chf, srcReg)
+		regionID++
 
 		chf.BorderSize = borderSize
 	}
 
-	sId := -1
+	sID := -1
 	for level > 0 {
 		if level >= 2 {
 			level = level - 2
 		} else {
 			level = 0
 		}
-		sId = (sId + 1) & (NB_STACKS - 1)
+		sID = (sID + 1) & (NB_STACKS - 1)
 
 		//		ctx->startTimer(RC_TIMER_DIVIDE_TO_LEVELS);
 
-		if sId == 0 {
+		if sID == 0 {
 			sortCellsByLevel(level, chf, srcReg, NB_STACKS, lvlStacks[:], 1)
 		} else {
 			// copy left overs from last level
-			appendStacks(lvlStacks[sId-1], lvlStacks[sId], srcReg)
+			appendStacks(lvlStacks[sID-1], lvlStacks[sID], srcReg)
 		}
 
 		//		ctx->stopTimer(RC_TIMER_DIVIDE_TO_LEVELS);
 
 		{
-			ctx.StartTimer(RC_TIMER_BUILD_REGIONS_EXPAND)
+			ctx.StartTimer(TimerBuildRegionsExpand)
 
 			// Expand current regions until no empty connected cells found.
 			// TODO: CHECK THIS
-			if swapped := expandRegions(expandIters, level, chf, &srcReg, &srcDist, &dstReg, &dstDist, &lvlStacks[sId], false); swapped {
+			if swapped := expandRegions(expandIters, level, chf, &srcReg, &srcDist, &dstReg, &dstDist, &lvlStacks[sID], false); swapped {
 				srcReg, dstReg = dstReg, srcReg
 				srcDist, dstDist = dstDist, srcDist
 			}
-			ctx.StopTimer(RC_TIMER_BUILD_REGIONS_EXPAND)
+			ctx.StopTimer(TimerBuildRegionsExpand)
 		}
 
 		{
-			ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FLOOD)
+			ctx.StartTimer(TimerBuildRegionsFlood)
 
 			// Mark new regions with IDs.
-			for j := 0; j < len(lvlStacks[sId]); j += 3 {
-				x := lvlStacks[sId][j]
-				y := lvlStacks[sId][j+1]
-				i := lvlStacks[sId][j+2]
+			for j := 0; j < len(lvlStacks[sID]); j += 3 {
+				x := lvlStacks[sID][j]
+				y := lvlStacks[sID][j+1]
+				i := lvlStacks[sID][j+2]
 				if i >= 0 && srcReg[i] == 0 {
-					if floodRegion(x, y, i, level, regionId, chf, srcReg, srcDist, &stack) {
-						if regionId == 0xFFFF {
+					if floodRegion(x, y, i, level, regionID, chf, srcReg, srcDist, &stack) {
+						if regionID == 0xFFFF {
 							ctx.Errorf("rcBuildRegions: Region ID overflow")
 							return false
 						}
 
-						regionId++
+						regionID++
 					}
 				}
 			}
-			ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FLOOD)
+			ctx.StopTimer(TimerBuildRegionsFlood)
 		}
 	}
 
@@ -305,14 +338,14 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 		srcDist, dstDist = dstDist, srcDist
 	}
 
-	ctx.StartTimer(RC_TIMER_BUILD_REGIONS_WATERSHED)
+	ctx.StartTimer(TimerBuildRegionsWatershed)
 
 	{
-		ctx.StartTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StartTimer(TimerBuildRegionsFilter)
 
 		// Merge regions and filter out smalle regions.
 		var overlaps []int32
-		chf.MaxRegions = regionId
+		chf.MaxRegions = regionID
 		if !mergeAndFilterRegions(ctx, minRegionArea, mergeRegionArea, &chf.MaxRegions, chf, srcReg, &overlaps) {
 			return false
 		}
@@ -321,7 +354,7 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 		if len(overlaps) > 0 {
 			ctx.Errorf("rcBuildRegions: %d overlapping regions.", len(overlaps))
 		}
-		ctx.StopTimer(RC_TIMER_BUILD_REGIONS_FILTER)
+		ctx.StopTimer(TimerBuildRegionsFilter)
 	}
 
 	// Write the result out.
@@ -332,15 +365,15 @@ func BuildRegions(ctx *BuildContext, chf *CompactHeightfield,
 	return true
 }
 
-func paintRectRegion(minx, maxx, miny, maxy int32, regId uint16, chf *CompactHeightfield, srcReg []uint16) {
+func paintRectRegion(minx, maxx, miny, maxy int32, regID uint16, chf *CompactHeightfield, srcReg []uint16) {
 	w := chf.Width
 	for y := miny; y < maxy; y++ {
 		for x := minx; x < maxx; x++ {
 			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				if chf.Areas[i] != RC_NULL_AREA {
-					srcReg[i] = regId
+				if chf.Areas[i] != nullArea {
+					srcReg[i] = regID
 				}
 			}
 		}
@@ -395,7 +428,7 @@ func floodRegion(x, y, i int32,
 		dir = 0
 		for ; dir < 4; dir++ {
 			// 8 connected
-			if GetCon(cs, dir) != RC_NOT_CONNECTED {
+			if GetCon(cs, dir) != notConnected {
 				ax := cx + GetDirOffsetX(dir)
 				ay := cy + GetDirOffsetY(dir)
 				ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(cs, dir)
@@ -403,7 +436,7 @@ func floodRegion(x, y, i int32,
 					continue
 				}
 				nr := srcReg[ai]
-				if (nr & RC_BORDER_REG) != 0 {
+				if (nr & borderReg) != 0 {
 					// Do not take borders into account.
 					continue
 				}
@@ -415,7 +448,7 @@ func floodRegion(x, y, i int32,
 				as := &chf.Spans[ai]
 
 				dir2 := int32((dir + 1) & 0x3)
-				if GetCon(as, dir2) != RC_NOT_CONNECTED {
+				if GetCon(as, dir2) != notConnected {
 					ax2 := ax + GetDirOffsetX(dir2)
 					ay2 := ay + GetDirOffsetY(dir2)
 					ai2 := int32(chf.Cells[ax2+ay2*w].Index) + GetCon(as, dir2)
@@ -439,7 +472,7 @@ func floodRegion(x, y, i int32,
 
 		// Expand neighbours.
 		for dir = 0; dir < 4; dir++ {
-			if GetCon(cs, dir) != RC_NOT_CONNECTED {
+			if GetCon(cs, dir) != notConnected {
 				ax := cx + GetDirOffsetX(dir)
 				ay := cy + GetDirOffsetY(dir)
 				ai := int32(chf.Cells[ax+ay*w].Index) + GetCon(cs, dir)
@@ -463,6 +496,7 @@ func expandRegions(maxIter int, level uint16,
 	srcReg, srcDist, dstReg, dstDist *[]uint16,
 	stack *[]int32, fillStack bool) (swapped bool) {
 
+	panic("untested")
 	swapped = false
 	w := chf.Width
 	h := chf.Height
@@ -475,19 +509,14 @@ func expandRegions(maxIter int, level uint16,
 				c := &chf.Cells[x+y*w]
 				i := int32(c.Index)
 				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-					if chf.Dist[i] >= level && (*srcReg)[i] == 0 && chf.Areas[i] != RC_NULL_AREA {
+					if chf.Dist[i] >= level && (*srcReg)[i] == 0 && chf.Areas[i] != nullArea {
 						*stack = append(*stack, x, y, i)
-						panic("NON TEST POUR CUBES ET DEVELER NavMesh")
-						//stack.push(x);
-						//stack.push(y);
-						//stack.push(i);
 					}
 				}
 			}
 		}
 	} else {
 		// use cells in the input stack
-
 		// mark all cells which already have a region
 		for j := 0; j < len(*stack); j += 3 {
 			i := (*stack)[j+2]
@@ -503,8 +532,6 @@ func expandRegions(maxIter int, level uint16,
 
 		copy(*dstReg, (*srcReg)[:chf.SpanCount])
 		copy(*dstDist, (*srcDist)[:chf.SpanCount])
-		//memcpy(dstReg, srcReg, sizeof(unsigned short)*chf.spanCount);
-		//memcpy(dstDist, srcDist, sizeof(unsigned short)*chf.spanCount);
 
 		for j := 0; j < len(*stack); j += 3 {
 			x := (*stack)[j+0]
@@ -521,7 +548,7 @@ func expandRegions(maxIter int, level uint16,
 			s := &chf.Spans[i]
 			var dir int32
 			for dir = 0; dir < 4; dir++ {
-				if GetCon(s, dir) == RC_NOT_CONNECTED {
+				if GetCon(s, dir) == notConnected {
 					continue
 				}
 				ax := x + GetDirOffsetX(dir)
@@ -530,7 +557,7 @@ func expandRegions(maxIter int, level uint16,
 				if chf.Areas[ai] != area {
 					continue
 				}
-				if (*srcReg)[ai] > 0 && ((*srcReg)[ai]&RC_BORDER_REG) == 0 {
+				if (*srcReg)[ai] > 0 && ((*srcReg)[ai]&borderReg) == 0 {
 					if int32((*srcDist)[ai]+2) < int32(d2) {
 						r = (*srcReg)[ai]
 						d2 = int32((*srcDist)[ai] + 2)
@@ -546,7 +573,6 @@ func expandRegions(maxIter int, level uint16,
 			}
 		}
 
-		// rcSwap source and dest.
 		*srcReg, *dstReg = *dstReg, *srcReg
 		*srcDist, *dstDist = *dstDist, *srcDist
 		swapped = !swapped
@@ -586,22 +612,22 @@ func sortCellsByLevel(startLevel uint16,
 			c := &chf.Cells[x+y*w]
 			i := int32(c.Index)
 			for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
-				if chf.Areas[i] == RC_NULL_AREA || srcReg[i] != 0 {
+				if chf.Areas[i] == nullArea || srcReg[i] != 0 {
 					continue
 				}
 
 				level := chf.Dist[i] >> loglevelsPerStack
-				sId := startLevel - level
-				if uint32(sId) >= nbStacks {
+				sID := startLevel - level
+				if uint32(sID) >= nbStacks {
 					continue
 				}
-				if sId < 0 {
-					sId = 0
+				if sID < 0 {
+					sID = 0
 				}
 
-				stacks[sId] = append(stacks[sId], x)
-				stacks[sId] = append(stacks[sId], y)
-				stacks[sId] = append(stacks[sId], i)
+				stacks[sID] = append(stacks[sID], x)
+				stacks[sID] = append(stacks[sID], y)
+				stacks[sID] = append(stacks[sID], i)
 			}
 		}
 	}
@@ -613,10 +639,7 @@ func appendStacks(srcStack, dstStack []int32, srcReg []uint16) {
 		if (i < 0) || (srcReg[i] != 0) {
 			continue
 		}
-		panic("NON TEST POUR CUBES ET DEVELER NavMesh")
 		dstStack = append(dstStack, srcStack[j:j+3]...)
-		//dstStack.push(srcStack[j+1]);
-		//dstStack.push(srcStack[j+2]);
 	}
 }
 
@@ -663,18 +686,18 @@ func (reg *Region) removeAdjacentNeighbours() {
 	}
 }
 
-func (reg *Region) replaceNeighbour(oldId, newId uint16) {
+func (reg *Region) replaceNeighbour(oldID, newID uint16) {
 	var neiChanged bool
 
 	for i := range reg.Connections {
-		if reg.Connections[i] == int32(oldId) {
-			reg.Connections[i] = int32(newId)
+		if reg.Connections[i] == int32(oldID) {
+			reg.Connections[i] = int32(newID)
 			neiChanged = true
 		}
 	}
 	for i := range reg.Floors {
-		if reg.Floors[i] == int32(oldId) {
-			reg.Floors[i] = int32(newId)
+		if reg.Floors[i] == int32(oldID) {
+			reg.Floors[i] = int32(newID)
 		}
 	}
 
@@ -683,21 +706,21 @@ func (reg *Region) replaceNeighbour(oldId, newId uint16) {
 	}
 }
 
-func (rega *Region) canMergeWithRegion(regb *Region) bool {
-	if rega.AreaType != regb.AreaType {
+func (reg *Region) canMergeWithRegion(reg2 *Region) bool {
+	if reg.AreaType != reg2.AreaType {
 		return false
 	}
 	var n int
-	for i := 0; i < len(rega.Connections); i++ {
-		if rega.Connections[i] == int32(regb.ID) {
+	for i := 0; i < len(reg.Connections); i++ {
+		if reg.Connections[i] == int32(reg2.ID) {
 			n++
 		}
 	}
 	if n > 1 {
 		return false
 	}
-	for i := 0; i < len(rega.Floors); i++ {
-		if rega.Floors[i] == int32(regb.ID) {
+	for i := 0; i < len(reg.Floors); i++ {
+		if reg.Floors[i] == int32(reg2.ID) {
 			return false
 		}
 	}
@@ -788,7 +811,7 @@ func isSolidEdge(chf *CompactHeightfield, srcReg []uint16,
 	x, y, i, dir int32) bool {
 	s := &chf.Spans[i]
 	var r uint16
-	if GetCon(s, dir) != RC_NOT_CONNECTED {
+	if GetCon(s, dir) != notConnected {
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
@@ -809,7 +832,7 @@ func walkContour(x, y, i, dir int32,
 
 	ss := &chf.Spans[i]
 	var curReg uint16
-	if GetCon(ss, dir) != RC_NOT_CONNECTED {
+	if GetCon(ss, dir) != notConnected {
 		ax := x + GetDirOffsetX(dir)
 		ay := y + GetDirOffsetY(dir)
 		ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(ss, dir)
@@ -823,7 +846,7 @@ func walkContour(x, y, i, dir int32,
 		if isSolidEdge(chf, srcReg, x, y, i, dir) {
 			// Choose the edge corner
 			var r uint16
-			if GetCon(s, dir) != RC_NOT_CONNECTED {
+			if GetCon(s, dir) != notConnected {
 				ax := x + GetDirOffsetX(dir)
 				ay := y + GetDirOffsetY(dir)
 				ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
@@ -839,7 +862,7 @@ func walkContour(x, y, i, dir int32,
 			ni := int32(-1)
 			nx := x + GetDirOffsetX(dir)
 			ny := y + GetDirOffsetY(dir)
-			if GetCon(s, dir) != RC_NOT_CONNECTED {
+			if GetCon(s, dir) != notConnected {
 				ni = int32(chf.Cells[nx+ny*chf.Width].Index) + GetCon(s, dir)
 			}
 			if ni == -1 {
@@ -875,7 +898,7 @@ func walkContour(x, y, i, dir int32,
 
 func mergeAndFilterRegions(ctx *BuildContext,
 	minRegionArea, mergeRegionSize int32,
-	maxRegionId *uint16,
+	maxRegionID *uint16,
 	chf *CompactHeightfield,
 	srcReg []uint16,
 	overlaps *[]int32) bool {
@@ -883,7 +906,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 	w := chf.Width
 	h := chf.Height
 
-	nreg := (*maxRegionId) + 1
+	nreg := (*maxRegionID) + 1
 	regions := make([]*Region, nreg)
 
 	// Construct regions
@@ -910,14 +933,14 @@ func mergeAndFilterRegions(ctx *BuildContext,
 					if i2 == j0 {
 						continue
 					}
-					floorId := srcReg[j0]
-					if floorId == 0 || floorId >= nreg {
+					floorID := srcReg[j0]
+					if floorID == 0 || floorID >= nreg {
 						continue
 					}
-					if floorId == r {
+					if floorID == r {
 						reg.Overlap = true
 					}
-					reg.addUniqueFloorRegion(int32(floorId))
+					reg.addUniqueFloorRegion(int32(floorID))
 				}
 
 				// Have found contour
@@ -950,7 +973,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 	trace := make([]int32, 32)
 	for i3 := uint16(0); i3 < nreg; i3++ {
 		reg := regions[i3]
-		if reg.ID == 0 || ((reg.ID & RC_BORDER_REG) != 0) {
+		if reg.ID == 0 || ((reg.ID & borderReg) != 0) {
 			continue
 		}
 		if reg.SpanCount == 0 {
@@ -982,7 +1005,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 			trace = append(trace, ri)
 
 			for j1 := 0; j1 < len(creg.Connections); j1++ {
-				if (creg.Connections[j1] & int32(RC_BORDER_REG)) != 0 {
+				if (creg.Connections[j1] & int32(borderReg)) != 0 {
 					connectsToBorder = true
 					continue
 				}
@@ -990,7 +1013,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 				if neireg.Visited {
 					continue
 				}
-				if neireg.ID == 0 || ((neireg.ID & RC_BORDER_REG) != 0) {
+				if neireg.ID == 0 || ((neireg.ID & borderReg) != 0) {
 					continue
 				}
 				// Visit
@@ -1018,7 +1041,7 @@ func mergeAndFilterRegions(ctx *BuildContext,
 		mergeCount = 0
 		for i4 := uint16(0); i4 < nreg; i4++ {
 			reg := regions[i4]
-			if reg.ID == 0 || ((reg.ID & RC_BORDER_REG) != 0) {
+			if reg.ID == 0 || ((reg.ID & borderReg) != 0) {
 				continue
 			}
 			if reg.Overlap {
@@ -1037,43 +1060,43 @@ func mergeAndFilterRegions(ctx *BuildContext,
 			// Or region which is not connected to a border at all.
 			// Find smallest neighbour region that connects to this one.
 			smallest := int32(0xfffffff)
-			mergeId := uint16(reg.ID)
+			mergeID := uint16(reg.ID)
 			for j3 := 0; j3 < len(reg.Connections); j3++ {
-				if (reg.Connections[j3] & int32(RC_BORDER_REG)) != 0 {
+				if (reg.Connections[j3] & int32(borderReg)) != 0 {
 					continue
 				}
 				mreg := regions[reg.Connections[j3]]
-				if mreg.ID == 0 || ((mreg.ID & RC_BORDER_REG) != 0) || mreg.Overlap {
+				if mreg.ID == 0 || ((mreg.ID & borderReg) != 0) || mreg.Overlap {
 					continue
 				}
 				if mreg.SpanCount < smallest &&
 					reg.canMergeWithRegion(mreg) &&
 					mreg.canMergeWithRegion(reg) {
 					smallest = mreg.SpanCount
-					mergeId = mreg.ID
+					mergeID = mreg.ID
 				}
 			}
 			// Found new id.
-			if mergeId != reg.ID {
-				oldId := reg.ID
-				target := regions[mergeId]
+			if mergeID != reg.ID {
+				oldID := reg.ID
+				target := regions[mergeID]
 
 				// Merge neighbours.
 				if mergeRegions(target, reg) {
 
 					// Fixup regions pointing to current region.
 					for j4 := uint16(0); j4 < nreg; j4++ {
-						if regions[j4].ID == 0 || ((regions[j4].ID & RC_BORDER_REG) != 0) {
+						if regions[j4].ID == 0 || ((regions[j4].ID & borderReg) != 0) {
 							continue
 						}
 						// If another region was already merged into current region
 						// change the nid of the previous region too.
-						if regions[j4].ID == oldId {
-							regions[j4].ID = mergeId
+						if regions[j4].ID == oldID {
+							regions[j4].ID = mergeID
 						}
 						// Replace the current region with the new one if the
 						// current regions is neighbour.
-						regions[j4].replaceNeighbour(oldId, mergeId)
+						regions[j4].replaceNeighbour(oldID, mergeID)
 					}
 					mergeCount++
 				}
@@ -1090,32 +1113,32 @@ func mergeAndFilterRegions(ctx *BuildContext,
 		if regions[i5].ID == 0 {
 			continue // Skip nil regions.
 		}
-		if (regions[i5].ID & RC_BORDER_REG) != 0 {
+		if (regions[i5].ID & borderReg) != 0 {
 			continue // Skip external regions.
 		}
 		regions[i5].Remap = true
 	}
 
-	var regIdGen uint16
+	var regIDGen uint16
 	for i6 := uint16(0); i6 < nreg; i6++ {
 		if !regions[i6].Remap {
 			continue
 		}
-		oldId := regions[i6].ID
-		regIdGen++
-		newId := regIdGen
+		oldID := regions[i6].ID
+		regIDGen++
+		newID := regIDGen
 		for j5 := i6; j5 < nreg; j5++ {
-			if regions[j5].ID == oldId {
-				regions[j5].ID = newId
+			if regions[j5].ID == oldID {
+				regions[j5].ID = newID
 				regions[j5].Remap = false
 			}
 		}
 	}
-	*maxRegionId = regIdGen
+	*maxRegionID = regIDGen
 
 	// Remap regions.
 	for i7 := int32(0); i7 < chf.SpanCount; i7++ {
-		if (srcReg[i7] & RC_BORDER_REG) == 0 {
+		if (srcReg[i7] & borderReg) == 0 {
 			srcReg[i7] = regions[srcReg[i7]].ID
 		}
 	}

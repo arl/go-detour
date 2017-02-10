@@ -233,7 +233,7 @@ func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
 			for s := hf.Spans[x+y*w]; s != nil; s = s.next {
-				if s.area != RC_NULL_AREA {
+				if s.area != nullArea {
 					spanCount++
 				}
 			}
@@ -267,7 +267,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	hf *Heightfield, chf *CompactHeightfield) bool {
 
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_BUILD_COMPACTHEIGHTFIELD)
+	ctx.StartTimer(TimerBuildCompactHeightfield)
 
 	w := hf.Width
 	h := hf.Height
@@ -289,7 +289,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	chf.Spans = make([]CompactSpan, spanCount)
 	chf.Areas = make([]uint8, spanCount)
 	for i := range chf.Areas {
-		chf.Areas[i] = RC_NULL_AREA
+		chf.Areas[i] = nullArea
 	}
 
 	MAX_HEIGHT := int32(0xffff)
@@ -307,7 +307,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 			c.Index = idx
 			c.Count = 0
 			for s != nil {
-				if s.area != RC_NULL_AREA {
+				if s.area != nullArea {
 					bot := int32(s.smax)
 					var top int32
 					if s.next != nil {
@@ -327,7 +327,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 	}
 
 	// Find neighbour connections.
-	const MAX_LAYERS = RC_NOT_CONNECTED - 1
+	const MAX_LAYERS = notConnected - 1
 	tooHighNeighbour := int32(0)
 	for y := int32(0); y < h; y++ {
 		for x := int32(0); x < w; x++ {
@@ -337,7 +337,7 @@ func BuildCompactHeightfield(ctx *BuildContext, walkableHeight, walkableClimb in
 				s := &chf.Spans[i]
 
 				for dir := int32(0); dir < 4; dir++ {
-					SetCon(s, dir, RC_NOT_CONNECTED)
+					SetCon(s, dir, notConnected)
 					nx := x + GetDirOffsetX(dir)
 					ny := y + GetDirOffsetY(dir)
 					// First check that the neighbour cell is in bounds.

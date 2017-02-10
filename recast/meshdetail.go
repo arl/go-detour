@@ -8,7 +8,6 @@ import (
 
 // Contains triangle meshes that represent detailed height data associated
 // with the polygons in its associated polygon mesh object.
-// @ingroup recast
 type PolyMeshDetail struct {
 	Meshes  []int32   // The sub-mesh data. [Size: 4*#nmeshes]
 	Verts   []float32 // The mesh vertices. [Size: 3*#nverts]
@@ -314,16 +313,28 @@ func getTriFlags(va, vb, vc, vpoly []float32, npoly int32) uint8 {
 	return flags
 }
 
-/// @par
-///
-/// See the #rcConfig documentation for more information on the configuration parameters.
-///
-/// @see rcAllocPolyMeshDetail, rcPolyMesh, rcCompactHeightfield, rcPolyMeshDetail, rcConfig
+// BuildPolyMeshDetail builds a detail mesh from the provided polygon mesh.
+//
+//  Arguments:
+//  ctx             The build context to use during the operation.
+//  meshs           A fully built polygon mesh.
+//  chf             The compact heightfield used to build the polygon mesh.
+//  sampleDist      Sets the distance to use when samping the heightfield.
+//                  [Limit: >=0] [Units: wu]
+//  sampleMaxError  The maximum distance the detail mesh surface should deviate
+//                  from heightfield data. [Limit: >=0] [Units: wu]
+//  dmesh           The resulting detail mesh. (Must be pre-allocated.)
+//
+// Returns True if the operation completed successfully.
+// See the Config documentation for more information on the configuration
+// parameters.
+//
+// see AllocPolyMeshDetail, PolyMesh, CompactHeightfield, PolyMeshDetail, Config
 func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfield, sampleDist, sampleMaxError float32) (*PolyMeshDetail, bool) {
 	assert.True(ctx != nil, "ctx should not be nil")
 
-	ctx.StartTimer(RC_TIMER_BUILD_POLYMESHDETAIL)
-	defer ctx.StopTimer(RC_TIMER_BUILD_POLYMESHDETAIL)
+	ctx.StartTimer(TimerBuildPolyMeshDetail)
+	defer ctx.StopTimer(TimerBuildPolyMeshDetail)
 
 	var dmesh PolyMeshDetail
 	if mesh.NVerts == 0 || mesh.NPolys == 0 {
@@ -369,7 +380,7 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 		*ymin = chf.Height
 		*ymax = 0
 		for j := int32(0); j < nvp; j++ {
-			if p[j] == RC_MESH_NULL_IDX {
+			if p[j] == meshNullIdx {
 				break
 			}
 			v := mesh.Verts[p[j]*3:]
@@ -410,7 +421,7 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 		// Store polygon vertices for processing.
 		var npoly int32
 		for j := int32(0); j < nvp; j++ {
-			if p[j] == RC_MESH_NULL_IDX {
+			if p[j] == meshNullIdx {
 				break
 			}
 			v := mesh.Verts[p[j]*3:]
@@ -629,7 +640,6 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 		nfaces, nedges int32
 	)
 	maxEdges := npts * 10
-	//edges.resize(maxEdges*4);
 	*edges = make([]int32, maxEdges*4)
 
 	var i int32
@@ -640,11 +650,9 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 
 	var currentEdge int32
 	for currentEdge < nedges {
-		// ARaddEdge
 		if (*edges)[currentEdge*4+2] == EV_UNDEF {
 			completeFacet(ctx, pts, npts, *edges, &nedges, maxEdges, &nfaces, currentEdge)
 		}
-		// ARaddEdge
 		if (*edges)[currentEdge*4+3] == EV_UNDEF {
 			completeFacet(ctx, pts, npts, *edges, &nedges, maxEdges, &nfaces, currentEdge)
 		}
@@ -689,21 +697,12 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 		t := (*tris)[i*4:]
 		if t[0] == -1 || t[1] == -1 || t[2] == -1 {
 			ctx.Warningf("delaunayHull: Removing dangling face %d [%d,%d,%d].", i, t[0], t[1], t[2])
-
-			// TODO: ORIGINAL CODE:
-			//t[0] = tris[tris.size()-4]
-			//t[1] = tris[tris.size()-3]
-			//t[2] = tris[tris.size()-2]
-			//t[3] = tris[tris.size()-1]
-			//tris.resize(tris.size() - 4)
-			panic("Simplify that after having made it work!!!")
-			// THERE IS A WAY TO SIMPLIFY THAT: because we are basically copying
-			// the last 4 elements of tris to the beggining of `t`? don't we?
+			panic("untested")
+			// TODO: simplify
 			t[0] = (*tris)[len(*tris)-4]
 			t[1] = (*tris)[len(*tris)-3]
 			t[2] = (*tris)[len(*tris)-2]
 			t[3] = (*tris)[len(*tris)-1]
-			//tris.resize(tris.size() - 4)
 			*tris = append([]int32{}, (*tris)[:len(*tris)-4]...)
 			i--
 		}
@@ -780,16 +779,10 @@ func triangulateHull(nverts int32, verts []float32, nhull int32, hull []int32, t
 		dright := vdist2(cvright, nvright) + vdist2(cvleft, nvright)
 
 		if dleft < dright {
-			*tris = append(*tris, hull[left])
-			*tris = append(*tris, hull[nleft])
-			*tris = append(*tris, hull[right])
-			*tris = append(*tris, 0)
+			*tris = append(*tris, hull[left], hull[nleft], hull[right], 0)
 			left = nleft
 		} else {
-			*tris = append(*tris, hull[left])
-			*tris = append(*tris, hull[nright])
-			*tris = append(*tris, hull[right])
-			*tris = append(*tris, 0)
+			*tris = append(*tris, hull[left], hull[nright], hull[right], 0)
 			right = nright
 		}
 	}
@@ -846,13 +839,11 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 			// using lexological sort or else there will be seams.
 			if math32.Abs(vj[0]-vi[0]) < 1e-6 {
 				if vj[2] > vi[2] {
-					//rcSwap(vj,vi);
 					vj, vi = vi, vj
 					swapped = true
 				}
 			} else {
 				if vj[0] > vi[0] {
-					//rcSwap(vj,vi);
 					vj, vi = vi, vj
 					swapped = true
 				}
@@ -962,7 +953,6 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 		x1 := int32(math32.Ceil(bmax[0] / sampleDist))
 		z0 := int32(math32.Floor(bmin[2] / sampleDist))
 		z1 := int32(math32.Ceil(bmax[2] / sampleDist))
-		//samples.resize(0);
 		*samples = make([]int32, 0)
 		for z := z0; z < z1; z++ {
 			for x := x0; x < x1; x++ {
@@ -974,14 +964,11 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 				if distToPoly(nin, in, pt[:]) > -sampleDist/2 {
 					continue
 				}
-				//samples.push(x);
-				*samples = append(*samples, x)
-				//samples.push(getHeight(pt[0], pt[1], pt[2], cs, ics, chf.ch, heightSearchRadius, hp));
-				*samples = append(*samples, int32(getHeight(pt[0], pt[1], pt[2], cs, ics, chf.Ch, heightSearchRadius, hp)))
-				//samples.push(z);
-				*samples = append(*samples, z)
-				//samples.push(0); // Not added
-				*samples = append(*samples, 0)
+				*samples = append(*samples,
+					x,
+					int32(getHeight(pt[0], pt[1], pt[2], cs, ics, chf.Ch, heightSearchRadius, hp)),
+					z,
+					0)
 			}
 		}
 
@@ -1042,6 +1029,7 @@ func buildPolyDetail(ctx *BuildContext, in []float32, nin int32,
 
 	ntris := len(*tris) / 4
 	if ntris > MAX_TRIS {
+		panic("untested")
 		//tris.resize(MAX_TRIS*4);
 		*tris = make([]int32, MAX_TRIS*4)
 		ctx.Errorf("rcBuildPolyMeshDetail: Shrinking triangle count from %d to max %d.", ntris, MAX_TRIS)
@@ -1111,19 +1099,10 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	pcy /= npoly
 
 	// Use seeds array as a stack for DFS
-	panic("CHECK THAT GOOD!, and in the same occasion, check every resize(0) of the original source, because before finding this stackoverflow link, i was doing differently, and those resize(0) might leak")
-	// TODO: AR: ORIGINAL CODE
-	//array.resize(0);
-	//array.push(startCellX);
-	//array.push(startCellY);
-	//array.push(startSpanIndex);
-
+	panic("untested")
 	*array = append([]int32{}, startCellX, startCellY, startSpanIndex)
 
 	dirs := []int32{0, 1, 2, 3}
-	// TODO: AR
-	// ORIGINAL CODE TO BE CHECKED
-	//memset(hp.data, 0, sizeof(unsigned short)*hp.width*hp.height);
 	for i := int32(0); i < hp.width*hp.height; i++ {
 		hp.data[i] = 0
 	}
@@ -1141,13 +1120,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 			break
 		}
 
-		// TODO: AR check that this is not leaking
-		panic("TODO: AR check that this is not leaking, and that the array length has decreased of 3")
-		// ORIGINAL CODE
-		//ci = array.pop();
-		//cy = array.pop();
-		//cx = array.pop();
-
+		panic("untested")
 		ci = (*array)[len(*array)-1]
 		cy = (*array)[len(*array)-1]
 		cx = (*array)[len(*array)-1]
@@ -1184,7 +1157,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		cs := &chf.Spans[ci]
 		for i := int32(0); i < int32(4); i++ {
 			dir := dirs[i]
-			if GetCon(cs, dir) == RC_NOT_CONNECTED {
+			if GetCon(cs, dir) == notConnected {
 				continue
 			}
 
@@ -1208,7 +1181,6 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 				int32(chf.Cells[(newX+bs)+(newY+bs)*chf.Width].Index)+GetCon(cs, dir))
 		}
 
-		//rcSwap(dirs[directDir], dirs[3]);
 		dirs[directDir], dirs[3] = dirs[3], dirs[directDir]
 	}
 
@@ -1268,7 +1240,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 	// We cannot sample from this poly if it was created from polys
 	// of different regions. If it was then it could potentially be overlapping
 	// with polys of that region and the heights sampled here could be wrong.
-	if region != int32(RC_MULTIPLE_REGS) {
+	if region != int32(multipleRegs) {
 		// Copy the height from the same region, and mark region borders
 		// as seed points to fill the rest.
 		for hy := int32(0); hy < hp.height; hy++ {
@@ -1288,7 +1260,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 						// add the current location as flood fill start
 						var border bool
 						for dir := int32(0); dir < 4; dir++ {
-							if GetCon(s, dir) != RC_NOT_CONNECTED {
+							if GetCon(s, dir) != notConnected {
 								ax := x + GetDirOffsetX(dir)
 								ay := y + GetDirOffsetY(dir)
 								ai := int32(chf.Cells[ax+ay*chf.Width].Index) + GetCon(s, dir)
@@ -1336,7 +1308,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 
 		cs := &chf.Spans[ci]
 		for dir := int32(0); dir < 4; dir++ {
-			if GetCon(cs, dir) == RC_NOT_CONNECTED {
+			if GetCon(cs, dir) == notConnected {
 				continue
 			}
 

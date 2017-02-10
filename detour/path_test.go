@@ -100,10 +100,10 @@ func TestFindPathFindStraightPath(t *testing.T) {
 
 		// FindPath
 		var (
-			pathCount int32
+			pathCount int
 		)
 		path = make([]PolyRef, 100)
-		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
+		pathCount, st = query.FindPath(orgRef, dstRef, org, dst, filter, path)
 		if StatusFailed(st) {
 			t.Errorf("query.FindPath failed with 0x%x\n", st)
 		}
@@ -117,7 +117,7 @@ func TestFindPathFindStraightPath(t *testing.T) {
 			straightPath      []d3.Vec3
 			straightPathFlags []uint8
 			straightPathRefs  []PolyRef
-			straightPathCount int32
+			straightPathCount int
 			maxStraightPath   int32
 		)
 		// slices that receive the straight path
@@ -129,7 +129,7 @@ func TestFindPathFindStraightPath(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]PolyRef, maxStraightPath)
 
-		st, straightPathCount = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
+		straightPathCount, st = query.FindStraightPath(tt.org, tt.dst, path[:pathCount], straightPath, straightPathFlags, straightPathRefs, 0)
 		if StatusFailed(st) {
 			t.Errorf("query.FindStraightPath failed with 0x%x\n", st)
 		}
@@ -142,7 +142,7 @@ func TestFindPathFindStraightPath(t *testing.T) {
 			t.Errorf("straightPath end is not flagged StraightPathEnd")
 		}
 
-		for i := int32(0); i < pathCount; i++ {
+		for i := 0; i < pathCount; i++ {
 			if !straightPath[i].Approx(tt.wantStraightPath[i]) {
 				t.Errorf("straightPath[%d] = %v, want %v", i, straightPath[i], tt.wantStraightPath[i])
 			}
@@ -160,7 +160,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		msg           string  // test description
 		org, dst      d3.Vec3 // path origin and destination points
 		wantStatus    Status  // expected status
-		wantPathCount int32   // expected path count
+		wantPathCount int     // expected path count
 	}{
 		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, Success, 1},
 	}
@@ -207,10 +207,10 @@ func TestFindPathSpecialCases(t *testing.T) {
 		}
 
 		// FindPath
-		var pathCount int32
+		var pathCount int
 
 		path = make([]PolyRef, 100)
-		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
+		pathCount, st = query.FindPath(orgRef, dstRef, org, dst, filter, path)
 
 		if st != tt.wantStatus {
 			t.Errorf("%s, got status 0x%x, want 0x%x", tt.msg, st, tt.wantStatus)

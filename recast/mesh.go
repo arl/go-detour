@@ -6,40 +6,33 @@ type Edge struct {
 	poly     [2]uint16
 }
 
-func buildMeshAdjacency(polys []uint16, npolys int32,
-	nverts, vertsPerPoly int32) bool {
+func buildMeshAdjacency(polys []uint16, npolys int32, nverts, vertsPerPoly int32) bool {
 	// Based on code by Eric Lengyel from:
 	// http://www.terathon.com/code/edges.php
 
 	maxEdgeCount := npolys * vertsPerPoly
-	//firstEdge := (unsigned short*)rcAlloc(sizeof(unsigned short)*(nverts + maxEdgeCount), RC_ALLOC_TEMP);
 	firstEdge := make([]uint16, nverts+maxEdgeCount)
-	//if !firstEdge {
-	//return false
-	//}
 	nextEdge := firstEdge[nverts:]
 	var edgeCount int32
 
-	//rcEdge* edges = (rcEdge*)rcAlloc(sizeof(rcEdge)*maxEdgeCount, RC_ALLOC_TEMP);
 	edges := make([]*Edge, maxEdgeCount)
 	for i := range edges {
 		edges[i] = new(Edge)
 	}
 
 	for i := int32(0); i < nverts; i++ {
-		firstEdge[i] = RC_MESH_NULL_IDX
+		firstEdge[i] = meshNullIdx
 	}
 
 	for i := int32(0); i < npolys; i++ {
 		t := polys[i*vertsPerPoly*2:]
 		for j := int32(0); j < vertsPerPoly; j++ {
-			if t[j] == RC_MESH_NULL_IDX {
+			if t[j] == meshNullIdx {
 				break
 			}
 			var v0, v1 uint16
 			v0 = t[j]
-			//v1 := (j+1 >= vertsPerPoly || t[j+1] == RC_MESH_NULL_IDX) ? t[0] : t[j+1];
-			if j+1 >= vertsPerPoly || t[j+1] == RC_MESH_NULL_IDX {
+			if j+1 >= vertsPerPoly || t[j+1] == meshNullIdx {
 				v1 = t[0]
 			} else {
 				v1 = t[j+1]
@@ -64,18 +57,18 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 	for i := int32(0); i < npolys; i++ {
 		t := polys[i*vertsPerPoly*2:]
 		for j := int32(0); j < vertsPerPoly; j++ {
-			if t[j] == RC_MESH_NULL_IDX {
+			if t[j] == meshNullIdx {
 				break
 			}
 			var v0, v1 uint16
 			v0 = t[j]
-			if j+1 >= vertsPerPoly || t[j+1] == RC_MESH_NULL_IDX {
+			if j+1 >= vertsPerPoly || t[j+1] == meshNullIdx {
 				v1 = t[0]
 			} else {
 				v1 = t[j+1]
 			}
 			if v0 > v1 {
-				for e := uint16(firstEdge[v1]); e != RC_MESH_NULL_IDX; e = nextEdge[e] {
+				for e := uint16(firstEdge[v1]); e != meshNullIdx; e = nextEdge[e] {
 					edge := edges[e]
 					if edge.vert[1] == v0 && edge.poly[0] == edge.poly[1] {
 						edge.poly[1] = uint16(i)
@@ -97,9 +90,6 @@ func buildMeshAdjacency(polys []uint16, npolys int32,
 			p1[vertsPerPoly+int32(e.polyEdge[1])] = e.poly[0]
 		}
 	}
-
-	//rcFree(firstEdge);
-	//rcFree(edges);
 
 	return true
 }
@@ -278,18 +268,10 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 		i1 := next(i, n)
 		i2 := next(i1, n)
 
-		// TODO: control with ORIGINAL CODE
-		//*dst++ = indices[i] & 0x0fffffff;
-		//*dst++ = indices[i1] & 0x0fffffff;
-		//*dst++ = indices[i2] & 0x0fffffff;
-
 		dst[0] = int32(indices[i] & 0x0fffffff)
-		dst = dst[1:]
-		dst[0] = int32(indices[i1] & 0x0fffffff)
-		dst = dst[1:]
-		dst[0] = int32(indices[i2] & 0x0fffffff)
-		dst = dst[1:]
-
+		dst[1] = int32(indices[i1] & 0x0fffffff)
+		dst[2] = int32(indices[i2] & 0x0fffffff)
+		dst = dst[3:]
 		ntris++
 
 		// Removes P[i1] by copying P[i+1]...P[n-1] left one index.
@@ -318,24 +300,18 @@ func triangulate(n int32, verts []int32, indices []int64, tris []int32) int32 {
 	}
 
 	// Append the remaining triangle.
-	// TODO: control with ORIGINAL CODE
-	//*dst++ = indices[0] & 0x0fffffff;
-	//*dst++ = indices[1] & 0x0fffffff;
-	//*dst++ = indices[2] & 0x0fffffff;
 	dst[0] = int32(indices[0] & 0x0fffffff)
-	dst = dst[1:]
-	dst[0] = int32(indices[1] & 0x0fffffff)
-	dst = dst[1:]
-	dst[0] = int32(indices[2] & 0x0fffffff)
-	dst = dst[1:]
-	ntris++
+	dst[1] = int32(indices[1] & 0x0fffffff)
+	dst[2] = int32(indices[2] & 0x0fffffff)
+	dst = dst[3:]
 
+	ntris++
 	return ntris
 }
 
 func countPolyVerts(p []uint16, nvp int32) int32 {
 	for i := int32(0); i < nvp; i++ {
-		if p[i] == RC_MESH_NULL_IDX {
+		if p[i] == meshNullIdx {
 			return i
 		}
 	}
@@ -733,26 +709,9 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 	}
 
 	// Merge the hole triangles back to polygons.
-	//rcScopedDelete<unsigned short> polys((unsigned short*)rcAlloc(sizeof(unsigned short)*(ntris+1)*nvp, RC_ALLOC_TEMP));
 	polys := make([]uint16, (ntris+1)*nvp)
-	//if (!polys) {
-	//ctx->log(RC_LOG_ERROR, "removeVertex: Out of memory 'polys' (%d).", (ntris+1)*nvp);
-	//return false;
-	//}
-	//rcScopedDelete<unsigned short> pregs((unsigned short*)rcAlloc(sizeof(unsigned short)*ntris, RC_ALLOC_TEMP));
 	pregs := make([]uint16, ntris)
-	//if (!pregs)
-	//{
-	//ctx->log(RC_LOG_ERROR, "removeVertex: Out of memory 'pregs' (%d).", ntris);
-	//return false;
-	//}
-	//rcScopedDelete<unsigned char> pareas((unsigned char*)rcAlloc(sizeof(unsigned char)*ntris, RC_ALLOC_TEMP));
 	pareas := make([]uint8, ntris)
-	//if (!pareas)
-	//{
-	//ctx->log(RC_LOG_ERROR, "removeVertex: Out of memory 'pareas' (%d).", ntris);
-	//return false;
-	//}
 
 	tmpPoly := polys[ntris*nvp:]
 
@@ -772,7 +731,7 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 			// If this polygon covers multiple region types then
 			// mark it as such
 			if hreg[t[0]] != hreg[t[1]] || hreg[t[1]] != hreg[t[2]] {
-				pregs[npolys] = RC_MULTIPLE_REGS
+				pregs[npolys] = multipleRegs
 			} else {
 				pregs[npolys] = uint16(hreg[t[0]])
 			}
@@ -816,13 +775,11 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 				pb := polys[bestPb*nvp:]
 				mergePolyVerts(pa, pb, bestEa, bestEb, tmpPoly, nvp)
 				if pregs[bestPa] != pregs[bestPb] {
-					pregs[bestPa] = RC_MULTIPLE_REGS
+					pregs[bestPa] = multipleRegs
 				}
 
 				last := polys[(npolys-1)*nvp:]
 				if compareSlicesUInt16(pb, last) {
-					//if pb != last {
-					//memcpy(pb, last, sizeof(unsigned short)*nvp);
 					copy(pb, last[:nvp])
 				}
 				pregs[bestPb] = pregs[npolys-1]

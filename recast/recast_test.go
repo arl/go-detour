@@ -179,19 +179,19 @@ func TestMarkWalkableTriangles(t *testing.T) {
 	walkable_tri := []int32{0, 1, 2}
 	unwalkable_tri := []int32{0, 2, 1}
 	nt := int32(1)
-	areas := []uint8{RC_NULL_AREA}
+	areas := []uint8{nullArea}
 
 	t.Run("One walkable triangle", func(t *testing.T) {
 		MarkWalkableTriangles(ctx, walkableSlopeAngle, verts, nv, walkable_tri, nt, areas)
-		if areas[0] != RC_WALKABLE_AREA {
+		if areas[0] != WalkableArea {
 			t.Fatalf("areas[0] should be RC_WALKABLE_AREA, got %v", areas[0])
 		}
 	})
 
 	t.Run("One non-walkable triangle", func(t *testing.T) {
-		areas[0] = RC_NULL_AREA
+		areas[0] = nullArea
 		MarkWalkableTriangles(ctx, walkableSlopeAngle, verts, nv, unwalkable_tri, nt, areas)
-		if areas[0] != RC_NULL_AREA {
+		if areas[0] != nullArea {
 			t.Fatalf("areas[0] should be RC_NULL_AREA, got %v", areas[0])
 		}
 	})
@@ -205,10 +205,10 @@ func TestMarkWalkableTriangles(t *testing.T) {
 	})
 
 	t.Run("Slopes equal to the max slope are considered unwalkable.", func(t *testing.T) {
-		areas[0] = RC_NULL_AREA
+		areas[0] = nullArea
 		walkableSlopeAngle = 0
 		MarkWalkableTriangles(ctx, walkableSlopeAngle, verts, nv, walkable_tri, nt, areas)
-		if areas[0] != RC_NULL_AREA {
+		if areas[0] != nullArea {
 			t.Fatalf("areas[0] should be RC_NULL_AREA, got %v", areas[0])
 		}
 	})
@@ -231,7 +231,7 @@ func TestClearUnwalkableTriangles(t *testing.T) {
 		areas := []uint8{42}
 		ClearUnwalkableTriangles(ctx, walkableSlopeAngle, verts, nv, unwalkable_tri, nt, areas)
 
-		if areas[0] != RC_NULL_AREA {
+		if areas[0] != nullArea {
 			t.Fatalf("areas[0] should be RC_NULL_AREA, got %v", areas[0])
 		}
 	})
@@ -248,7 +248,7 @@ func TestClearUnwalkableTriangles(t *testing.T) {
 		walkableSlopeAngle = 0
 		ClearUnwalkableTriangles(ctx, walkableSlopeAngle, verts, nv, walkable_tri, nt, areas)
 
-		if areas[0] != RC_NULL_AREA {
+		if areas[0] != nullArea {
 			t.Fatalf("areas[0] should be RC_NULL_AREA, got %v", areas[0])
 		}
 	})
@@ -276,14 +276,12 @@ func TestAddSpan(t *testing.T) {
 	)
 
 	testSetup := func() {
-
 		hf = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 		x, y = 0, 0
 		smin, smax = 0, 1
 		area = 42
 		flagMergeThr = 1
 	}
-	//ok, so the test setUp state is not clearly reset because when we run the test that was failing before alone, its not failing anymore...
 
 	t.Run("Add a span to an empty heightfield.", func(t *testing.T) {
 		testSetup()

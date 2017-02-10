@@ -9,6 +9,7 @@ import (
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
+// FIXME: this test is disabled for now
 func _TestOffMeshConnections(t *testing.T) {
 	var (
 		mesh *NavMesh
@@ -102,33 +103,33 @@ func _TestOffMeshConnections(t *testing.T) {
 		filter.SetIncludeFlags(tt.incFlags)
 		filter.SetExcludeFlags(tt.excFlags)
 
-		/// These are just sample areas to use consistent values across the samples.
-		/// The use should specify these base on his needs.
+		// These are just sample areas to use consistent values across the samples.
+		// The use should specify these base on his needs.
 		const (
-			SAMPLE_POLYAREA_GROUND int32 = iota
-			SAMPLE_POLYAREA_WATER
-			SAMPLE_POLYAREA_ROAD
-			SAMPLE_POLYAREA_DOOR
-			SAMPLE_POLYAREA_GRASS
-			SAMPLE_POLYAREA_JUMP
+			samplePolyAreaGround int32 = iota
+			samplePolyAreaWater
+			samplePolyAreaRoad
+			samplePolyAreaDoor
+			samplePolyAreaGrass
+			samplePolyAreaJump
 		)
 
 		const (
-			SAMPLE_POLYFLAGS_WALK     int32 = 0x01   // Ability to walk (ground, grass, road)
-			SAMPLE_POLYFLAGS_SWIM           = 0x02   // Ability to swim (water).
-			SAMPLE_POLYFLAGS_DOOR           = 0x04   // Ability to move through doors.
-			SAMPLE_POLYFLAGS_JUMP           = 0x08   // Ability to jump.
-			SAMPLE_POLYFLAGS_DISABLED       = 0x10   // Disabled polygon
-			SAMPLE_POLYFLAGS_ALL            = 0xffff // All abilities.
+			samplePolyFlagsWalk     int32 = 0x01   // Ability to walk (ground, grass, road)
+			samplePolyFlagsSwim           = 0x02   // Ability to swim (water).
+			samplePolyFlagsDoor           = 0x04   // Ability to move through doors.
+			samplePolyFlagsJump           = 0x08   // Ability to jump.
+			samplePolyFlagsDisabled       = 0x10   // Disabled polygon
+			samplePolyFlagsAll            = 0xffff // All abilities.
 		)
 
 		// Change costs.
-		filter.SetAreaCost(SAMPLE_POLYAREA_GROUND, 1.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_WATER, 10.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_ROAD, 1.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_DOOR, 1.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_GRASS, 2.0)
-		filter.SetAreaCost(SAMPLE_POLYAREA_JUMP, 1.5)
+		filter.SetAreaCost(samplePolyAreaGround, 1.0)
+		filter.SetAreaCost(samplePolyAreaWater, 10.0)
+		filter.SetAreaCost(samplePolyAreaRoad, 1.0)
+		filter.SetAreaCost(samplePolyAreaDoor, 1.0)
+		filter.SetAreaCost(samplePolyAreaGrass, 2.0)
+		filter.SetAreaCost(samplePolyAreaJump, 1.5)
 
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
@@ -154,10 +155,10 @@ func _TestOffMeshConnections(t *testing.T) {
 
 		// FindPath
 		var (
-			pathCount int32
+			pathCount int
 		)
 		path = make([]PolyRef, 100)
-		st = query.FindPath(orgRef, dstRef, org, dst, filter, &path, &pathCount, 100)
+		pathCount, st = query.FindPath(orgRef, dstRef, org, dst, filter, path)
 		if StatusFailed(st) {
 			t.Fatal("query.FindPath failed:", st)
 		}
@@ -171,7 +172,7 @@ func _TestOffMeshConnections(t *testing.T) {
 			straightPath      []d3.Vec3
 			straightPathFlags []uint8
 			straightPathRefs  []PolyRef
-			straightPathCount int32
+			straightPathCount int
 			maxStraightPath   int32
 		)
 		// slices that receive the straight path
@@ -183,7 +184,7 @@ func _TestOffMeshConnections(t *testing.T) {
 		straightPathFlags = make([]uint8, maxStraightPath)
 		straightPathRefs = make([]PolyRef, maxStraightPath)
 
-		st, straightPathCount = query.FindStraightPath(tt.org, tt.dst, path, pathCount, straightPath, straightPathFlags, straightPathRefs, 100, 0)
+		straightPathCount, st = query.FindStraightPath(tt.org, tt.dst, path[:pathCount], straightPath, straightPathFlags, straightPathRefs, 0)
 		if StatusFailed(st) {
 			t.Fatal("query.FindStraightPath failed:", st)
 		}
@@ -200,10 +201,10 @@ func _TestOffMeshConnections(t *testing.T) {
 		if int(straightPathCount) != len(tt.wantStraightPath) {
 			t.Fatalf("found path and wanted path do not have the same length (%d != %d)", straightPathCount, len(tt.wantStraightPath))
 		}
-		for i := int32(0); i < straightPathCount; i++ {
+		for i := 0; i < straightPathCount; i++ {
 			log.Printf("straightPath[%d].Flags = 0x%x\n", i, straightPathFlags[i])
 		}
-		for i := int32(0); i < pathCount; i++ {
+		for i := 0; i < pathCount; i++ {
 			if !straightPath[i].Approx(tt.wantStraightPath[i]) {
 				t.Errorf("straightPath[%d] = %v, want %v", i, straightPath[i], tt.wantStraightPath[i])
 			}

@@ -2,18 +2,28 @@ package recast
 
 import "github.com/aurelien-rainone/assertgo"
 
+// FilterLowHangingWalkableObstacles marks non-walkable spans as walkable if
+// their maximum is within p walkableClimb of a walkable neighbor.
+//
+//  Arguments:
+//   ctx           The build context to use during the operation.
+//   walkableClimb Maximum ledge height that is considered to still be
+//                 traversable. [Limit: >=0] [Units: vx]
+//   solid         A fully built heightfield.  (All spans have been added.)
+//
 // Allows the formation of walkable regions that will flow over low lying
 // objects such as curbs, and up structures such as stairways.
 //
-// Two neighboring spans are walkable if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) < waklableClimb</tt>
+// Two neighboring spans are walkable if:
+// Abs(currentSpan.smax - neighborSpan.smax) < waklableClimb
 //
-// @warning Will override the effect of #rcFilterLedgeSpans.  So if both filters are used, call
-// #rcFilterLedgeSpans after calling this filter.
+// Warning Will override the effect of FilterLedgeSpans. So if both filters are
+// used, call FilterLedgeSpans after calling this filter.
 //
-// @see rcHeightfield, rcConfig
+// see Heightfield, Config
 func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_FILTER_LOW_OBSTACLES)
+	ctx.StartTimer(TimerFilterLowObstacles)
 
 	w := solid.Width
 	h := solid.Height
@@ -22,10 +32,10 @@ func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, s
 		for x := int32(0); x < w; x++ {
 			var ps *Span
 			previousWalkable := false
-			previousArea := uint8(RC_NULL_AREA)
+			previousArea := uint8(nullArea)
 
 			for s := solid.Spans[x+y*w]; s != nil; s = s.next {
-				walkable := s.area != RC_NULL_AREA
+				walkable := s.area != nullArea
 				// If current span is not walkable, but there is walkable
 				// span just below it, mark the span above it walkable too.
 				if !walkable && previousWalkable {
@@ -43,17 +53,30 @@ func FilterLowHangingWalkableObstacles(ctx *BuildContext, walkableClimb int32, s
 	}
 }
 
-// A ledge is a span with one or more neighbors whose maximum is further away than @p walkableClimb
-// from the current span's maximum.
-// This method removes the impact of the overestimation of conservative voxelization
-// so the resulting mesh will not have regions hanging in the air over ledges.
+// FilterLedgeSpans marks spans that are ledges as not-walkable.
 //
-// A span is a ledge if: <tt>rcAbs(currentSpan.smax - neighborSpan.smax) > walkableClimb</tt>
+//  Arguments:
+//  ctx             The build context to use during the operation.
+//  walkableHeight  Minimum floor to 'ceiling' height that will still allow the
+//                  floor area to be considered walkable.
+//                  [Limit: >= 3] [Units: vx]
+//  walkableClimb   Maximum ledge height that is considered to still be
+//                  traversable. [Limit: >=0] [Units: vx]
+//  solid           A fully built heightfield.  (All spans have been added.)
 //
-// @see rcHeightfield, rcConfig
+// A ledge is a span with one or more neighbors whose maximum is further away
+// than walkableClimb from the current span's maximum.
+// This method removes the impact of the overestimation of conservative
+// voxelization so the resulting mesh will not have regions hanging in the air
+// over ledges.
+//
+// A span is a ledge if:
+// Abs(currentSpan.smax - neighborSpan.smax) > walkableClimb
+//
+// see Heightfield, Config
 func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_FILTER_BORDER)
+	ctx.StartTimer(TimerFilterBorder)
 
 	w := solid.Width
 	h := solid.Height
@@ -64,7 +87,7 @@ func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, so
 		for x := int32(0); x < w; x++ {
 			for s := solid.Spans[x+y*w]; s != nil; s = s.next {
 				// Skip non walkable spans.
-				if s.area == RC_NULL_AREA {
+				if s.area == nullArea {
 					continue
 				}
 
@@ -136,24 +159,34 @@ func FilterLedgeSpans(ctx *BuildContext, walkableHeight, walkableClimb int32, so
 				// The current span is close to a ledge if the drop to any
 				// neighbour span is less than the walkableClimb.
 				if minh < -walkableClimb {
-					s.area = RC_NULL_AREA
+					s.area = nullArea
 				} else if int32(asmax-asmin) > walkableClimb {
 					// If the difference between all neighbours is too large,
 					// we are at steep slope, mark the span as ledge.
-					s.area = RC_NULL_AREA
+					s.area = nullArea
 				}
 			}
 		}
 	}
 }
 
-/// For this filter, the clearance above the span is the distance from the span's
-/// maximum to the next higher span's minimum. (Same grid column.)
-///
-/// @see rcHeightfield, rcConfig
+// FilterWalkableLowHeightSpans marks walkable spans as not walkable if the
+// clearance above the span is less than the specified height.
+//
+//  Arguments:
+//  ctx             The build context to use during the operation.
+//  walkableHeight  Minimum floor to 'ceiling' height that will still allow the
+//                  floor area to be considered walkable.
+//                  [Limit: >= 3] [Units: vx]
+//  solid           A fully built heightfield. (All spans have been added.)
+//
+// For this filter, the clearance above the span is the distance from the span's
+// maximum to the next higher span's minimum. (Same grid column.)
+//
+// see Heightfield, Config
 func FilterWalkableLowHeightSpans(ctx *BuildContext, walkableHeight int32, solid *Heightfield) {
 	assert.True(ctx != nil, "ctx should not be nil")
-	ctx.StartTimer(RC_TIMER_FILTER_WALKABLE)
+	ctx.StartTimer(TimerFilterWalkable)
 
 	w := solid.Width
 	h := solid.Height
@@ -172,7 +205,7 @@ func FilterWalkableLowHeightSpans(ctx *BuildContext, walkableHeight int32, solid
 					top = int32(MAX_HEIGHT)
 				}
 				if (top - bot) <= walkableHeight {
-					s.area = RC_NULL_AREA
+					s.area = nullArea
 				}
 			}
 		}
