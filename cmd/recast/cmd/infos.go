@@ -25,7 +25,7 @@ func init() {
 func doInfos(cmd *cobra.Command, args []string) {
 	// check existence of navmesh
 	if len(args) < 1 {
-		fmt.Printf("missing navmesh file")
+		fmt.Printf("no input navmesh file")
 		return
 	}
 	var (
@@ -34,8 +34,6 @@ func doInfos(cmd *cobra.Command, args []string) {
 		navmesh *detour.NavMesh
 	)
 	binMesh = args[0]
-	err = fileExists(binMesh)
-	check(err)
 
 	// read navmesh
 	var f *os.File
