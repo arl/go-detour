@@ -44,6 +44,11 @@ Available Commands:
 Use "recast [command] --help" for more information about a command.
 ```
 
+Installation of the cli tool:
+
+```
+go get -u github.com/aurelien-rainone/go-detour/cmd/recast
+```
 
 
 ## Detour library
