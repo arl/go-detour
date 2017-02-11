@@ -60,7 +60,7 @@ func doConfig(cmd *cobra.Command, args []string) {
 		path = args[0]
 	}
 	if err = fileExists(path); err == nil {
-		msg := fmt.Sprintf("'%v' already exists, overwrite? [y/N]", path)
+		msg := fmt.Sprintf("\n'%v' already exists, overwrite? [y/N]", path)
 		if overwrite := askForConfirmation(msg); !overwrite {
 			fmt.Println("aborted")
 			return
