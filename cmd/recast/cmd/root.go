@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var cfgFile string
@@ -15,13 +14,10 @@ var RootCmd = &cobra.Command{
 	Use:   "recast",
 	Short: "build recast navmeshes",
 	Long: `This is the command-line application accompanying go-detour:
-	- build navigation meshes from any input geometry,
-	- save them to binary files,
-	- easily modify build settings,
-	- show info about generated navigation meshes.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	- build navigation meshes from any level geometry,
+	- save them to binary files (usable in 'go-detour')
+	- easily tweak build settings (YAML files),
+	- check or show info about generated navmesh binaries.`,
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -30,26 +26,5 @@ func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
-	}
-}
-
-func init() {
-	cobra.OnInitialize(initConfig)
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" { // enable ability to specify config file via flag
-		viper.SetConfigFile(cfgFile)
-	}
-
-	// TODO: remove useless statements
-	viper.SetConfigName(".recast") // name of config file (without extension)
-	viper.AddConfigPath("$HOME")   // adding home directory as first search path
-	viper.AutomaticEnv()           // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }
