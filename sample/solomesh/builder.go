@@ -15,7 +15,7 @@ import (
 // not actually a navmesh, but more an api to build and manage one
 type SoloMesh struct {
 	ctx           *recast.BuildContext
-	geom          recast.InputGeom
+	geom          *recast.InputGeom
 	meshName      string
 	cfg           recast.Config
 	partitionType sample.PartitionType
@@ -43,11 +43,17 @@ func (sm *SoloMesh) LoadGeometry(r io.Reader) error {
 
 // InputGeom returns the nav mesh input geometry.
 func (sm *SoloMesh) InputGeom() *recast.InputGeom {
-	return &sm.geom
+	return sm.geom
 }
 
 // Build builds the navigation mesh for the input geometry provided
+// TODO: should return an error instead of bool
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
+	if sm.geom == nil || sm.geom.Mesh() == nil {
+		// TODO: error "no vertices and triangles"
+		return nil, false
+	}
+
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
 	verts := sm.geom.Mesh().Verts()
