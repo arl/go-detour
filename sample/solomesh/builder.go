@@ -1,21 +1,10 @@
-package recast
+package solomesh
 
 import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
+	"github.com/aurelien-rainone/go-detour/sample"
 	"github.com/aurelien-rainone/math32"
-)
-
-// SamplePartitionType represents a specific heightfield partitioning method.
-type SamplePartitionType int
-
-const (
-	// SamplePartitionWatershed uses the watershed partitioning method
-	SamplePartitionWatershed SamplePartitionType = iota
-	// SamplePartitionMonotone uses the monotone partitioning method
-	SamplePartitionMonotone
-	// SamplePartitionLayers uses the layer partitioning method
-	SamplePartitionLayers
 )
 
 // SoloMesh allows building of single tile navigation meshes.
@@ -27,15 +16,21 @@ type SoloMesh struct {
 	geom          recast.InputGeom
 	meshName      string
 	cfg           recast.Config
-	partitionType SamplePartitionType
+	partitionType sample.PartitionType
+	settings      Settings
 }
 
-// NewSoloMesh creates a new solo mesh
-func NewSoloMesh(ctx *recast.BuildContext) *SoloMesh {
-	sm := &SoloMesh{}
+// New creates a new solo mesh with default build settings.
+func New(ctx *recast.BuildContext) *SoloMesh {
+	sm := &SoloMesh{settings: NewSettings()}
 	sm.ctx = ctx
-	sm.partitionType = SamplePartitionMonotone
+	sm.partitionType = sample.PartitionMonotone
 	return sm
+}
+
+// SetSettings sets the build settings for this solo mesh.
+func (sm *SoloMesh) SetSettings(s Settings) {
+	sm.settings = s
 }
 
 // LoadGeometry loads geometry from given geometry definition file.
@@ -68,38 +63,31 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Step 1. Initialize build config.
 	//
 
-	// Init build configuration from GUI
-	// TODO: original comment says gfrom GUI but it will be either from command
-	// line, from inifile or struct
-	// for now, settings are the ones that work for wallfloors.obj
-
-	// Rasterization settigs
-	cellSize := float32(0.3)
-	cellHeight := float32(0.2)
+	// Rasterization settings
+	cellSize := sm.settings.CellSize
+	cellHeight := sm.settings.CellHeight
 
 	// Agent properties
-	agentHeight := float32(2.0)
-	agentMaxClimb := float32(0.9)
-	// m_agentRadius := float32(0.0) // TODO; but should be different
-	agentRadius := float32(0.6) // TODO; but should be different
+	agentHeight := sm.settings.AgentHeight
+	agentMaxClimb := sm.settings.AgentMaxClimb
+	agentRadius := sm.settings.AgentRadius
 
 	// Region
-	regionMinSize := int32(8)
-	regionMergeSize := int32(20)
+	regionMinSize := sm.settings.RegionMinSize
+	regionMergeSize := sm.settings.RegionMergeSize
 
 	// Polygonization
-	edgeMaxLen := int32(12)
-	// m_edgeMaxError := float32(.3)
-	edgeMaxError := float32(1.3)
-	vertsPerPoly := int32(6)
+	edgeMaxLen := sm.settings.EdgeMaxLen
+	edgeMaxError := sm.settings.EdgeMaxError
+	vertsPerPoly := sm.settings.VertsPerPoly
 
 	// Detail Mesh
-	detailSampleDist := float32(6)
-	detailSampleMaxError := float32(1)
+	detailSampleDist := sm.settings.DetailSampleDist
+	detailSampleMaxError := sm.settings.DetailSampleMaxError
 
 	sm.cfg.Cs = cellSize
 	sm.cfg.Ch = cellHeight
-	sm.cfg.WalkableSlopeAngle = float32(45)
+	sm.cfg.WalkableSlopeAngle = sm.settings.WalkableSlopeAngle
 	sm.cfg.WalkableHeight = int32(math32.Ceil(agentHeight / sm.cfg.Ch))
 	sm.cfg.WalkableClimb = int32(math32.Floor(agentMaxClimb / sm.cfg.Ch))
 	sm.cfg.WalkableRadius = int32(math32.Ceil(agentRadius / sm.cfg.Cs))
@@ -225,7 +213,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	//   * good choice to use for tiled navmesh with medium and small sized
 	//     tiles
 
-	if sm.partitionType == SamplePartitionWatershed {
+	if sm.partitionType == sample.PartitionWatershed {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		//if (!rcBuildDistanceField(m_ctx, *m_chf))
 		//{
@@ -239,7 +227,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
 		//return navData, false
 		//}
-	} else if sm.partitionType == SamplePartitionMonotone {
+	} else if sm.partitionType == sample.PartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
 		if !recast.BuildRegionsMonotone(sm.ctx, chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
@@ -313,17 +301,17 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Update poly flags from areas.
 	for i := int32(0); i < pmesh.NPolys; i++ {
 		if pmesh.Areas[i] == recast.WalkableArea {
-			pmesh.Areas[i] = samplePolyAreaGround
+			pmesh.Areas[i] = sample.PolyAreaGround
 		}
 
-		if pmesh.Areas[i] == samplePolyAreaGround ||
-			pmesh.Areas[i] == samplePolyAreaGrass ||
-			pmesh.Areas[i] == samplePolyAreaRoad {
-			pmesh.Flags[i] = samplePolyFlagsWalk
-		} else if pmesh.Areas[i] == samplePolyAreaWater {
-			pmesh.Flags[i] = samplePolyFlagsSwim
-		} else if pmesh.Areas[i] == samplePolyAreaDoor {
-			pmesh.Flags[i] = samplePolyFlagsWalk | samplePolyFlagsDoor
+		if pmesh.Areas[i] == sample.PolyAreaGround ||
+			pmesh.Areas[i] == sample.PolyAreaGrass ||
+			pmesh.Areas[i] == sample.PolyAreaRoad {
+			pmesh.Flags[i] = sample.PolyFlagsWalk
+		} else if pmesh.Areas[i] == sample.PolyAreaWater {
+			pmesh.Flags[i] = sample.PolyFlagsSwim
+		} else if pmesh.Areas[i] == sample.PolyAreaDoor {
+			pmesh.Flags[i] = sample.PolyFlagsWalk | sample.PolyFlagsDoor
 		}
 	}
 
