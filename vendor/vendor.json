@@ -33,6 +33,12 @@
 			"revisionTime": "2017-02-04T00:28:37Z"
 		},
 		{
+			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
+			"path": "github.com/inconshreveable/mousetrap",
+			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+			"revisionTime": "2014-10-17T20:07:13Z"
+		},
+		{
 			"checksumSHA1": "7qRuI2uyis6CoKEaaWm4Dq8dxvA=",
 			"path": "github.com/spf13/cobra",
 			"revision": "35136c09d8da66b901337c6e86fd8e88a1a255bd",
