@@ -2,10 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 
-	yaml "gopkg.in/yaml.v2"
-
+	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/go-detour/sample/solomesh"
 	"github.com/spf13/cobra"
@@ -32,14 +30,53 @@ func init() {
 }
 
 func doBuild(cmd *cobra.Command, args []string) {
-	// check existence of input geometry
+	// check existence of input geometry flags
 	if len(inputVal) == 0 {
 		fmt.Printf("missing input geometry file (--input)")
 		return
 	}
-	var err error
-	err = fileExists(inputVal)
-	check(err)
+
+	//
+	// build navmesh
+	//
+
+	var (
+		navMesh *detour.NavMesh
+		err     error
+		ok      bool
+	)
+	ctx := recast.NewBuildContext(true)
+
+	switch typeVal {
+
+	case "solo":
+		// unmarshall build settings
+		var cfg solomesh.Settings
+		err = unmarshalYAMLFile(cfgVal, &cfg)
+		check(err)
+
+		// read input geometry
+		soloMesh := solomesh.New(ctx)
+		if err = soloMesh.LoadGeometry(inputVal); err != nil {
+			check(err)
+		}
+		navMesh, ok = soloMesh.Build()
+
+	default:
+		fmt.Printf("unknown (or unimplemented) navmesh type '%v'\n", typeVal)
+		return
+	}
+
+	ctx.DumpLog("")
+
+	//
+	// save
+	//
+
+	if !ok {
+		fmt.Printf("couldn't build navmesh for %v\n", inputVal)
+		return
+	}
 
 	// check output file name
 	out := "navmesh.bin"
@@ -47,48 +84,16 @@ func doBuild(cmd *cobra.Command, args []string) {
 		out = args[0]
 	}
 	if err = fileExists(out); err == nil {
-		msg := fmt.Sprintf("'%v' already exists, overwrite? [y/N]", out)
+		msg := fmt.Sprintf("\n'%v' already exists, overwrite? [y/N]", out)
 		if overwrite := askForConfirmation(msg); !overwrite {
 			fmt.Println("aborted")
 			return
 		}
 	}
 
-	switch typeVal {
+	err = navMesh.SaveToFile(out)
+	check(err)
 
-	case "solo":
-		var (
-			buf []byte
-			cfg solomesh.Settings
-		)
-		// read config
-		buf, err = ioutil.ReadFile(cfgVal)
-		check(err)
-
-		// marhsall config
-		err = yaml.Unmarshal(buf, &cfg)
-		check(err)
-
-		// read input geometry
-		ctx := recast.NewBuildContext(true)
-		soloMesh := solomesh.New(ctx)
-		if err = soloMesh.LoadGeometry(inputVal); err != nil {
-			ctx.DumpLog("")
-			check(err)
-		}
-		navMesh, ok := soloMesh.Build()
-		if !ok {
-			ctx.DumpLog("")
-			fmt.Printf("couldn't build navmesh for %v\n", inputVal)
-			return
-		}
-
-		err = navMesh.SaveToFile(out)
-		check(err)
-
-		fmt.Println("success")
-		ctx.DumpLog("'%v' navmesh generated '%v'\n", typeVal, out)
-	default:
-		fmt.Printf("unknown (or unimplemented) navmesh type '%v'\n", typeVal)
-	}
+	fmt.Println("success")
+	fmt.Printf("navmesh written to '%v'\n", out)
 }
