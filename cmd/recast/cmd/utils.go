@@ -3,7 +3,10 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 // convenience function that returns nil if file exists, or an error if it
@@ -46,4 +49,12 @@ func check(err error) {
 		fmt.Printf("error, %v\n", err)
 		os.Exit(-1)
 	}
+}
+
+func unmarshalYAMLFile(path string, out interface{}) error {
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return yaml.Unmarshal(buf, &out)
 }
