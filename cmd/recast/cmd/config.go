@@ -50,7 +50,7 @@ func doConfig(cmd *cobra.Command, args []string) {
 	)
 
 	if cfg, ok = defaultCfgs[typeVal]; !ok {
-		fmt.Sprintf("error, unknown navmesh type '%v' (or not implemented)\n", typeVal)
+		fmt.Printf("error, unknown (or unimplemented) navmesh type '%v'\n", typeVal)
 		return
 	}
 

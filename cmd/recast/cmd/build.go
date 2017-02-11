@@ -86,13 +86,9 @@ func doBuild(cmd *cobra.Command, args []string) {
 		err = navMesh.SaveToFile(out)
 		check(err)
 
-		fmt.Printf("success")
-		fmt.Printf("'%v' navmesh generated '%v'\n", typeVal, out)
-
-	case "tiled":
-		fmt.Println("unimplemented navmesh type")
-
+		fmt.Println("success")
+		ctx.DumpLog("'%v' navmesh generated '%v'\n", typeVal, out)
 	default:
-		fmt.Println("unknown navmesh type")
+		fmt.Printf("unknown (or unimplemented) navmesh type '%v'\n", typeVal)
 	}
 }
