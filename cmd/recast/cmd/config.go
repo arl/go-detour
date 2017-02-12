@@ -31,7 +31,7 @@ func init() {
 	configCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tiled'")
 
 	// register solo mesh configs
-	if buf, err := yaml.Marshal(solomesh.NewSettings()); err != nil {
+	if buf, err := yaml.Marshal(solomesh.DefaultSettings()); err != nil {
 		fmt.Println("couldn't register solomesh default settings,", err)
 	} else {
 		defaultCfgs["solo"] = buf

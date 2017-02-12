@@ -17,19 +17,19 @@ type TileMesh struct {
 	meshName      string
 	cfg           recast.Config
 	partitionType sample.PartitionType
-	settings      Settings
+	settings      recast.BuildSettings
 }
 
 // New creates a new tile mesh with default build settings.
 func New(ctx *recast.BuildContext) *TileMesh {
-	sm := &TileMesh{settings: NewSettings()}
+	sm := &TileMesh{settings: DefaultSettings()}
 	sm.ctx = ctx
 	sm.partitionType = sample.PartitionMonotone
 	return sm
 }
 
 // SetSettings sets the build settings for this tile mesh.
-func (sm *TileMesh) SetSettings(s Settings) {
+func (sm *TileMesh) SetSettings(s recast.BuildSettings) {
 	sm.settings = s
 }
 
@@ -95,15 +95,15 @@ func (sm *TileMesh) Build() (*detour.NavMesh, bool) {
 
 	sm.cfg.Cs = cellSize
 	sm.cfg.Ch = cellHeight
-	sm.cfg.WalkableSlopeAngle = sm.settings.WalkableSlopeAngle
+	sm.cfg.WalkableSlopeAngle = sm.settings.AgentMaxSlope
 	sm.cfg.WalkableHeight = int32(math32.Ceil(agentHeight / sm.cfg.Ch))
 	sm.cfg.WalkableClimb = int32(math32.Floor(agentMaxClimb / sm.cfg.Ch))
 	sm.cfg.WalkableRadius = int32(math32.Ceil(agentRadius / sm.cfg.Cs))
 	sm.cfg.MaxEdgeLen = int32(float32(edgeMaxLen) / cellSize)
 	sm.cfg.MaxSimplificationError = edgeMaxError
-	sm.cfg.MinRegionArea = regionMinSize * regionMinSize       // Note: area = size*size
-	sm.cfg.MergeRegionArea = regionMergeSize * regionMergeSize // Note: area = size*size
-	sm.cfg.MaxVertsPerPoly = vertsPerPoly
+	sm.cfg.MinRegionArea = int32(regionMinSize * regionMinSize)       // Note: area = size*size
+	sm.cfg.MergeRegionArea = int32(regionMergeSize * regionMergeSize) // Note: area = size*size
+	sm.cfg.MaxVertsPerPoly = int32(vertsPerPoly)
 
 	if detailSampleDist < 0.9 {
 		sm.cfg.DetailSampleDist = 0

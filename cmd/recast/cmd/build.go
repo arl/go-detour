@@ -52,7 +52,7 @@ func doBuild(cmd *cobra.Command, args []string) {
 
 	case "solo":
 		// unmarshall build settings
-		var cfg solomesh.Settings
+		var cfg recast.BuildSettings
 		err = unmarshalYAMLFile(cfgVal, &cfg)
 		check(err)
 
