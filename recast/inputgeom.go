@@ -20,39 +20,39 @@ type ConvexVolume struct {
 
 type BuildSettings struct {
 	// Cell size in world units
-	cellSize float32
+	CellSize float32
 	// Cell height in world units
-	cellHeight float32
+	CellHeight float32
 	// Agent height in world units
-	agentHeight float32
+	AgentHeight float32
 	// Agent radius in world units
-	agentRadius float32
+	AgentRadius float32
 	// Agent max climb in world units
-	agentMaxClimb float32
+	AgentMaxClimb float32
 	// Agent max slope in degrees
-	agentMaxSlope float32
+	AgentMaxSlope float32
 	// Region minimum size in voxels.
 	// regionMinSize = sqrt(regionMinArea)
-	regionMinSize float32
+	RegionMinSize float32
 	// Region merge size in voxels.
 	// regionMergeSize = sqrt(regionMergeArea)
-	regionMergeSize float32
+	RegionMergeSize float32
 	// Edge max length in world units
-	edgeMaxLen float32
+	EdgeMaxLen float32
 	// Edge max error in voxels
-	edgeMaxError float32
-	vertsPerPoly float32
+	EdgeMaxError float32
+	VertsPerPoly float32
 	// Detail sample distance in voxels
-	detailSampleDist float32
+	DetailSampleDist float32
 	// Detail sample max error in voxel heights.
-	detailSampleMaxError float32
+	DetailSampleMaxError float32
 	// Partition type, see SamplePartitionType
-	partitionType int32
+	PartitionType int32
 	// Bounds of the area to mesh
-	navMeshBMin [3]float32
-	navMeshBMax [3]float32
+	NavMeshBMin [3]float32
+	NavMeshBMax [3]float32
 	// Size of the tiles in voxels
-	tileSize float32
+	TileSize float32
 }
 
 type InputGeom struct {
@@ -116,7 +116,7 @@ func (ig *InputGeom) MeshBoundsMax() [3]float32 {
 
 func (ig *InputGeom) NavMeshBoundsMin() [3]float32 {
 	if ig.hasBuildSettings {
-		return ig.buildSettings.navMeshBMin
+		return ig.buildSettings.NavMeshBMin
 	} else {
 		return ig.meshBMin
 	}
@@ -124,7 +124,7 @@ func (ig *InputGeom) NavMeshBoundsMin() [3]float32 {
 
 func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
 	if ig.hasBuildSettings {
-		return ig.buildSettings.navMeshBMax
+		return ig.buildSettings.NavMeshBMax
 	} else {
 		return ig.meshBMax
 	}
