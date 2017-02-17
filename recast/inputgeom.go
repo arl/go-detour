@@ -106,27 +106,27 @@ func (ig *InputGeom) Mesh() *MeshLoaderOBJ {
 	return ig.mesh
 }
 
-func (ig *InputGeom) MeshBoundsMin() [3]float32 {
-	return ig.meshBMin
+func (ig *InputGeom) MeshBoundsMin() []float32 {
+	return ig.meshBMin[:3]
 }
 
-func (ig *InputGeom) MeshBoundsMax() [3]float32 {
-	return ig.meshBMax
+func (ig *InputGeom) MeshBoundsMax() []float32 {
+	return ig.meshBMax[:3]
 }
 
-func (ig *InputGeom) NavMeshBoundsMin() [3]float32 {
+func (ig *InputGeom) NavMeshBoundsMin() []float32 {
 	if ig.hasBuildSettings {
-		return ig.buildSettings.NavMeshBMin
+		return ig.buildSettings.NavMeshBMin[:3]
 	} else {
-		return ig.meshBMin
+		return ig.meshBMin[:3]
 	}
 }
 
-func (ig *InputGeom) NavMeshBoundsMax() [3]float32 {
+func (ig *InputGeom) NavMeshBoundsMax() []float32 {
 	if ig.hasBuildSettings {
-		return ig.buildSettings.NavMeshBMax
+		return ig.buildSettings.NavMeshBMax[:3]
 	} else {
-		return ig.meshBMax
+		return ig.meshBMax[:3]
 	}
 }
 

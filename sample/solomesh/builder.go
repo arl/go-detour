@@ -110,8 +110,8 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Set the area where the navigation will be build.
 	// Here the bounds of the input mesh are used, but the
 	// area could be specified by an user defined box, etc.
-	sm.cfg.BMin = bmin
-	sm.cfg.BMax = bmax
+	copy(sm.cfg.BMin[:], bmin[:3])
+	copy(sm.cfg.BMax[:], bmax[:3])
 	sm.cfg.Width, sm.cfg.Height = recast.CalcGridSize(sm.cfg.BMin, sm.cfg.BMax, sm.cfg.Cs)
 
 	// Reset build times gathering.
