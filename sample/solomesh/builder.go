@@ -1,6 +1,8 @@
 package solomesh
 
 import (
+	"io"
+
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/go-detour/sample"
@@ -33,16 +35,10 @@ func (sm *SoloMesh) SetSettings(s Settings) {
 	sm.settings = s
 }
 
-// LoadGeometry loads geometry from given geometry definition file.
-func (sm *SoloMesh) LoadGeometry(path string) error {
-	// load geometry
-	var err error
-	err = sm.geom.Load(sm.ctx, path)
-	if err != nil {
-		return err
-	}
-	sm.ctx.Progressf("Geom load log %s:", path)
-	return nil
+// LoadGeometry loads geometry from r that reads from a geometry definition
+// file.
+func (sm *SoloMesh) LoadGeometry(r io.Reader) error {
+	return sm.geom.LoadOBJMesh(r)
 }
 
 // InputGeom returns the nav mesh input geometry.
