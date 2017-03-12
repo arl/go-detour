@@ -57,7 +57,7 @@ type BuildSettings struct {
 
 type InputGeom struct {
 	chunkyMesh *chunkyTriMesh
-	mesh       *MeshLoaderObj
+	mesh       *MeshLoaderOBJ
 
 	meshBMin, meshBMax [3]float32
 	buildSettings      BuildSettings
@@ -86,7 +86,7 @@ func (ig *InputGeom) LoadOBJMesh(r io.Reader) error {
 	ig.offMeshConCount = 0
 	ig.volumeCount = 0
 
-	ig.mesh = NewMeshLoaderObj()
+	ig.mesh = NewMeshLoaderOBJ()
 	if err = ig.mesh.Load(r); err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (ig *InputGeom) LoadOBJMesh(r io.Reader) error {
 }
 
 // Method to return static mesh data.
-func (ig *InputGeom) Mesh() *MeshLoaderObj {
+func (ig *InputGeom) Mesh() *MeshLoaderOBJ {
 	return ig.mesh
 }
 

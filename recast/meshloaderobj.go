@@ -7,15 +7,15 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-type MeshLoaderObj struct {
+type MeshLoaderOBJ struct {
 	scale   float32
 	verts   []float32
 	tris    []int32
 	normals []float32
 }
 
-func NewMeshLoaderObj() *MeshLoaderObj {
-	return &MeshLoaderObj{
+func NewMeshLoaderOBJ() *MeshLoaderOBJ {
+	return &MeshLoaderOBJ{
 		scale:   1.0,
 		verts:   make([]float32, 0),
 		tris:    make([]int32, 0),
@@ -23,7 +23,7 @@ func NewMeshLoaderObj() *MeshLoaderObj {
 	}
 }
 
-func (mlo *MeshLoaderObj) Load(r io.Reader) error {
+func (mlo *MeshLoaderOBJ) Load(r io.Reader) error {
 	var (
 		obj *gobj.OBJFile
 		err error
@@ -86,26 +86,26 @@ func (mlo *MeshLoaderObj) Load(r io.Reader) error {
 	return nil
 }
 
-func (mlo *MeshLoaderObj) Scale() float32 {
+func (mlo *MeshLoaderOBJ) Scale() float32 {
 	return mlo.scale
 }
 
-func (mlo *MeshLoaderObj) Verts() []float32 {
+func (mlo *MeshLoaderOBJ) Verts() []float32 {
 	return mlo.verts
 }
 
-func (mlo *MeshLoaderObj) Tris() []int32 {
+func (mlo *MeshLoaderOBJ) Tris() []int32 {
 	return mlo.tris
 }
 
-func (mlo *MeshLoaderObj) Normals() []float32 {
+func (mlo *MeshLoaderOBJ) Normals() []float32 {
 	return mlo.normals
 }
 
-func (mlo *MeshLoaderObj) VertCount() int32 {
+func (mlo *MeshLoaderOBJ) VertCount() int32 {
 	return int32(len(mlo.verts) / 3)
 }
 
-func (mlo *MeshLoaderObj) TriCount() int32 {
+func (mlo *MeshLoaderOBJ) TriCount() int32 {
 	return int32(len(mlo.tris) / 3)
 }
