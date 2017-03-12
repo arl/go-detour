@@ -2,7 +2,7 @@ package recast
 
 import (
 	"fmt"
-	"path/filepath"
+	"io"
 )
 
 const (
@@ -77,18 +77,7 @@ type InputGeom struct {
 	volumeCount int32
 }
 
-func (ig *InputGeom) Load(ctx *BuildContext, path string) error {
-
-	switch filepath.Ext(path) {
-	case ".obj":
-		return ig.loadMesh(ctx, path)
-	case ".gset":
-		return fmt.Errorf("gset input geometry not implemented")
-	}
-	return fmt.Errorf("couldn't recognize input geometry file extension: '%s'", path)
-}
-
-func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
+func (ig *InputGeom) LoadOBJMesh(r io.Reader) error {
 	var err error
 	if ig.mesh != nil {
 		ig.chunkyMesh = nil
@@ -98,7 +87,7 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 	ig.volumeCount = 0
 
 	ig.mesh = NewMeshLoaderObj()
-	if err = ig.mesh.Load(path); err != nil {
+	if err = ig.mesh.Load(r); err != nil {
 		return err
 	}
 
@@ -106,7 +95,7 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 
 	ig.chunkyMesh = new(chunkyTriMesh)
 	if !createChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
-		return fmt.Errorf("failed to build chunky mesh for '%s'", path)
+		return fmt.Errorf("failed to build chunky mesh")
 	}
 
 	return nil
