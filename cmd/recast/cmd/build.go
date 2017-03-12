@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
@@ -57,7 +58,11 @@ func doBuild(cmd *cobra.Command, args []string) {
 
 		// read input geometry
 		soloMesh := solomesh.New(ctx)
-		if err = soloMesh.LoadGeometry(inputVal); err != nil {
+		var r *os.File
+		r, err = os.Open(inputVal)
+		check(err)
+		defer r.Close()
+		if err = soloMesh.LoadGeometry(r); err != nil {
 			check(err)
 		}
 		navMesh, ok = soloMesh.Build()
