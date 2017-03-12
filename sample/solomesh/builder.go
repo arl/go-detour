@@ -142,7 +142,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// the are type for each of the meshes and rasterize them.
 	recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, triAreas)
 	if !recast.RasterizeTriangles(sm.ctx, verts, nverts, tris, triAreas, ntris, solid, sm.cfg.WalkableClimb) {
-		sm.ctx.Errorf("buildNavigation: Could not rasterize triangles.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not rasterize triangles.")
 		return nil, false
 	}
 
@@ -162,13 +162,13 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// between walkable cells will be calculated.
 	chf := &recast.CompactHeightfield{}
 	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, solid, chf) {
-		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not build compact data.")
 		return nil, false
 	}
 
 	// Erode the walkable area by agent radius.
 	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, chf) {
-		sm.ctx.Errorf("buildNavigation: Could not erode.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not erode.")
 		return nil, false
 	}
 
@@ -220,28 +220,28 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		//if (!rcBuildDistanceField(m_ctx, *m_chf))
 		//{
-		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build distance field.");
+		//m_ctx.log(RC_LOG_ERROR, "SoloMesh.Build: Could not build distance field.");
 		//return navData, false
 		//}
 
 		//// Partition the walkable surface into simple regions without holes.
 		//if (!rcBuildRegions(m_ctx, *m_chf, 0, m_cfg.minRegionArea, m_cfg.mergeRegionArea))
 		//{
-		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
+		//m_ctx.log(RC_LOG_ERROR, "SoloMesh.Build: Could not build watershed regions.");
 		//return navData, false
 		//}
 	} else if sm.partitionType == sample.PartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
 		if !recast.BuildRegionsMonotone(sm.ctx, chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
-			sm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
+			sm.ctx.Errorf("SoloMesh.Build: Could not build monotone regions.")
 			return nil, false
 		}
 	} else {
 		// SAMPLE_PARTITION_LAYERS
 		// Partition the walkable surface into simple regions without holes.
 		//if !rcBuildLayerRegions(m_ctx, *m_chf, 0, m_cfg.minRegionArea) {
-		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build layer regions.")
+		//m_ctx.log(RC_LOG_ERROR, "SoloMesh.Build: Could not build layer regions.")
 		//return navData, false
 		//}
 	}
@@ -253,7 +253,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Create contours.
 	cset := &recast.ContourSet{}
 	if !recast.BuildContours(sm.ctx, chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, cset, recast.ContourTessWallEdges) {
-		sm.ctx.Errorf("buildNavigation: Could not create contours.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not create contours.")
 		return nil, false
 	}
 
@@ -268,7 +268,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	)
 	pmesh, ret = recast.BuildPolyMesh(sm.ctx, cset, sm.cfg.MaxVertsPerPoly)
 	if !ret {
-		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not triangulate contours.")
 		return nil, false
 	}
 
@@ -279,7 +279,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	var dmesh *recast.PolyMeshDetail
 	dmesh, ret = recast.BuildPolyMeshDetail(sm.ctx, pmesh, chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	if !ret {
-		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not build detail mesh.")
 		return nil, false
 	}
 
