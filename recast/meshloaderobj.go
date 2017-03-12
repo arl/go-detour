@@ -1,12 +1,13 @@
 package recast
 
 import (
+	"io"
+
 	"github.com/aurelien-rainone/gobj"
 	"github.com/aurelien-rainone/math32"
 )
 
 type MeshLoaderObj struct {
-	m_filename  string
 	m_scale     float32
 	m_verts     []float32
 	m_tris      []int32
@@ -24,12 +25,12 @@ func NewMeshLoaderObj() *MeshLoaderObj {
 	}
 }
 
-func (mlo *MeshLoaderObj) Load(filename string) error {
+func (mlo *MeshLoaderObj) Load(r io.Reader) error {
 	var (
 		obj *gobj.OBJFile
 		err error
 	)
-	obj, err = gobj.Load(filename)
+	obj, err = gobj.Decode(r)
 	if err != nil {
 		return err
 	}
@@ -85,12 +86,7 @@ func (mlo *MeshLoaderObj) Load(filename string) error {
 		}
 	}
 
-	mlo.m_filename = filename
 	return nil
-}
-
-func (mlo *MeshLoaderObj) Filename() string {
-	return mlo.m_filename
 }
 
 func (mlo *MeshLoaderObj) Scale() float32 {
