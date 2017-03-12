@@ -3,6 +3,7 @@ package solomesh
 import (
 	"bytes"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/aurelien-rainone/go-detour/detour"
@@ -10,6 +11,18 @@ import (
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
 )
+
+func check(t *testing.T, err error) {
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func checkb(b *testing.B, err error) {
+	if err != nil {
+		b.Fatal(err)
+	}
+}
 
 func compareFiles(fn1, fn2 string) (bool, error) {
 	// per comment, better to not read an entire file into memory
@@ -50,7 +63,11 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 
 	ctx = recast.NewBuildContext(true)
 	soloMesh = New(ctx)
-	if err = soloMesh.LoadGeometry(path); err != nil {
+
+	r, err := os.Open(path)
+	check(t, err)
+	defer r.Close()
+	if err = soloMesh.LoadGeometry(r); err != nil {
 		ctx.DumpLog("")
 		t.Fatalf("couldn't load mesh %v", path)
 	}
@@ -111,7 +128,10 @@ func benchmarkCreateNavMesh(b *testing.B, meshName string) {
 	path := testDataDir + meshName + ".obj"
 
 	soloMesh := New(recast.NewBuildContext(false))
-	if err := soloMesh.LoadGeometry(path); err != nil {
+	r, err := os.Open(path)
+	checkb(b, err)
+	defer r.Close()
+	if err := soloMesh.LoadGeometry(r); err != nil {
 		b.Fatalf("couldn't load mesh %v: %v", path, err)
 	}
 
@@ -170,7 +190,11 @@ func BenchmarkPathFindSoloMesh(b *testing.B) {
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := New(ctx)
-	if err = soloMesh.LoadGeometry(path); err != nil {
+
+	r, err := os.Open(path)
+	checkb(b, err)
+	defer r.Close()
+	if err = soloMesh.LoadGeometry(r); err != nil {
 		b.Fatalf("couldn't load mesh '%v': %s", path, err)
 	}
 	navMesh, ok := soloMesh.Build()
@@ -249,7 +273,10 @@ func TestRaycastSoloMesh(t *testing.T) {
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := New(ctx)
-	if err = soloMesh.LoadGeometry(path); err != nil {
+	r, err := os.Open(path)
+	check(t, err)
+	defer r.Close()
+	if err = soloMesh.LoadGeometry(r); err != nil {
 		t.Fatalf("couldn't load mesh '%v': %s", path, err)
 	}
 	navMesh, ok := soloMesh.Build()

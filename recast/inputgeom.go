@@ -2,7 +2,7 @@ package recast
 
 import (
 	"fmt"
-	"path/filepath"
+	"io"
 )
 
 const (
@@ -57,7 +57,7 @@ type BuildSettings struct {
 
 type InputGeom struct {
 	chunkyMesh *chunkyTriMesh
-	mesh       *MeshLoaderObj
+	mesh       *MeshLoaderOBJ
 
 	meshBMin, meshBMax [3]float32
 	buildSettings      BuildSettings
@@ -77,18 +77,7 @@ type InputGeom struct {
 	volumeCount int32
 }
 
-func (ig *InputGeom) Load(ctx *BuildContext, path string) error {
-
-	switch filepath.Ext(path) {
-	case ".obj":
-		return ig.loadMesh(ctx, path)
-	case ".gset":
-		return fmt.Errorf("gset input geometry not implemented")
-	}
-	return fmt.Errorf("couldn't recognize input geometry file extension: '%s'", path)
-}
-
-func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
+func (ig *InputGeom) LoadOBJMesh(r io.Reader) error {
 	var err error
 	if ig.mesh != nil {
 		ig.chunkyMesh = nil
@@ -97,8 +86,8 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 	ig.offMeshConCount = 0
 	ig.volumeCount = 0
 
-	ig.mesh = NewMeshLoaderObj()
-	if err = ig.mesh.Load(path); err != nil {
+	ig.mesh = NewMeshLoaderOBJ()
+	if err = ig.mesh.Load(r); err != nil {
 		return err
 	}
 
@@ -106,14 +95,14 @@ func (ig *InputGeom) loadMesh(ctx *BuildContext, path string) error {
 
 	ig.chunkyMesh = new(chunkyTriMesh)
 	if !createChunkyTriMesh(ig.mesh.Verts(), ig.mesh.Tris(), ig.mesh.TriCount(), 256, ig.ChunkyMesh()) {
-		return fmt.Errorf("failed to build chunky mesh for '%s'", path)
+		return fmt.Errorf("failed to build chunky mesh")
 	}
 
 	return nil
 }
 
 // Method to return static mesh data.
-func (ig *InputGeom) Mesh() *MeshLoaderObj {
+func (ig *InputGeom) Mesh() *MeshLoaderOBJ {
 	return ig.mesh
 }
 
