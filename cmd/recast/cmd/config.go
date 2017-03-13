@@ -74,6 +74,6 @@ func doConfig(cmd *cobra.Command, args []string) {
 	_, err = f.Write(cfg)
 	check(err)
 
-	fmt.Printf("success")
+	fmt.Printf("success\n")
 	fmt.Printf("build settings for '%v' navmesh generated to '%v'\n", typeVal, path)
 }
