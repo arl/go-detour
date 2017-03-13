@@ -56,5 +56,5 @@ func unmarshalYAMLFile(path string, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(buf, &out)
+	return yaml.Unmarshal(buf, out)
 }

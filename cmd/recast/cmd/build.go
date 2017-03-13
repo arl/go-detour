@@ -62,6 +62,8 @@ func doBuild(cmd *cobra.Command, args []string) {
 		r, err = os.Open(inputVal)
 		check(err)
 		defer r.Close()
+
+		soloMesh.SetSettings(cfg)
 		if err = soloMesh.LoadGeometry(r); err != nil {
 			check(err)
 		}
