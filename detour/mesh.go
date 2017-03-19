@@ -84,7 +84,7 @@ func Decode(r io.Reader) (*NavMesh, error) {
 		if err != nil {
 			return nil, err
 		}
-		status, _ := mesh.addTile(data, tileHdr.DataSize, tileHdr.TileRef)
+		status, _ := mesh.AddTile(data, tileHdr.TileRef)
 		if status&Failure != 0 {
 			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
 		}
@@ -171,7 +171,7 @@ func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 		return status
 	}
 
-	status, _ = m.addTile(data, int32(len(data)), TileRef(flags))
+	status, _ = m.AddTile(data, TileRef(flags))
 	return status
 }
 
@@ -221,11 +221,10 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 	return Success
 }
 
-// addTile adds a tile to the navigation mesh.
+// AddTile adds a tile to the navigation mesh.
 //
 //  Arguments:
 //   data      Data for the new tile mesh. (See: CreateNavMeshData)
-//   dataSize  Data size of the new tile mesh.
 //   flags     Tile flags. (See: tileFlags)
 //   lastRef   The desired reference for the tile. (When reloading a tile.)
 //             optional, defaults to 0
@@ -247,7 +246,7 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 // removed from this nav mesh.
 //
 // see CreateNavMeshData, removeTileBvTree
-func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status, TileRef) {
+func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 	var hdr MeshHeader
 	hdr.unserialize(data)
 
@@ -333,7 +332,7 @@ func (m *NavMesh) addTile(data []byte, dataSize int32, lastRef TileRef) (Status,
 	// Init tile.
 	tile.Header = &hdr
 	tile.Data = data
-	tile.DataSize = dataSize
+	tile.DataSize = int32(len(data))
 	tile.Flags = 0
 
 	m.connectIntLinks(tile)

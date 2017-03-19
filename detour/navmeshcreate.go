@@ -587,7 +587,7 @@ type NavMeshCreateParams struct {
 //
 // Return true if the tile data was successfully created.
 //
-// see NavMesh, NavMesh.addTile()
+// see NavMesh, NavMesh.AddTile()
 func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	if params.Nvp > int32(VertsPerPolygon) {
 		return nil, fmt.Errorf("wrong value for params.Nvp")
