@@ -377,6 +377,106 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 	return Success, m.TileRef(tile)
 }
 
+// Removes the specified tile from the navigation mesh.
+//
+//  Arguments:
+//   ref      The reference of the tile to remove.
+//
+//  Return values:
+//  data      Data associated with deleted tile.
+//  st        The status flags for the operation.
+// This function returns the data for the tile so that, if desired,
+// it can be added back to the navigation mesh at a later point.
+//
+// see AddTile
+func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
+	data = nil
+	if ref == 0 {
+		return data, Failure | InvalidParam
+	}
+	tileIndex := m.decodePolyIDTile(PolyRef(ref))
+	tileSalt := m.decodePolyIDSalt(PolyRef(ref))
+	if tileIndex >= uint32(m.MaxTiles) {
+		return data, Failure | InvalidParam
+	}
+	tile := &m.Tiles[tileIndex]
+	if tile.Salt != tileSalt {
+		return data, Failure | InvalidParam
+	}
+
+	// Remove tile from hash lookup.
+	h := computeTileHash(tile.Header.X, tile.Header.Y, m.TileLUTMask)
+	var (
+		prev *MeshTile
+		cur  *MeshTile = m.posLookup[h]
+	)
+	for cur != nil {
+		if cur == tile {
+			if prev != nil {
+				prev.Next = cur.Next
+			} else {
+				m.posLookup[h] = cur.Next
+			}
+			break
+		}
+		prev = cur
+		cur = cur.Next
+	}
+
+	// Remove connections to neighbour tiles.
+	const MAX_NEIS = 32
+	var (
+		neis  [MAX_NEIS]*MeshTile
+		nneis int
+	)
+
+	// Disconnect from other layers in current tile.
+	nneis = int(m.TilesAt(tile.Header.X, tile.Header.Y, neis[:], MAX_NEIS))
+	for j := 0; j < nneis; j++ {
+		if neis[j] == tile {
+			continue
+		}
+		m.unconnectLinks(neis[j], tile)
+	}
+
+	// Disconnect from neighbour tiles.
+	for i := 0; i < 8; i++ {
+		nneis = int(m.neighbourTilesAt(tile.Header.X, tile.Header.Y, int32(i), neis[:], MAX_NEIS))
+		for j := 0; j < nneis; j++ {
+			m.unconnectLinks(neis[j], tile)
+		}
+	}
+
+	// Reset tile.
+	if data != nil {
+		data = tile.Data
+	}
+
+	tile.Header = nil
+	tile.Flags = 0
+	tile.LinksFreeList = 0
+	tile.Polys = nil
+	tile.Verts = nil
+	tile.Links = nil
+	tile.DetailMeshes = nil
+	tile.DetailVerts = nil
+	tile.DetailTris = nil
+	tile.BvTree = nil
+	tile.OffMeshCons = nil
+
+	// Update salt, salt should never be zero.
+	tile.Salt = (tile.Salt + 1) & ((1 << m.saltBits) - 1)
+	if tile.Salt == 0 {
+		tile.Salt++
+	}
+
+	// Add to free list.
+	tile.Next = m.nextFree
+	m.nextFree = tile
+
+	return data, Success
+}
+
 // TileAt returns the tile at the specified grid location.
 //
 //  Arguments:
@@ -1231,6 +1331,37 @@ func (m *NavMesh) findConnectingPolys(
 		}
 	}
 	return n
+}
+
+func (m *NavMesh) unconnectLinks(tile *MeshTile, target *MeshTile) {
+	if tile == nil || target == nil {
+		return
+	}
+
+	targetNum := m.decodePolyIDTile(PolyRef(m.TileRef(target)))
+
+	for i := int32(0); i < tile.Header.PolyCount; i++ {
+		poly := &tile.Polys[i]
+		j := poly.FirstLink
+		pj := nullLink
+		for j != nullLink {
+			if m.decodePolyIDTile(tile.Links[j].Ref) == targetNum {
+				// Remove link.
+				nj := tile.Links[j].Next
+				if pj == nullLink {
+					poly.FirstLink = nj
+				} else {
+					tile.Links[pj].Next = nj
+				}
+				freeLink(tile, j)
+				j = nj
+			} else {
+				// Advance
+				pj = j
+				j = tile.Links[j].Next
+			}
+		}
+	}
 }
 
 func calcSlabEndPoints(va, vb d3.Vec3, bmin, bmax []float32, side int32) {
