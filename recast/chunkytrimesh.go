@@ -17,7 +17,7 @@ type chunkyTriMesh struct {
 	nnodes          int32
 	tris            []int32
 	ntris           int32
-	maxTrisPerChunk int32
+	MaxTrisPerChunk int32
 }
 
 type BoundsItem struct {
@@ -230,15 +230,15 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 	cm.nnodes = curNode
 
 	// Calc max tris per node.
-	cm.maxTrisPerChunk = 0
+	cm.MaxTrisPerChunk = 0
 	for i := int32(0); i < cm.nnodes; i++ {
 		node := cm.nodes[i]
 		isLeaf := node.i >= 0
 		if !isLeaf {
 			continue
 		}
-		if node.n > cm.maxTrisPerChunk {
-			cm.maxTrisPerChunk = node.n
+		if node.n > cm.MaxTrisPerChunk {
+			cm.MaxTrisPerChunk = node.n
 		}
 	}
 
