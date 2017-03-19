@@ -259,7 +259,7 @@ func checkOverlapRect(amin, amax, bmin, bmax [2]float32) bool {
 }
 
 // Returns the chunk indices which overlap the input rectable.
-func (cm *chunkyTriMesh) ChunksOverlappingRect(bmin, bmax [2]float32, ids []int32, maxIds int32) bool {
+func (cm *chunkyTriMesh) ChunksOverlappingRect(bmin, bmax [2]float32, ids []int32) int {
 	// Traverse tree
 	var i, n int32
 	for i < cm.nnodes {
@@ -268,7 +268,7 @@ func (cm *chunkyTriMesh) ChunksOverlappingRect(bmin, bmax [2]float32, ids []int3
 		isLeafNode := node.i >= 0
 
 		if isLeafNode && overlap {
-			if n < maxIds {
+			if n < len(ids) {
 				ids[n] = i
 				n++
 			}
@@ -282,7 +282,7 @@ func (cm *chunkyTriMesh) ChunksOverlappingRect(bmin, bmax [2]float32, ids []int3
 		}
 	}
 
-	return n != 0
+	return n
 }
 
 func checkOverlapSegment(p, q, bmin, bmax [2]float32) bool {
