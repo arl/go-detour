@@ -15,7 +15,7 @@ import (
 // not actually a navmesh, but more an api to build and manage one
 type SoloMesh struct {
 	ctx      *recast.BuildContext
-	geom     *recast.InputGeom
+	geom     recast.InputGeom
 	meshName string
 	cfg      recast.Config
 	// TODO: remove partitionType, it is part of BuildSettings already
@@ -44,13 +44,13 @@ func (sm *SoloMesh) LoadGeometry(r io.Reader) error {
 
 // InputGeom returns the nav mesh input geometry.
 func (sm *SoloMesh) InputGeom() *recast.InputGeom {
-	return sm.geom
+	return &sm.geom
 }
 
 // Build builds the navigation mesh for the input geometry provided
 // TODO: should return an error instead of bool
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
-	if sm.geom == nil || sm.geom.Mesh() == nil {
+	if sm.geom.Mesh() == nil {
 		// TODO: error "no vertices and triangles"
 		return nil, false
 	}
@@ -132,7 +132,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	var solid *recast.Heightfield
 	solid = recast.NewHeightfield(sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch)
 
-	// Allocate array that can hold triangle area types.
+	// Allocate array that can hold triangle flags.
 	// If you have multiple meshes you need to process, allocate
 	// and array which can hold the max number of triangles you need to process.
 	triAreas := make([]uint8, ntris)
