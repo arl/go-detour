@@ -38,7 +38,7 @@ func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 // 	Returns:
 //   w         The width along the x-axis. [Limit: >= 0] [Units: vx]
 //   h         The height along the z-axis. [Limit: >= 0] [Units: vx]
-func CalcGridSize(bmin, bmax [3]float32, cs float32) (w, h int32) {
+func CalcGridSize(bmin, bmax []float32, cs float32) (w, h int32) {
 	w = int32((bmax[0]-bmin[0])/cs + 0.5)
 	h = int32((bmax[2]-bmin[2])/cs + 0.5)
 	return
