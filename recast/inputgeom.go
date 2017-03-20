@@ -3,6 +3,8 @@ package recast
 import (
 	"fmt"
 	"io"
+
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 const (
@@ -49,10 +51,17 @@ type BuildSettings struct {
 	// Partition type, see SamplePartitionType
 	PartitionType int32
 	// Bounds of the area to mesh
-	NavMeshBMin [3]float32
-	NavMeshBMax [3]float32
+	NavMeshBMin d3.Vec3
+	NavMeshBMax d3.Vec3
 	// Size of the tiles in voxels
 	TileSize float32
+}
+
+func NewBuildSettings() *BuildSettings {
+	return &BuildSettings{
+		NavMeshBMin: d3.NewVec3(),
+		NavMeshBMax: d3.NewVec3(),
+	}
 }
 
 type InputGeom struct {
@@ -61,7 +70,12 @@ type InputGeom struct {
 
 	meshBMin, meshBMax [3]float32
 	buildSettings      BuildSettings
-	hasBuildSettings   bool
+
+	// TODO: for now hasBuildSettings is never set to True. It would be useful
+	// to restrict the navmesh on a specific volume of the geometry. By default,
+	// the whole input geometry is always used but it may not always be the
+	// case.
+	hasBuildSettings bool
 
 	// Off-Mesh connections.
 	offMeshConVerts [maxOffMeshConnections * 3 * 2]float32
