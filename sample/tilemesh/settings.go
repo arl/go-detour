@@ -23,5 +23,6 @@ func DefaultSettings() recast.BuildSettings {
 		DetailSampleDist:     float32(6),
 		DetailSampleMaxError: float32(1),
 		PartitionType:        int32(sample.PartitionMonotone),
+		TileSize:             32,
 	}
 }
