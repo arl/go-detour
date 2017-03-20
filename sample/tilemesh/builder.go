@@ -7,6 +7,7 @@ import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/go-detour/sample"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
 )
 
@@ -15,67 +16,71 @@ import (
 // TODO: rename TileMeshBuilder or something like that to show that this is
 // not actually a navmesh, but more an api to build and manage one
 type TileMesh struct {
-	ctx                 *recast.BuildContext
-	geom                recast.InputGeom
-	navMesh             detour.NavMesh
-	meshName            string
-	cfg                 recast.Config
-	partitionType       sample.PartitionType
-	settings            recast.BuildSettings
-	m_lastBuiltTileBmin [3]float32
-	m_lastBuiltTileBmax [3]float32
-	m_totalBuildTime    time.Duration
-	maxTiles            uint32
-	m_tileBuildTime     time.Duration
-	m_tileMemUsage      float32
+	ctx               *recast.BuildContext
+	geom              recast.InputGeom
+	navMesh           detour.NavMesh
+	meshName          string
+	cfg               recast.Config
+	partitionType     sample.PartitionType
+	settings          recast.BuildSettings
+	lastBuiltTileBMin d3.Vec3
+	lastBuiltTileBMax d3.Vec3
+	totalBuildTime    time.Duration
+	tileBuildTime     time.Duration
+	tileMemUsage      float32
 
-	m_maxPolysPerTile uint32
-	m_tileSize        float32
-	m_tileTriCount    int32
-	m_triAreas        []uint8
+	maxTiles        uint32
+	maxPolysPerTile uint32
+	tileSize        float32
+	tileTriCount    int32
 
-	solid *recast.Heightfield
-	chf   *recast.CompactHeightfield
-	cset  *recast.ContourSet
-	pmesh *recast.PolyMesh
-	dmesh *recast.PolyMeshDetail
+	triAreas []uint8
+	solid    *recast.Heightfield
+	chf      *recast.CompactHeightfield
+	cset     *recast.ContourSet
+	pmesh    *recast.PolyMesh
+	dmesh    *recast.PolyMeshDetail
 }
 
 // New creates a new tile mesh with default build settings.
 func New(ctx *recast.BuildContext) *TileMesh {
-	sm := &TileMesh{settings: DefaultSettings()}
+	sm := &TileMesh{
+		settings:          DefaultSettings(),
+		lastBuiltTileBMin: d3.NewVec3(),
+		lastBuiltTileBMax: d3.NewVec3(),
+	}
 	sm.ctx = ctx
 	sm.partitionType = sample.PartitionMonotone
 	return sm
 }
 
 // SetSettings sets the build settings for this tile mesh.
-func (sm *TileMesh) SetSettings(s recast.BuildSettings) {
-	sm.settings = s
+func (tm *TileMesh) SetSettings(s recast.BuildSettings) {
+	tm.settings = s
 }
 
 // LoadGeometry loads geometry from r that reads from a geometry definition
 // file.
-func (sm *TileMesh) LoadGeometry(r io.Reader) error {
-	return sm.geom.LoadOBJMesh(r)
+func (tm *TileMesh) LoadGeometry(r io.Reader) error {
+	return tm.geom.LoadOBJMesh(r)
 }
 
 // InputGeom returns the nav mesh input geometry.
-func (sm *TileMesh) InputGeom() *recast.InputGeom {
-	return &sm.geom
+func (tm *TileMesh) InputGeom() *recast.InputGeom {
+	return &tm.geom
 }
 
 // Build builds the navigation mesh for the input geometry provided
-func (sm *TileMesh) Build() (*detour.NavMesh, bool) {
-	if sm.geom.Mesh() == nil {
+func (tm *TileMesh) Build() (*detour.NavMesh, bool) {
+	if tm.geom.Mesh() == nil {
 		// TODO: error "no vertices and triangles"
 		return nil, false
 	}
 
-	bmin := sm.geom.NavMeshBoundsMin()
-	bmax := sm.geom.NavMeshBoundsMax()
-	gw, gh := recast.CalcGridSize(bmin[:], bmax[:], sm.settings.CellSize)
-	ts := int32(sm.settings.TileSize)
+	bmin := tm.geom.NavMeshBoundsMin()
+	bmax := tm.geom.NavMeshBoundsMax()
+	gw, gh := recast.CalcGridSize(bmin[:], bmax[:], tm.settings.CellSize)
+	ts := int32(tm.settings.TileSize)
 	tw := (gw + ts - 1) / ts
 	th := (gh + ts - 1) / ts
 
@@ -83,138 +88,138 @@ func (sm *TileMesh) Build() (*detour.NavMesh, bool) {
 	// There are 22 bits available for identifying a tile and a polygon.
 	tileBits := math32.MinInt32(int32(math32.Ilog2(math32.NextPow2(uint32(tw*th)))), 14)
 	polyBits := 22 - tileBits
-	sm.maxTiles = 1 << uint(tileBits)
-	sm.m_maxPolysPerTile = 1 << uint(polyBits)
+	tm.maxTiles = 1 << uint(tileBits)
+	tm.maxPolysPerTile = 1 << uint(polyBits)
 
 	var (
 		params detour.NavMeshParams
 		status detour.Status
 	)
-	copy(params.Orig[:], sm.geom.NavMeshBoundsMin()[:3])
-	params.TileWidth = sm.settings.TileSize * sm.settings.CellSize
-	params.TileHeight = sm.settings.TileSize * sm.settings.CellSize
-	params.MaxTiles = sm.maxTiles
-	params.MaxPolys = sm.m_maxPolysPerTile
-	status = sm.navMesh.Init(&params)
+	copy(params.Orig[:], tm.geom.NavMeshBoundsMin()[:3])
+	params.TileWidth = tm.settings.TileSize * tm.settings.CellSize
+	params.TileHeight = tm.settings.TileSize * tm.settings.CellSize
+	params.MaxTiles = tm.maxTiles
+	params.MaxPolys = tm.maxPolysPerTile
+	status = tm.navMesh.Init(&params)
 	if detour.StatusFailed(status) {
-		sm.ctx.Errorf("TileMesh.Build: Could not init navmesh")
+		tm.ctx.Errorf("TileMesh.Build: Could not init navmesh")
 		return nil, false
 	}
-	status, _ = detour.NewNavMeshQuery(&sm.navMesh, 2048)
+	status, _ = detour.NewNavMeshQuery(&tm.navMesh, 2048)
 	if detour.StatusFailed(status) {
-		sm.ctx.Errorf("TileMesh.Build: Could not init detour navmesh query")
+		tm.ctx.Errorf("TileMesh.Build: Could not init detour navmesh query")
 		return nil, false
 	}
 
-	sm.buildAllTiles()
+	tm.buildAllTiles()
 
-	return &sm.navMesh, true
+	return &tm.navMesh, true
 }
 
-func (sm *TileMesh) buildAllTiles() (*detour.NavMesh, bool) {
-	bmin := sm.geom.NavMeshBoundsMin()
-	bmax := sm.geom.NavMeshBoundsMax()
-	gw, gh := recast.CalcGridSize(bmin[:], bmax[:], sm.settings.CellSize)
-	ts := int32(sm.settings.TileSize)
+func (tm *TileMesh) buildAllTiles() (*detour.NavMesh, bool) {
+	bmin := tm.geom.NavMeshBoundsMin()
+	bmax := tm.geom.NavMeshBoundsMax()
+	gw, gh := recast.CalcGridSize(bmin[:], bmax[:], tm.settings.CellSize)
+	ts := int32(tm.settings.TileSize)
 	tw := (gw + ts - 1) / ts
 	th := (gh + ts - 1) / ts
-	tcs := sm.settings.TileSize * sm.settings.CellSize
+	tcs := tm.settings.TileSize * tm.settings.CellSize
 
 	// Start the build process.
-	sm.ctx.StartTimer(recast.TimerTemp)
+	tm.ctx.StartTimer(recast.TimerTemp)
 	for y := int32(0); y < th; y++ {
 		for x := int32(0); x < tw; x++ {
 
-			sm.m_lastBuiltTileBmin[0] = bmin[0] + float32(x)*tcs
-			sm.m_lastBuiltTileBmin[1] = bmin[1]
-			sm.m_lastBuiltTileBmin[2] = bmin[2] + float32(y)*tcs
+			tm.lastBuiltTileBMin[0] = bmin[0] + float32(x)*tcs
+			tm.lastBuiltTileBMin[1] = bmin[1]
+			tm.lastBuiltTileBMin[2] = bmin[2] + float32(y)*tcs
 
-			sm.m_lastBuiltTileBmax[0] = bmin[0] + float32(x+1)*tcs
-			sm.m_lastBuiltTileBmax[1] = bmax[1]
-			sm.m_lastBuiltTileBmax[2] = bmin[2] + float32(y+1)*tcs
+			tm.lastBuiltTileBMax[0] = bmin[0] + float32(x+1)*tcs
+			tm.lastBuiltTileBMax[1] = bmax[1]
+			tm.lastBuiltTileBMax[2] = bmin[2] + float32(y+1)*tcs
 
-			data := sm.buildTileMesh(x, y, sm.m_lastBuiltTileBmin[:], sm.m_lastBuiltTileBmax[:])
+			data := tm.buildTileMesh(x, y, tm.lastBuiltTileBMin[:], tm.lastBuiltTileBMax[:])
 			if data != nil {
 				// Remove any previous data (navmesh owns and deletes the data).
-				//sm.navMesh.removeTile(sm.navMesh.TileRefAt(x, y, 0), 0, 0)
+				tm.navMesh.RemoveTile(tm.navMesh.TileRefAt(x, y, 0))
 				// Let the navmesh own the data.
-				sm.navMesh.AddTile(data, detour.TileRef(0))
+				tm.navMesh.AddTile(data, detour.TileRef(0))
 			}
 		}
 	}
 
 	// Start the build process.
-	sm.ctx.StopTimer(recast.TimerTemp)
+	tm.ctx.StopTimer(recast.TimerTemp)
 
-	sm.m_totalBuildTime = sm.ctx.AccumulatedTime(recast.TimerTemp)
+	tm.totalBuildTime = tm.ctx.AccumulatedTime(recast.TimerTemp)
 
 	// TODO: probably useless
-	return &sm.navMesh, true
+	return &tm.navMesh, true
 }
 
-func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
-	if sm.geom.Mesh() == nil || sm.geom.ChunkyMesh() == nil {
-		sm.ctx.Errorf("buildNavigation: Input mesh is not specified.")
+func (tm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
+	if tm.geom.Mesh() == nil || tm.geom.ChunkyMesh() == nil {
+		tm.ctx.Errorf("buildNavigation: Input mesh is not specified.")
 		return nil
 	}
 
-	sm.m_tileMemUsage = 0
-	sm.m_tileBuildTime = 0
+	tm.tileMemUsage = 0
+	tm.tileBuildTime = 0
 
-	verts := sm.geom.Mesh().Verts()
-	nverts := sm.geom.Mesh().VertCount()
+	verts := tm.geom.Mesh().Verts()
+	nverts := tm.geom.Mesh().VertCount()
 	//tris := sm.geom.Mesh().Tris()
-	ntris := sm.geom.Mesh().TriCount()
-	chunkyMesh := sm.geom.ChunkyMesh()
+	ntris := tm.geom.Mesh().TriCount()
+	chunkyMesh := tm.geom.ChunkyMesh()
 
 	//
 	// Step 1. Initialize build config.
 	//
 
 	// Rasterization settings
-	cellSize := sm.settings.CellSize
-	cellHeight := sm.settings.CellHeight
+	cellSize := tm.settings.CellSize
+	cellHeight := tm.settings.CellHeight
 
 	// Agent properties
-	agentHeight := sm.settings.AgentHeight
-	agentMaxClimb := sm.settings.AgentMaxClimb
-	agentRadius := sm.settings.AgentRadius
+	agentHeight := tm.settings.AgentHeight
+	agentMaxClimb := tm.settings.AgentMaxClimb
+	agentRadius := tm.settings.AgentRadius
 
 	// Region
-	regionMinSize := sm.settings.RegionMinSize
-	regionMergeSize := sm.settings.RegionMergeSize
+	regionMinSize := tm.settings.RegionMinSize
+	regionMergeSize := tm.settings.RegionMergeSize
 
 	// Polygonization
-	edgeMaxLen := sm.settings.EdgeMaxLen
-	edgeMaxError := sm.settings.EdgeMaxError
-	vertsPerPoly := sm.settings.VertsPerPoly
+	edgeMaxLen := tm.settings.EdgeMaxLen
+	edgeMaxError := tm.settings.EdgeMaxError
+	vertsPerPoly := tm.settings.VertsPerPoly
 
 	// Detail Mesh
-	detailSampleDist := sm.settings.DetailSampleDist
-	detailSampleMaxError := sm.settings.DetailSampleMaxError
+	detailSampleDist := tm.settings.DetailSampleDist
+	detailSampleMaxError := tm.settings.DetailSampleMaxError
 
-	sm.cfg.Cs = cellSize
-	sm.cfg.Ch = cellHeight
-	sm.cfg.WalkableSlopeAngle = sm.settings.AgentMaxSlope
-	sm.cfg.WalkableHeight = int32(math32.Ceil(agentHeight / sm.cfg.Ch))
-	sm.cfg.WalkableClimb = int32(math32.Floor(agentMaxClimb / sm.cfg.Ch))
-	sm.cfg.WalkableRadius = int32(math32.Ceil(agentRadius / sm.cfg.Cs))
-	sm.cfg.MaxEdgeLen = int32(float32(edgeMaxLen) / cellSize)
-	sm.cfg.MaxSimplificationError = edgeMaxError
-	sm.cfg.MinRegionArea = int32(regionMinSize * regionMinSize)       // Note: area = size*size
-	sm.cfg.MergeRegionArea = int32(regionMergeSize * regionMergeSize) // Note: area = size*size
-	sm.cfg.MaxVertsPerPoly = int32(vertsPerPoly)
-	sm.cfg.TileSize = int32(sm.m_tileSize)
-	sm.cfg.BorderSize = sm.cfg.WalkableRadius + 3 // Reserve enough padding
-	sm.cfg.Width = int32(sm.m_tileSize) + sm.cfg.BorderSize*2
-	sm.cfg.Height = int32(sm.m_tileSize) + sm.cfg.BorderSize*2
+	tm.cfg.Cs = cellSize
+	tm.cfg.Ch = cellHeight
+	tm.cfg.WalkableSlopeAngle = tm.settings.AgentMaxSlope
+	tm.cfg.WalkableHeight = int32(math32.Ceil(agentHeight / tm.cfg.Ch))
+	tm.cfg.WalkableClimb = int32(math32.Floor(agentMaxClimb / tm.cfg.Ch))
+	tm.cfg.WalkableRadius = int32(math32.Ceil(agentRadius / tm.cfg.Cs))
+	tm.cfg.MaxEdgeLen = int32(float32(edgeMaxLen) / cellSize)
+	tm.cfg.MaxSimplificationError = edgeMaxError
+	tm.cfg.MinRegionArea = int32(regionMinSize * regionMinSize)       // Note: area = size*size
+	tm.cfg.MergeRegionArea = int32(regionMergeSize * regionMergeSize) // Note: area = size*size
+	tm.cfg.MaxVertsPerPoly = int32(vertsPerPoly)
+	tm.cfg.TileSize = int32(tm.tileSize)
+	tm.cfg.BorderSize = tm.cfg.WalkableRadius + 3 // Reserve enough padding
+	tm.cfg.Width = int32(tm.tileSize) + tm.cfg.BorderSize*2
+	tm.cfg.Height = int32(tm.tileSize) + tm.cfg.BorderSize*2
 
 	if detailSampleDist < 0.9 {
-		sm.cfg.DetailSampleDist = 0
+		tm.cfg.DetailSampleDist = 0
 	} else {
-		sm.cfg.DetailSampleDist = cellSize * detailSampleDist
+		tm.cfg.DetailSampleDist = cellSize * detailSampleDist
 	}
-	sm.cfg.DetailSampleMaxError = cellHeight * detailSampleMaxError
+	tm.cfg.DetailSampleMaxError = cellHeight * detailSampleMaxError
 
 	// Expand the heighfield bounding box by border size to find the extents of
 	// geometry we need to build this tile.
@@ -245,62 +250,62 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	// Set the area where the navigation will be build.
 	// Here the bounds of the input mesh are used, but the area could be
 	// specified by an user defined box, etc.
-	copy(sm.cfg.BMin[:], bmin[:3])
-	copy(sm.cfg.BMax[:], bmax[:3])
-	sm.cfg.BMin[0] -= float32(sm.cfg.BorderSize) * sm.cfg.Cs
-	sm.cfg.BMin[2] -= float32(sm.cfg.BorderSize) * sm.cfg.Cs
-	sm.cfg.BMax[0] += float32(sm.cfg.BorderSize) * sm.cfg.Cs
-	sm.cfg.BMax[2] += float32(sm.cfg.BorderSize) * sm.cfg.Cs
+	copy(tm.cfg.BMin[:], bmin[:3])
+	copy(tm.cfg.BMax[:], bmax[:3])
+	tm.cfg.BMin[0] -= float32(tm.cfg.BorderSize) * tm.cfg.Cs
+	tm.cfg.BMin[2] -= float32(tm.cfg.BorderSize) * tm.cfg.Cs
+	tm.cfg.BMax[0] += float32(tm.cfg.BorderSize) * tm.cfg.Cs
+	tm.cfg.BMax[2] += float32(tm.cfg.BorderSize) * tm.cfg.Cs
 
 	// Reset build times gathering.
-	sm.ctx.ResetTimers()
+	tm.ctx.ResetTimers()
 
 	// Start the build process.
-	sm.ctx.StartTimer(recast.TimerTotal)
+	tm.ctx.StartTimer(recast.TimerTotal)
 
-	sm.ctx.Progressf("Building navigation:")
-	sm.ctx.Progressf(" - %d x %d cells", sm.cfg.Width, sm.cfg.Height)
-	sm.ctx.Progressf(" - %.1fK verts, %.1fK tris", float64(nverts)/1000.0, float64(ntris)/1000.0)
+	tm.ctx.Progressf("Building navigation:")
+	tm.ctx.Progressf(" - %d x %d cells", tm.cfg.Width, tm.cfg.Height)
+	tm.ctx.Progressf(" - %.1fK verts, %.1fK tris", float64(nverts)/1000.0, float64(ntris)/1000.0)
 
 	//
 	// Step 2. Rasterize input polygon soup.
 	//
 
 	// Allocate voxel heightfield where we rasterize our input data to.
-	sm.solid = recast.NewHeightfield(sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch)
+	tm.solid = recast.NewHeightfield(tm.cfg.Width, tm.cfg.Height, tm.cfg.BMin[:], tm.cfg.BMax[:], tm.cfg.Cs, tm.cfg.Ch)
 
 	// Allocate array that can hold triangle flags.
 	// If you have multiple meshes you need to process, allocate
 	// and array which can hold the max number of triangles you need to process.
-	sm.m_triAreas = make([]uint8, chunkyMesh.MaxTrisPerChunk)
+	tm.triAreas = make([]uint8, chunkyMesh.MaxTrisPerChunk)
 
 	var tbmin, tbmax [2]float32
-	tbmin[0] = sm.cfg.BMin[0]
-	tbmin[1] = sm.cfg.BMin[2]
-	tbmax[0] = sm.cfg.BMax[0]
-	tbmax[1] = sm.cfg.BMax[2]
+	tbmin[0] = tm.cfg.BMin[0]
+	tbmin[1] = tm.cfg.BMin[2]
+	tbmax[0] = tm.cfg.BMax[0]
+	tbmax[1] = tm.cfg.BMax[2]
 	var cid [512]int32 // TODO: Make grow when returning too many items.
 	ncid := chunkyMesh.ChunksOverlappingRect(tbmin, tbmax, cid[:])
 	if ncid == 0 {
 		return nil
 	}
 
-	sm.m_tileTriCount = 0
+	tm.tileTriCount = 0
 
 	for i := 0; i < ncid; i++ {
 		node := chunkyMesh.Nodes[cid[i]]
 		ctris := chunkyMesh.Tris[node.I*3:]
 		nctris := node.N
 
-		sm.m_tileTriCount += nctris
+		tm.tileTriCount += nctris
 
-		for i = 0; i < len(sm.m_triAreas); i++ {
-			sm.m_triAreas[i] = 0
+		for i = 0; i < len(tm.triAreas); i++ {
+			tm.triAreas[i] = 0
 		}
-		recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle,
-			verts, nverts, ctris, nctris, sm.m_triAreas)
+		recast.MarkWalkableTriangles(tm.ctx, tm.cfg.WalkableSlopeAngle,
+			verts, nverts, ctris, nctris, tm.triAreas)
 
-		if !recast.RasterizeTriangles(sm.ctx, verts, nverts, ctris, sm.m_triAreas, nctris, sm.solid, sm.cfg.WalkableClimb) {
+		if !recast.RasterizeTriangles(tm.ctx, verts, nverts, ctris, tm.triAreas, nctris, tm.solid, tm.cfg.WalkableClimb) {
 			return nil
 		}
 	}
@@ -312,31 +317,31 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	// Once all geoemtry is rasterized, we do initial pass of filtering to
 	// remove unwanted overhangs caused by the conservative rasterization
 	// as well as filter spans where the character cannot possibly stand.
-	recast.FilterLowHangingWalkableObstacles(sm.ctx, sm.cfg.WalkableClimb, sm.solid)
-	recast.FilterLedgeSpans(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, sm.solid)
-	recast.FilterWalkableLowHeightSpans(sm.ctx, sm.cfg.WalkableHeight, sm.solid)
+	recast.FilterLowHangingWalkableObstacles(tm.ctx, tm.cfg.WalkableClimb, tm.solid)
+	recast.FilterLedgeSpans(tm.ctx, tm.cfg.WalkableHeight, tm.cfg.WalkableClimb, tm.solid)
+	recast.FilterWalkableLowHeightSpans(tm.ctx, tm.cfg.WalkableHeight, tm.solid)
 
 	// Compact the heightfield so that it is faster to handle from now on.
 	// This will result more cache coherent data as well as the neighbours
 	// between walkable cells will be calculated.
-	sm.chf = &recast.CompactHeightfield{}
-	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, sm.solid, sm.chf) {
-		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
+	tm.chf = &recast.CompactHeightfield{}
+	if !recast.BuildCompactHeightfield(tm.ctx, tm.cfg.WalkableHeight, tm.cfg.WalkableClimb, tm.solid, tm.chf) {
+		tm.ctx.Errorf("buildNavigation: Could not build compact data.")
 		return nil
 	}
 
 	// Erode the walkable area by agent radius.
-	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, sm.chf) {
-		sm.ctx.Errorf("buildNavigation: Could not erode.")
+	if !recast.ErodeWalkableArea(tm.ctx, tm.cfg.WalkableRadius, tm.chf) {
+		tm.ctx.Errorf("buildNavigation: Could not erode.")
 		return nil
 	}
 
 	// (Optional) Mark areas.
-	vols := sm.geom.ConvexVolumes()
+	vols := tm.geom.ConvexVolumes()
 
 	// TODO: : control that ConvexVolumeCount() is also 0 on original library
-	for i := int32(0); i < sm.geom.ConvexVolumesCount(); i++ {
-		recast.MarkConvexPolyArea(sm.ctx, vols[i].Verts[:], vols[i].NVerts, vols[i].HMin, vols[i].HMax, uint8(vols[i].Area), sm.chf)
+	for i := int32(0); i < tm.geom.ConvexVolumesCount(); i++ {
+		recast.MarkConvexPolyArea(tm.ctx, vols[i].Verts[:], vols[i].NVerts, vols[i].HMin, vols[i].HMax, uint8(vols[i].Area), tm.chf)
 	}
 
 	// Partition the heightfield so that we can use simple algorithm later to
@@ -375,7 +380,7 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	//   * good choice to use for tiled navmesh with medium and small sized
 	//     tiles
 
-	if sm.partitionType == sample.PartitionWatershed {
+	if tm.partitionType == sample.PartitionWatershed {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		//if (!rcBuildDistanceField(m_ctx, *m_chf))
 		//{
@@ -389,11 +394,11 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
 		//return navData, false
 		//}
-	} else if sm.partitionType == sample.PartitionMonotone {
+	} else if tm.partitionType == sample.PartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
-		if !recast.BuildRegionsMonotone(sm.ctx, sm.chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
-			sm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
+		if !recast.BuildRegionsMonotone(tm.ctx, tm.chf, 0, tm.cfg.MinRegionArea, tm.cfg.MergeRegionArea) {
+			tm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
 			return nil
 		}
 	} else {
@@ -410,13 +415,13 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	//
 
 	// Create contours.
-	sm.cset = &recast.ContourSet{}
-	if !recast.BuildContours(sm.ctx, sm.chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, sm.cset, recast.ContourTessWallEdges) {
-		sm.ctx.Errorf("buildNavigation: Could not create contours.")
+	tm.cset = &recast.ContourSet{}
+	if !recast.BuildContours(tm.ctx, tm.chf, tm.cfg.MaxSimplificationError, tm.cfg.MaxEdgeLen, tm.cset, recast.ContourTessWallEdges) {
+		tm.ctx.Errorf("buildNavigation: Could not create contours.")
 		return nil
 	}
 
-	if sm.cset.NConts == 0 {
+	if tm.cset.NConts == 0 {
 		return nil
 	}
 
@@ -426,9 +431,9 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 
 	// Build polygon navmesh from the contours.
 	var ret bool
-	sm.pmesh, ret = recast.BuildPolyMesh(sm.ctx, sm.cset, sm.cfg.MaxVertsPerPoly)
+	tm.pmesh, ret = recast.BuildPolyMesh(tm.ctx, tm.cset, tm.cfg.MaxVertsPerPoly)
 	if !ret {
-		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
+		tm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
 		return nil
 	}
 
@@ -436,9 +441,9 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	// Step 7. Create detail mesh which allows to access approximate height on each polygon.
 	//
 
-	sm.dmesh, ret = recast.BuildPolyMeshDetail(sm.ctx, sm.pmesh, sm.chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
+	tm.dmesh, ret = recast.BuildPolyMeshDetail(tm.ctx, tm.pmesh, tm.chf, tm.cfg.DetailSampleDist, tm.cfg.DetailSampleMaxError)
 	if !ret {
-		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
+		tm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
 		return nil
 	}
 
@@ -452,91 +457,136 @@ func (sm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 		navData []uint8
 		err     error
 	)
-	if sm.cfg.MaxVertsPerPoly <= int32(detour.VertsPerPolygon) {
-		if sm.pmesh.NVerts >= 0xffff {
+	if tm.cfg.MaxVertsPerPoly <= int32(detour.VertsPerPolygon) {
+		if tm.pmesh.NVerts >= 0xffff {
 			// The vertex indices are ushorts, and cannot point to more than 0xffff vertices.
-			sm.ctx.Errorf("Too many vertices per tile %d (max: %d).", sm.pmesh.NVerts, 0xffff)
+			tm.ctx.Errorf("Too many vertices per tile %d (max: %d).", tm.pmesh.NVerts, 0xffff)
 			return nil
 		}
 
 		// Update poly flags from areas.
-		for i := int32(0); i < sm.pmesh.NPolys; i++ {
-			if sm.pmesh.Areas[i] == recast.WalkableArea {
-				sm.pmesh.Areas[i] = sample.PolyAreaGround
+		for i := int32(0); i < tm.pmesh.NPolys; i++ {
+			if tm.pmesh.Areas[i] == recast.WalkableArea {
+				tm.pmesh.Areas[i] = sample.PolyAreaGround
 			}
 
-			if sm.pmesh.Areas[i] == sample.PolyAreaGround ||
-				sm.pmesh.Areas[i] == sample.PolyAreaGrass ||
-				sm.pmesh.Areas[i] == sample.PolyAreaRoad {
-				sm.pmesh.Flags[i] = sample.PolyFlagsWalk
-			} else if sm.pmesh.Areas[i] == sample.PolyAreaWater {
-				sm.pmesh.Flags[i] = sample.PolyFlagsSwim
-			} else if sm.pmesh.Areas[i] == sample.PolyAreaDoor {
-				sm.pmesh.Flags[i] = sample.PolyFlagsWalk | sample.PolyFlagsDoor
+			if tm.pmesh.Areas[i] == sample.PolyAreaGround ||
+				tm.pmesh.Areas[i] == sample.PolyAreaGrass ||
+				tm.pmesh.Areas[i] == sample.PolyAreaRoad {
+				tm.pmesh.Flags[i] = sample.PolyFlagsWalk
+			} else if tm.pmesh.Areas[i] == sample.PolyAreaWater {
+				tm.pmesh.Flags[i] = sample.PolyFlagsSwim
+			} else if tm.pmesh.Areas[i] == sample.PolyAreaDoor {
+				tm.pmesh.Flags[i] = sample.PolyFlagsWalk | sample.PolyFlagsDoor
 			}
 		}
 
 		var params detour.NavMeshCreateParams
-		params.Verts = sm.pmesh.Verts
-		params.VertCount = sm.pmesh.NVerts
-		params.Polys = sm.pmesh.Polys
-		params.PolyAreas = sm.pmesh.Areas
-		params.PolyFlags = sm.pmesh.Flags
-		params.PolyCount = sm.pmesh.NPolys
-		params.Nvp = sm.pmesh.Nvp
-		params.DetailMeshes = sm.dmesh.Meshes
-		params.DetailVerts = sm.dmesh.Verts
-		params.DetailVertsCount = sm.dmesh.NVerts
-		params.DetailTris = sm.dmesh.Tris
-		params.DetailTriCount = sm.dmesh.NTris
-		params.OffMeshConVerts = sm.geom.OffMeshConnectionVerts()
-		params.OffMeshConRad = sm.geom.OffMeshConnectionRads()
-		params.OffMeshConDir = sm.geom.OffMeshConnectionDirs()
-		params.OffMeshConAreas = sm.geom.OffMeshConnectionAreas()
-		params.OffMeshConFlags = sm.geom.OffMeshConnectionFlags()
-		params.OffMeshConUserID = sm.geom.OffMeshConnectionId()
-		params.OffMeshConCount = sm.geom.OffMeshConnectionCount()
+		params.Verts = tm.pmesh.Verts
+		params.VertCount = tm.pmesh.NVerts
+		params.Polys = tm.pmesh.Polys
+		params.PolyAreas = tm.pmesh.Areas
+		params.PolyFlags = tm.pmesh.Flags
+		params.PolyCount = tm.pmesh.NPolys
+		params.Nvp = tm.pmesh.Nvp
+		params.DetailMeshes = tm.dmesh.Meshes
+		params.DetailVerts = tm.dmesh.Verts
+		params.DetailVertsCount = tm.dmesh.NVerts
+		params.DetailTris = tm.dmesh.Tris
+		params.DetailTriCount = tm.dmesh.NTris
+		params.OffMeshConVerts = tm.geom.OffMeshConnectionVerts()
+		params.OffMeshConRad = tm.geom.OffMeshConnectionRads()
+		params.OffMeshConDir = tm.geom.OffMeshConnectionDirs()
+		params.OffMeshConAreas = tm.geom.OffMeshConnectionAreas()
+		params.OffMeshConFlags = tm.geom.OffMeshConnectionFlags()
+		params.OffMeshConUserID = tm.geom.OffMeshConnectionId()
+		params.OffMeshConCount = tm.geom.OffMeshConnectionCount()
 		params.WalkableHeight = agentHeight
 		params.WalkableRadius = agentRadius
 		params.WalkableClimb = agentMaxClimb
 		params.TileX = tx
 		params.TileY = ty
 		params.TileLayer = 0
-		copy(params.BMin[:], sm.pmesh.BMin[:])
-		copy(params.BMax[:], sm.pmesh.BMax[:])
-		params.Cs = sm.cfg.Cs
-		params.Ch = sm.cfg.Ch
+		copy(params.BMin[:], tm.pmesh.BMin[:])
+		copy(params.BMax[:], tm.pmesh.BMax[:])
+		params.Cs = tm.cfg.Cs
+		params.Ch = tm.cfg.Ch
 		params.BuildBvTree = true
 
 		if navData, err = detour.CreateNavMeshData(&params); err != nil {
-			sm.ctx.Errorf("Could not build Detour navmesh: %v", err)
+			tm.ctx.Errorf("Could not build Detour navmesh: %v", err)
 			return nil
 		}
 	}
 
-	sm.m_tileMemUsage = float32(len(navData)) / 1024.0
+	tm.tileMemUsage = float32(len(navData)) / 1024.0
 
-	sm.ctx.StopTimer(recast.TimerTotal)
+	tm.ctx.StopTimer(recast.TimerTotal)
 	// Log performance stats.
-	recast.LogBuildTimes(sm.ctx, sm.ctx.AccumulatedTime(recast.TimerTotal))
-	sm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", sm.pmesh.NVerts, sm.pmesh.NPolys)
-	sm.m_tileBuildTime = sm.ctx.AccumulatedTime(recast.TimerTotal)
+	recast.LogBuildTimes(tm.ctx, tm.ctx.AccumulatedTime(recast.TimerTotal))
+	tm.ctx.Progressf(">> Polymesh: %d vertices  %d polygons", tm.pmesh.NVerts, tm.pmesh.NPolys)
+	tm.tileBuildTime = tm.ctx.AccumulatedTime(recast.TimerTotal)
 
-	//var (
-	//navMesh detour.NavMesh
-	//// navQuery *detour.NavMeshQuery
-	//status detour.Status
-	//)
-	//status = navMesh.InitForSingleTile(navData, 0)
-	//if detour.StatusFailed(status) {
-	//sm.ctx.Errorf("Could not init Detour navmesh")
-	//return nil, false
-	//}
-
-	//status, _ = detour.NewNavMeshQuery(&navMesh, 2048)
-	//if detour.StatusFailed(status) {
-	//sm.ctx.Errorf("Could not init Detour navmesh query")
-	//return nil, false
-	//}
 	return navData
+}
+
+func (tm *TileMesh) BuildTile(pos d3.Vec3) {
+	bmin := tm.geom.NavMeshBoundsMin()
+	bmax := tm.geom.NavMeshBoundsMax()
+
+	ts := tm.tileSize * tm.settings.CellSize
+	tx := int32((pos[0] - bmin[0]) / ts)
+	ty := int32((pos[2] - bmin[2]) / ts)
+
+	tm.lastBuiltTileBMin[0] = bmin[0] + float32(tx)*ts
+	tm.lastBuiltTileBMin[1] = bmin[1]
+	tm.lastBuiltTileBMin[2] = bmin[2] + float32(ty)*ts
+
+	tm.lastBuiltTileBMax[0] = bmin[0] + float32(tx+1)*ts
+	tm.lastBuiltTileBMax[1] = bmax[1]
+	tm.lastBuiltTileBMax[2] = bmin[2] + float32(ty+1)*ts
+
+	tm.ctx.ResetLog()
+
+	data := tm.buildTileMesh(tx, ty, tm.lastBuiltTileBMin, tm.lastBuiltTileBMax)
+
+	// Remove any previous data (navmesh owns and deletes the data).
+	tm.navMesh.RemoveTile(tm.navMesh.TileRefAt(tx, ty, 0))
+
+	// Add tile, or leave the location empty.
+	if data != nil {
+		// Let the navmesh own the data.
+		status, _ := tm.navMesh.AddTile(data, detour.TileRef(0))
+		if detour.StatusFailed(status) {
+			data = nil
+		}
+	}
+
+	tm.ctx.DumpLog("Build Tile (%d,%d):", tx, ty)
+}
+
+func (tm *TileMesh) TilePos(pos d3.Vec3) (x, y int32) {
+	bmin := tm.geom.NavMeshBoundsMin()
+
+	ts := tm.tileSize * tm.settings.CellSize
+	return int32((pos[0] - bmin[0]) / ts), int32((pos[2] - bmin[2]) / ts)
+}
+
+func (tm *TileMesh) RemoveTile(pos d3.Vec3) {
+	bmin := tm.geom.NavMeshBoundsMin()
+	bmax := tm.geom.NavMeshBoundsMax()
+
+	ts := tm.tileSize * tm.settings.CellSize
+	tx := int32((pos[0] - bmin[0]) / ts)
+	ty := int32((pos[2] - bmin[2]) / ts)
+
+	tm.lastBuiltTileBMin[0] = bmin[0] + float32(tx)*ts
+	tm.lastBuiltTileBMin[1] = bmin[1]
+	tm.lastBuiltTileBMin[2] = bmin[2] + float32(ty)*ts
+
+	tm.lastBuiltTileBMax[0] = bmin[0] + float32(tx+1)*ts
+	tm.lastBuiltTileBMax[1] = bmax[1]
+	tm.lastBuiltTileBMax[2] = bmin[2] + float32(ty+1)*ts
+
+	tm.navMesh.RemoveTile(tm.navMesh.TileRefAt(tx, ty, 0))
 }
