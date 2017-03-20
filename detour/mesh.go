@@ -383,8 +383,8 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 //   ref      The reference of the tile to remove.
 //
 //  Return values:
-//  data      Data associated with deleted tile.
-//  st        The status flags for the operation.
+//   data     Data associated with deleted tile.
+//   st       The status flags for the operation.
 // This function returns the data for the tile so that, if desired,
 // it can be added back to the navigation mesh at a later point.
 //
