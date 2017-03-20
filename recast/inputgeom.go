@@ -3,8 +3,6 @@ package recast
 import (
 	"fmt"
 	"io"
-
-	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 const (
@@ -50,9 +48,6 @@ type BuildSettings struct {
 	DetailSampleMaxError float32
 	// Partition type, see SamplePartitionType
 	PartitionType int32
-	// Bounds of the area to mesh
-	NavMeshBMin d3.Vec3
-	NavMeshBMax d3.Vec3
 	// Size of the tiles in voxels
 	TileSize float32
 }
