@@ -28,7 +28,7 @@ var (
 
 func init() {
 	RootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tiled'")
+	configCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tile'")
 
 	// register solo mesh configs
 	if buf, err := yaml.Marshal(solomesh.DefaultSettings()); err != nil {

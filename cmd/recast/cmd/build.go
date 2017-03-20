@@ -26,7 +26,7 @@ var cfgVal, inputVal string
 func init() {
 	RootCmd.AddCommand(buildCmd)
 	buildCmd.Flags().StringVar(&cfgVal, "config", "recast.yml", "build settings")
-	buildCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tiled'")
+	buildCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tile'")
 	buildCmd.Flags().StringVar(&inputVal, "input", "", "input geometry OBJ file (required)")
 }
 
