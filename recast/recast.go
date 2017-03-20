@@ -10,10 +10,10 @@ import (
 // CalcBounds calculates the bounding box of an array of vertices.
 //
 //  Arguments:
-//  verts     An array of vertices. [(x, y, z) * nv]
-//  nv        The number of vertices in the verts array.
-//  bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
-//  bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
+//   verts     An array of vertices. [(x, y, z) * nv]
+//   nv        The number of vertices in the verts array.
+//   bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
+//   bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
 func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
 	copy(bmin, verts[:3])

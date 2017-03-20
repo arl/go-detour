@@ -273,7 +273,8 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	}
 
 	//
-	// Step 7. Create detail mesh which allows to access approximate height on each polygon.
+	// Step 7. Create detail mesh which allows to access approximate height on
+	// each polygon.
 	//
 
 	var dmesh *recast.PolyMeshDetail
@@ -283,8 +284,8 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		return nil, false
 	}
 
-	// At this point the navigation mesh data is ready, you can access it from m_pmesh.
-	// See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
+	// At this point the navigation mesh data is ready, you can access it from
+	// pmesh.
 
 	//
 	// (Optional) Step 8. Create Detour data from Recast poly mesh.
