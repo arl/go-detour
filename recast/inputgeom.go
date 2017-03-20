@@ -57,25 +57,11 @@ type BuildSettings struct {
 	TileSize float32
 }
 
-func NewBuildSettings() *BuildSettings {
-	return &BuildSettings{
-		NavMeshBMin: d3.NewVec3(),
-		NavMeshBMax: d3.NewVec3(),
-	}
-}
-
 type InputGeom struct {
 	chunkyMesh *ChunkyTriMesh
 	mesh       *MeshLoaderOBJ
 
 	meshBMin, meshBMax [3]float32
-	buildSettings      BuildSettings
-
-	// TODO: for now hasBuildSettings is never set to True. It would be useful
-	// to restrict the navmesh on a specific volume of the geometry. By default,
-	// the whole input geometry is always used but it may not always be the
-	// case.
-	hasBuildSettings bool
 
 	// Off-Mesh connections.
 	offMeshConVerts [maxOffMeshConnections * 3 * 2]float32
@@ -129,30 +115,15 @@ func (ig *InputGeom) MeshBoundsMax() []float32 {
 }
 
 func (ig *InputGeom) NavMeshBoundsMin() []float32 {
-	if ig.hasBuildSettings {
-		return ig.buildSettings.NavMeshBMin[:3]
-	} else {
-		return ig.meshBMin[:3]
-	}
+	return ig.meshBMin[:3]
 }
 
 func (ig *InputGeom) NavMeshBoundsMax() []float32 {
-	if ig.hasBuildSettings {
-		return ig.buildSettings.NavMeshBMax[:3]
-	} else {
-		return ig.meshBMax[:3]
-	}
+	return ig.meshBMax[:3]
 }
 
 func (ig *InputGeom) ChunkyMesh() *ChunkyTriMesh {
 	return ig.chunkyMesh
-}
-
-func (ig *InputGeom) BuildSettings() *BuildSettings {
-	if ig.hasBuildSettings {
-		return &ig.buildSettings
-	}
-	return nil
 }
 
 func (ig *InputGeom) ConvexVolumes() []ConvexVolume {
