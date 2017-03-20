@@ -3,7 +3,6 @@ package solomesh
 import (
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/go-detour/sample"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 // DefaultSettings returns a recast.BuildSettings with default values for solo
@@ -24,7 +23,5 @@ func DefaultSettings() recast.BuildSettings {
 		DetailSampleDist:     float32(6),
 		DetailSampleMaxError: float32(1),
 		PartitionType:        int32(sample.PartitionMonotone),
-		NavMeshBMin:          d3.NewVec3(),
-		NavMeshBMax:          d3.NewVec3(),
 	}
 }
