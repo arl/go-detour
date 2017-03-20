@@ -52,9 +52,10 @@ func doBuild(cmd *cobra.Command, args []string) {
 	switch typeVal {
 
 	case "solo":
+
 		// unmarshall build settings
-		var cfg recast.BuildSettings
-		err = unmarshalYAMLFile(cfgVal, &cfg)
+		var cfg *recast.BuildSettings = recast.NewBuildSettings()
+		err = unmarshalYAMLFile(cfgVal, cfg)
 		check(err)
 
 		// read input geometry
@@ -64,13 +65,14 @@ func doBuild(cmd *cobra.Command, args []string) {
 		check(err)
 		defer r.Close()
 
-		soloMesh.SetSettings(cfg)
+		soloMesh.SetSettings(*cfg)
 		if err = soloMesh.LoadGeometry(r); err != nil {
 			check(err)
 		}
 		navMesh, ok = soloMesh.Build()
 
 	case "tile":
+
 		// unmarshall build settings
 		var cfg recast.BuildSettings
 		err = unmarshalYAMLFile(cfgVal, &cfg)
