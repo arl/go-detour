@@ -299,8 +299,8 @@ func (tm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 
 		tm.tileTriCount += nctris
 
-		for i = 0; i < len(tm.triAreas); i++ {
-			tm.triAreas[i] = 0
+		for ai := 0; ai < len(tm.triAreas); ai++ {
+			tm.triAreas[ai] = 0
 		}
 		recast.MarkWalkableTriangles(tm.ctx, tm.cfg.WalkableSlopeAngle,
 			verts, nverts, ctris, nctris, tm.triAreas)
