@@ -31,7 +31,6 @@ type TileMesh struct {
 
 	maxTiles        uint32
 	maxPolysPerTile uint32
-	tileSize        float32
 	tileTriCount    int32
 
 	triAreas []uint8
@@ -209,10 +208,10 @@ func (tm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	tm.cfg.MinRegionArea = int32(regionMinSize * regionMinSize)       // Note: area = size*size
 	tm.cfg.MergeRegionArea = int32(regionMergeSize * regionMergeSize) // Note: area = size*size
 	tm.cfg.MaxVertsPerPoly = int32(vertsPerPoly)
-	tm.cfg.TileSize = int32(tm.tileSize)
+	tm.cfg.TileSize = int32(tm.settings.TileSize)
 	tm.cfg.BorderSize = tm.cfg.WalkableRadius + 3 // Reserve enough padding
-	tm.cfg.Width = int32(tm.tileSize) + tm.cfg.BorderSize*2
-	tm.cfg.Height = int32(tm.tileSize) + tm.cfg.BorderSize*2
+	tm.cfg.Width = tm.cfg.TileSize + tm.cfg.BorderSize*2
+	tm.cfg.Height = tm.cfg.TileSize + tm.cfg.BorderSize*2
 
 	if detailSampleDist < 0.9 {
 		tm.cfg.DetailSampleDist = 0
@@ -534,7 +533,7 @@ func (tm *TileMesh) BuildTile(pos d3.Vec3) {
 	bmin := tm.geom.NavMeshBoundsMin()
 	bmax := tm.geom.NavMeshBoundsMax()
 
-	ts := tm.tileSize * tm.settings.CellSize
+	ts := tm.settings.TileSize * tm.settings.CellSize
 	tx := int32((pos[0] - bmin[0]) / ts)
 	ty := int32((pos[2] - bmin[2]) / ts)
 
@@ -568,7 +567,7 @@ func (tm *TileMesh) BuildTile(pos d3.Vec3) {
 func (tm *TileMesh) TilePos(pos d3.Vec3) (x, y int32) {
 	bmin := tm.geom.NavMeshBoundsMin()
 
-	ts := tm.tileSize * tm.settings.CellSize
+	ts := tm.settings.TileSize * tm.settings.CellSize
 	return int32((pos[0] - bmin[0]) / ts), int32((pos[2] - bmin[2]) / ts)
 }
 
@@ -576,7 +575,7 @@ func (tm *TileMesh) RemoveTile(pos d3.Vec3) {
 	bmin := tm.geom.NavMeshBoundsMin()
 	bmax := tm.geom.NavMeshBoundsMax()
 
-	ts := tm.tileSize * tm.settings.CellSize
+	ts := tm.settings.TileSize * tm.settings.CellSize
 	tx := int32((pos[0] - bmin[0]) / ts)
 	ty := int32((pos[2] - bmin[2]) / ts)
 
