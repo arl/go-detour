@@ -988,10 +988,9 @@ func (m *NavMesh) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverP
 	nv := poly.VertCount
 	var i uint8
 	for i = 0; i < nv; i++ {
-		// TODO: could probably use copy
 		idx := i * 3
 		jdx := poly.Verts[i] * 3
-		copy(verts[idx:idx+3], tile.Verts[jdx:jdx+3])
+		copy(verts[idx:], tile.Verts[jdx:jdx+3])
 	}
 
 	closest.Assign(pos)
