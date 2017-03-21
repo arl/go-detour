@@ -1,18 +1,21 @@
 #! /usr/bin/env bash
 
-echo "mode: set" > acc.out
-for Dir in $(find ./* -maxdepth 10 -type d );
-do
-  if ls "${Dir}/*.go" &> /dev/null;
-  then
-    go test -coverprofile=profile.out "${Dir}" -v
-    if [ -f profile.out ]
-    then
-      grep -v "mode: set" profile.out >> acc.out
-    fi
-fi
-done
+GOVENDOR="$HOME/gopath/bin/govendor"
+GOCOVMERGE="$HOME/gopath/bin/gocovmerge"
+GOVERALLS="$HOME/gopath/bin/goveralls"
+#GOVENDOR=govendor
+#GOCOVMERGE=gocovmerge
+#GOVERALLS=goveralls
 
-"${HOME}/gopath/bin/goveralls" -coverprofile=acc.out -service=travis-ci
-rm -rf ./profile.out
-rm -rf ./acc.out
+# create list of project packages, excluding vendored (with govendor)
+export PKGS=$($GOVENDOR list -no-status +local)
+
+# make comma-separated
+export PKGS_DELIM=$(echo "$PKGS" | paste -sd "," -)
+
+# run with full coverage (including other packages) with govendor
+go list -f "{{if or (len .TestGoFiles) (len .XTestGoFiles)}}$GOVENDOR test -covermode count -coverprofile {{.Name}}_{{len .Imports}}_{{len .Deps}}.coverprofile -coverpkg '$PKGS_DELIM' {{.ImportPath}}{{end}}" $PKGS | xargs -I {} bash -c {}
+
+$GOCOVMERGE `ls *.coverprofile` > cover.out
+$GOVERALLS -coverprofile=cover.out -service=travis-ci
+rm -rf ./cover.out ./*.coverprofile
