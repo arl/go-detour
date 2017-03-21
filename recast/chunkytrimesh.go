@@ -137,12 +137,10 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 		node.N = inum
 
 		for i := imin; i < imax; i++ {
-			src := inTris[items[i].i*3 : 3+items[i].i*3]
-			dst := outTris[(*curTri)*3 : 3+(*curTri)*3]
+			src := inTris[items[i].i*3:]
+			dst := outTris[(*curTri)*3:]
 			(*curTri)++
-			dst[0] = src[0]
-			dst[1] = src[1]
-			dst[2] = src[2]
+			copy(dst, src[:3])
 		}
 	} else {
 		// Split
