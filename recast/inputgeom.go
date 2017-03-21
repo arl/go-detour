@@ -21,33 +21,48 @@ type ConvexVolume struct {
 type BuildSettings struct {
 	// Cell size in world units
 	CellSize float32
+
 	// Cell height in world units
 	CellHeight float32
+
 	// Agent height in world units
 	AgentHeight float32
+
 	// Agent radius in world units
 	AgentRadius float32
+
 	// Agent max climb in world units
 	AgentMaxClimb float32
+
 	// Agent max slope in degrees
 	AgentMaxSlope float32
+
 	// Region minimum size in voxels.
 	// regionMinSize = sqrt(regionMinArea)
 	RegionMinSize float32
+
 	// Region merge size in voxels.
 	// regionMergeSize = sqrt(regionMergeArea)
 	RegionMergeSize float32
+
 	// Edge max length in world units
 	EdgeMaxLen float32
+
 	// Edge max error in voxels
 	EdgeMaxError float32
+
+	// VertsPerPolys is the number of vertices to consider per polygons
 	VertsPerPoly float32
+
 	// Detail sample distance in voxels
 	DetailSampleDist float32
-	// Detail sample max error in voxel heights.
+
+	// Detail sample max error in voxel heights
 	DetailSampleMaxError float32
+
 	// Partition type, see SamplePartitionType
 	PartitionType int32
+
 	// Size of the tiles in voxels
 	TileSize float32
 }
