@@ -58,62 +58,6 @@ func longestAxis(x, y float32) int {
 	return 0
 }
 
-type alongXAxis []BoundsItem
-
-// Len is the number of elements in the collection.
-func (s alongXAxis) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s alongXAxis) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	switch {
-	case a.bmin[0] < b.bmin[0]:
-		return true
-	case a.bmin[0] > b.bmin[0]:
-		return false
-	default:
-		return false
-	}
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s alongXAxis) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-type alongYAxis []BoundsItem
-
-// Len is the number of elements in the collection.
-func (s alongYAxis) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s alongYAxis) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	switch {
-	case a.bmin[1] < b.bmin[1]:
-		return true
-	case a.bmin[1] > b.bmin[1]:
-		return false
-	default:
-		return false
-	}
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s alongYAxis) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
 func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 	curNode *int32, nodes []ChunkyTriMeshNode, maxNodes int32,
 	curTri *int32, outTris, inTris []int32) {
@@ -151,10 +95,13 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 
 		if axis == 0 {
 			// Sort along x-axis
-			sort.Sort(alongXAxis(items[imin : imin+inum]))
-		} else if axis == 1 {
+			sort.SliceStable(items[imin:imin+inum],
+				func(i, j int) bool { return items[int(imin)+i].bmin[0] < items[int(imin)+j].bmin[0] })
+
+		} else {
 			// Sort along y-axis
-			sort.Sort(alongYAxis(items[imin : imin+inum]))
+			sort.SliceStable(items[imin:imin+inum],
+				func(i, j int) bool { return items[int(imin)+i].bmin[1] < items[int(imin)+j].bmin[1] })
 		}
 
 		isplit := imin + inum/2
