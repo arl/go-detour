@@ -857,10 +857,10 @@ func (q *NavMeshQuery) portalPoints8(
 	// the link width.
 	if link.Side != 0xff {
 		// Unpack portal limits.
-		if link.Bmin != 0 || link.Bmax != 255 {
+		if link.BMin != 0 || link.BMax != 255 {
 			s := float32(1.0 / 255.0)
-			tmin := float32(link.Bmin) * s
-			tmax := float32(link.Bmax) * s
+			tmin := float32(link.BMin) * s
+			tmax := float32(link.BMax) * s
 			d3.Vec3Lerp(left, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmin)
 			d3.Vec3Lerp(right, fromTile.Verts[v0idx:v0idx+3], fromTile.Verts[v1idx:v1idx+3], tmax)
 		}
@@ -1240,8 +1240,8 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 		nodeIdx = 0
 		endIdx = tile.Header.BvNodeCount
 
-		tbmin = d3.NewVec3From(tile.Header.Bmin[:])
-		tbmax = d3.NewVec3From(tile.Header.Bmax[:])
+		tbmin = d3.NewVec3From(tile.Header.BMin[:])
+		tbmax = d3.NewVec3From(tile.Header.BMax[:])
 		qfac = tile.Header.BvQuantFactor
 
 		// Calculate quantized box
@@ -1267,7 +1267,7 @@ func (q *NavMeshQuery) queryPolygonsInTile(
 		// TODO: probably need to use an index or unsafe.Pointer here
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
-			overlap := OverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
+			overlap := OverlapQuantBounds(bmin[:], bmax[:], node.BMin[:], node.BMax[:])
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
@@ -1555,7 +1555,7 @@ func (q *NavMeshQuery) Raycast(
 			// If the link is at tile boundary,
 
 			// Check if the link spans the whole edge, and accept.
-			if link.Bmin == 0 && link.Bmax == 255 {
+			if link.BMin == 0 && link.BMax == 255 {
 				nextRef = link.Ref
 				break
 			}
@@ -1570,8 +1570,8 @@ func (q *NavMeshQuery) Raycast(
 			if link.Side == 0 || link.Side == 4 {
 				// Calculate link size.
 				var s float32 = 1.0 / 255.0
-				lmin := left[2] + (right[2]-left[2])*(float32(link.Bmin)*s)
-				lmax := left[2] + (right[2]-left[2])*(float32(link.Bmax)*s)
+				lmin := left[2] + (right[2]-left[2])*(float32(link.BMin)*s)
+				lmax := left[2] + (right[2]-left[2])*(float32(link.BMax)*s)
 				if lmin > lmax {
 					lmin, lmax = lmax, lmin
 				}
@@ -1585,8 +1585,8 @@ func (q *NavMeshQuery) Raycast(
 			} else if link.Side == 2 || link.Side == 6 {
 				// Calculate link size.
 				var s float32 = 1.0 / 255.0
-				lmin := left[0] + (right[0]-left[0])*(float32(link.Bmin)*s)
-				lmax := left[0] + (right[0]-left[0])*(float32(link.Bmax)*s)
+				lmin := left[0] + (right[0]-left[0])*(float32(link.BMin)*s)
+				lmax := left[0] + (right[0]-left[0])*(float32(link.BMax)*s)
 				if lmin > lmax {
 					lmin, lmax = lmax, lmin
 				}

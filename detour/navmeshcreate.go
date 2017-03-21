@@ -248,23 +248,23 @@ func subdivide(items []bvItem, nitems, imin, imax int32, curNode *int32, nodes [
 
 	if inum == 1 {
 		// Leaf
-		node.Bmin[0] = items[imin].BMin[0]
-		node.Bmin[1] = items[imin].BMin[1]
-		node.Bmin[2] = items[imin].BMin[2]
+		node.BMin[0] = items[imin].BMin[0]
+		node.BMin[1] = items[imin].BMin[1]
+		node.BMin[2] = items[imin].BMin[2]
 
-		node.Bmax[0] = items[imin].BMax[0]
-		node.Bmax[1] = items[imin].BMax[1]
-		node.Bmax[2] = items[imin].BMax[2]
+		node.BMax[0] = items[imin].BMax[0]
+		node.BMax[1] = items[imin].BMax[1]
+		node.BMax[2] = items[imin].BMax[2]
 
 		node.I = items[imin].i
 	} else {
 		// Split
-		calcExtends(items, imin, imax, node.Bmin[:], node.Bmax[:])
+		calcExtends(items, imin, imax, node.BMin[:], node.BMax[:])
 
 		axis := longestAxis(
-			node.Bmax[0]-node.Bmin[0],
-			node.Bmax[1]-node.Bmin[1],
-			node.Bmax[2]-node.Bmin[2])
+			node.BMax[0]-node.BMin[0],
+			node.BMax[1]-node.BMin[1],
+			node.BMax[2]-node.BMin[2])
 
 		if axis == 0 {
 			// Sort along x-axis
@@ -776,8 +776,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	hdr.PolyCount = int32(totPolyCount)
 	hdr.VertCount = int32(totVertCount)
 	hdr.MaxLinkCount = maxLinkCount
-	copy(hdr.Bmin[:], params.BMin[:])
-	copy(hdr.Bmax[:], params.BMax[:])
+	copy(hdr.BMin[:], params.BMin[:])
+	copy(hdr.BMax[:], params.BMax[:])
 	hdr.DetailMeshCount = params.PolyCount
 	hdr.DetailVertCount = uniqueDetailVertCount
 	hdr.DetailTriCount = detailTriCount

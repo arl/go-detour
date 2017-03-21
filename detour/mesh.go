@@ -160,9 +160,9 @@ func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	}
 
 	var params NavMeshParams
-	copy(params.Orig[:], header.Bmin[:])
-	params.TileWidth = header.Bmax[0] - header.Bmin[0]
-	params.TileHeight = header.Bmax[2] - header.Bmin[2]
+	copy(params.Orig[:], header.BMin[:])
+	params.TileWidth = header.BMax[0] - header.BMin[0]
+	params.TileHeight = header.BMax[2] - header.BMin[2]
 	params.MaxTiles = 1
 	params.MaxPolys = uint32(header.PolyCount)
 
@@ -538,8 +538,8 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 				link.Ref = base | PolyRef(poly.Neis[j]-1)
 				link.Edge = uint8(j)
 				link.Side = 0xff
-				link.Bmin = 0
-				link.Bmax = 0
+				link.BMin = 0
+				link.BMax = 0
 				// Add to linked list.
 				link.Next = poly.FirstLink
 				poly.FirstLink = idx
@@ -617,8 +617,8 @@ type Link struct {
 	Next uint32  // Index of the next link.
 	Edge uint8   // Index of the polygon edge that owns this link.
 	Side uint8   // If a boundary link, defines on which side the link is.
-	Bmin uint8   // If a boundary link, defines the minimum sub-edge area.
-	Bmax uint8   // If a boundary link, defines the maximum sub-edge area.
+	BMin uint8   // If a boundary link, defines the minimum sub-edge area.
+	BMax uint8   // If a boundary link, defines the maximum sub-edge area.
 }
 
 // A PolyDetail defines the location of detail sub-mesh data within a MeshTile.
@@ -634,8 +634,8 @@ type PolyDetail struct {
 // Note: This structure is rarely if ever used by the end user.
 // see MeshTile
 type BvNode struct {
-	Bmin [3]uint16 // Minimum bounds of the node's AABB. [(x, y, z)]
-	Bmax [3]uint16 // Maximum bounds of the node's AABB. [(x, y, z)]
+	BMin [3]uint16 // Minimum bounds of the node's AABB. [(x, y, z)]
+	BMax [3]uint16 // Maximum bounds of the node's AABB. [(x, y, z)]
 	I    int32     // The node's index. (Negative for escape sequence.)
 }
 
@@ -767,8 +767,8 @@ func (m *NavMesh) baseOffMeshLinks(tile *MeshTile) {
 			link.Ref = ref
 			link.Edge = uint8(0)
 			link.Side = 0xff
-			link.Bmin = 0
-			link.Bmax = 0
+			link.BMin = 0
+			link.BMax = 0
 			// Add to linked list.
 			link.Next = poly.FirstLink
 			poly.FirstLink = idx
@@ -783,8 +783,8 @@ func (m *NavMesh) baseOffMeshLinks(tile *MeshTile) {
 			link.Ref = base | PolyRef(con.Poly)
 			link.Edge = 0xff
 			link.Side = 0xff
-			link.Bmin = 0
-			link.Bmax = 0
+			link.BMin = 0
+			link.BMax = 0
 			// Add to linked list.
 			link.Next = landPoly.FirstLink
 			landPoly.FirstLink = tidx
@@ -856,8 +856,8 @@ func (m *NavMesh) queryPolygonsInTile(
 		nodeIdx = 0
 		endIdx = tile.Header.BvNodeCount
 
-		tbmin = d3.NewVec3From(tile.Header.Bmin[:])
-		tbmax = d3.NewVec3From(tile.Header.Bmax[:])
+		tbmin = d3.NewVec3From(tile.Header.BMin[:])
+		tbmax = d3.NewVec3From(tile.Header.BMax[:])
 		qfac = tile.Header.BvQuantFactor
 
 		// Calculate quantized box
@@ -881,7 +881,7 @@ func (m *NavMesh) queryPolygonsInTile(
 		var n int32
 		for nodeIdx < endIdx {
 			node = &tile.BvTree[nodeIdx]
-			overlap := OverlapQuantBounds(bmin[:], bmax[:], node.Bmin[:], node.Bmax[:])
+			overlap := OverlapQuantBounds(bmin[:], bmax[:], node.BMin[:], node.BMax[:])
 			isLeafNode := node.I >= 0
 
 			if isLeafNode && overlap {
@@ -1133,8 +1133,8 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 			link.Ref = ref
 			link.Edge = uint8(1)
 			link.Side = oppositeSide
-			link.Bmin = 0
-			link.Bmax = 0
+			link.BMin = 0
+			link.BMax = 0
 			// Add to linked list.
 			link.Next = targetPoly.FirstLink
 			targetPoly.FirstLink = idx
@@ -1154,8 +1154,8 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 				} else {
 					link.Side = uint8(side)
 				}
-				link.Bmin = 0
-				link.Bmax = 0
+				link.BMin = 0
+				link.BMax = 0
 				// Add to linked list.
 				link.Next = landPoly.FirstLink
 				landPoly.FirstLink = tidx
@@ -1247,16 +1247,16 @@ func (m *NavMesh) connectExtLinks(tile, target *MeshTile, side int32) {
 						if tmin > tmax {
 							tmin, tmax = tmax, tmin
 						}
-						link.Bmin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
-						link.Bmax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
+						link.BMin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
+						link.BMax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					} else if dir == 2 || dir == 6 {
 						tmin := (neia[k*2+0] - va[0]) / (vb[0] - va[0])
 						tmax := (neia[k*2+1] - va[0]) / (vb[0] - va[0])
 						if tmin > tmax {
 							tmin, tmax = tmax, tmin
 						}
-						link.Bmin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
-						link.Bmax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
+						link.BMin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
+						link.BMax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					}
 				}
 			}

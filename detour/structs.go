@@ -102,8 +102,8 @@ type MeshHeader struct {
 	WalkableHeight  float32    // The height of the agents using the tile.
 	WalkableRadius  float32    // The radius of the agents using the tile.
 	WalkableClimb   float32    // The maximum climb height of the agents using the tile.
-	Bmin            [3]float32 // The minimum bounds of the tile's AABB. [(x, y, z)]
-	Bmax            [3]float32 // The maximum bounds of the tile's AABB. [(x, y, z)]
+	BMin            [3]float32 // The minimum bounds of the tile's AABB. [(x, y, z)]
+	BMax            [3]float32 // The maximum bounds of the tile's AABB. [(x, y, z)]
 	BvQuantFactor   float32    // The bounding volume quantization factor.
 }
 
@@ -139,12 +139,12 @@ func (s *MeshHeader) serialize(dst []byte) {
 	little.PutUint32(dst[off+60:], uint32(math.Float32bits(s.WalkableHeight)))
 	little.PutUint32(dst[off+64:], uint32(math.Float32bits(s.WalkableRadius)))
 	little.PutUint32(dst[off+68:], uint32(math.Float32bits(s.WalkableClimb)))
-	little.PutUint32(dst[off+72:], uint32(math.Float32bits(s.Bmin[0])))
-	little.PutUint32(dst[off+76:], uint32(math.Float32bits(s.Bmin[1])))
-	little.PutUint32(dst[off+80:], uint32(math.Float32bits(s.Bmin[2])))
-	little.PutUint32(dst[off+84:], uint32(math.Float32bits(s.Bmax[0])))
-	little.PutUint32(dst[off+88:], uint32(math.Float32bits(s.Bmax[1])))
-	little.PutUint32(dst[off+92:], uint32(math.Float32bits(s.Bmax[2])))
+	little.PutUint32(dst[off+72:], uint32(math.Float32bits(s.BMin[0])))
+	little.PutUint32(dst[off+76:], uint32(math.Float32bits(s.BMin[1])))
+	little.PutUint32(dst[off+80:], uint32(math.Float32bits(s.BMin[2])))
+	little.PutUint32(dst[off+84:], uint32(math.Float32bits(s.BMax[0])))
+	little.PutUint32(dst[off+88:], uint32(math.Float32bits(s.BMax[1])))
+	little.PutUint32(dst[off+92:], uint32(math.Float32bits(s.BMax[2])))
 	little.PutUint32(dst[off+96:], uint32(math.Float32bits(s.BvQuantFactor)))
 }
 
@@ -176,11 +176,11 @@ func (s *MeshHeader) unserialize(src []byte) {
 	s.WalkableHeight = math.Float32frombits(little.Uint32(src[off+60:]))
 	s.WalkableRadius = math.Float32frombits(little.Uint32(src[off+64:]))
 	s.WalkableClimb = math.Float32frombits(little.Uint32(src[off+68:]))
-	s.Bmin[0] = math.Float32frombits(little.Uint32(src[off+72:]))
-	s.Bmin[1] = math.Float32frombits(little.Uint32(src[off+76:]))
-	s.Bmin[2] = math.Float32frombits(little.Uint32(src[off+80:]))
-	s.Bmax[0] = math.Float32frombits(little.Uint32(src[off+84:]))
-	s.Bmax[1] = math.Float32frombits(little.Uint32(src[off+88:]))
-	s.Bmax[2] = math.Float32frombits(little.Uint32(src[off+92:]))
+	s.BMin[0] = math.Float32frombits(little.Uint32(src[off+72:]))
+	s.BMin[1] = math.Float32frombits(little.Uint32(src[off+76:]))
+	s.BMin[2] = math.Float32frombits(little.Uint32(src[off+80:]))
+	s.BMax[0] = math.Float32frombits(little.Uint32(src[off+84:]))
+	s.BMax[1] = math.Float32frombits(little.Uint32(src[off+88:]))
+	s.BMax[2] = math.Float32frombits(little.Uint32(src[off+92:]))
 	s.BvQuantFactor = math.Float32frombits(little.Uint32(src[off+96:]))
 }
