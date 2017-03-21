@@ -246,16 +246,14 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 }
 
 func checkOverlapRect(amin, amax, bmin, bmax [2]float32) bool {
-	overlap := true
-
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
-		overlap = false
+		return false
 	}
 
 	if amin[1] > bmax[1] || amax[1] < bmin[1] {
-		overlap = false
+		return false
 	}
-	return overlap
+	return true
 }
 
 // Returns the chunk indices which overlap the input rectable.
