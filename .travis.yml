@@ -9,12 +9,12 @@ before_script:
   # go vet ./...
 
 before_install:
-- go get github.com/axw/gocov/gocov
-- go get github.com/mattn/goveralls
-- if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
-- go get github.com/golang/lint/golint
+- go get -u -v github.com/kardianos/govendor
+- go get -u -v github.com/mattn/goveralls
+- go get -u -v github.com/wadey/gocovmerge
+- if ! go get -u -v github.com/golang/tools/cmd/cover; then go get -u -v golang.org/x/tools/cmd/cover; fi
+- go get -u -v github.com/golang/lint/golint
 
 script:
 # ./golint.bash
 - ./testandcover.bash
-- $HOME/gopath/bin/goveralls -coverprofile=profile.cov -service=travis-ci
