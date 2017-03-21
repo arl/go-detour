@@ -125,7 +125,7 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 		return
 	}
 
-	node := nodes[*curNode]
+	node := &nodes[*curNode]
 	(*curNode)++
 
 	if inum <= trisPerChunk {
@@ -196,7 +196,7 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 
 	for i := int32(0); i < ntris; i++ {
 		t := tris[i*3 : i*3+3]
-		it := items[i]
+		it := &items[i]
 		it.i = i
 		// Calc triangle XZ bounds.
 		it.bmax[0] = verts[t[0]*3+0]
@@ -232,7 +232,7 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 	// Calc max tris per node.
 	cm.MaxTrisPerChunk = 0
 	for i := int32(0); i < cm.Nnodes; i++ {
-		node := cm.Nodes[i]
+		node := &cm.Nodes[i]
 		isLeaf := node.I >= 0
 		if !isLeaf {
 			continue
