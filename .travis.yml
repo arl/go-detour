@@ -17,4 +17,5 @@ before_install:
 
 script:
 # ./golint.bash
-- ./testandcover.bash
+- go test ./...
+- ./cover.sh
