@@ -17,4 +17,3 @@ before_install:
 script:
 # ./golint.bash
 - ./testandcover.bash
-- $HOME/gopath/bin/goveralls -coverprofile=profile.cov -service=travis-ci
