@@ -396,7 +396,7 @@ func (tm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	} else if tm.partitionType == sample.PartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
-		if !recast.BuildRegionsMonotone(tm.ctx, tm.chf, 0, tm.cfg.MinRegionArea, tm.cfg.MergeRegionArea) {
+		if !recast.BuildRegionsMonotone(tm.ctx, tm.chf, tm.cfg.BorderSize, tm.cfg.MinRegionArea, tm.cfg.MergeRegionArea) {
 			tm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
 			return nil
 		}
