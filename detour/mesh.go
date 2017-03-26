@@ -1231,7 +1231,7 @@ func (m *NavMesh) connectExtLinks(tile, target *MeshTile, side int32) {
 			for k = 0; k < nnei; k++ {
 				idx := allocLink(tile)
 				if idx != nullLink {
-					link := tile.Links[idx]
+					link := &tile.Links[idx]
 					link.Ref = nei[k]
 					link.Edge = uint8(j)
 					link.Side = uint8(dir)
