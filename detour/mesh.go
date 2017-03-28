@@ -1050,6 +1050,7 @@ func (m *NavMesh) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverP
 // Warning: only use this function if it is known that the provided polygon
 // reference is valid. This function is faster than TileAndPolyByRef, but it
 // does not validate the reference.
+// TODO: Use Go-idioms: change signature and returns tile and poly
 func (m *NavMesh) TileAndPolyByRefUnsafe(ref PolyRef, tile **MeshTile, poly **Poly) {
 	var salt, it, ip uint32
 	m.DecodePolyID(ref, &salt, &it, &ip)
@@ -1066,6 +1067,7 @@ func (m *NavMesh) TileAndPolyByRefUnsafe(ref PolyRef, tile **MeshTile, poly **Po
 //   [out]ip    The index of the polygon within the tile.
 //
 // see encodePolyID
+// TODO: Use Go-idioms: change signature and returns salt, it and ip
 func (m *NavMesh) DecodePolyID(ref PolyRef, salt, it, ip *uint32) {
 	saltMask := (PolyRef(1) << m.saltBits) - 1
 	tileMask := (PolyRef(1) << m.tileBits) - 1
@@ -1526,6 +1528,7 @@ func (m *NavMesh) IsValidPolyRef(ref PolyRef) bool {
 //   [in] ref     A known valid reference for a polygon.
 //   [out]tile    The tile containing the polygon.
 //   [out]poly    The polygon.
+// TODO: Use Go-idioms: change signature and returns tile and poly
 func (m *NavMesh) TileAndPolyByRef(ref PolyRef, tile **MeshTile, poly **Poly) Status {
 	if ref == 0 {
 		return Failure
