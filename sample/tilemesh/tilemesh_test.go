@@ -88,11 +88,11 @@ func testCreateTileMesh(t *testing.T, objName string) {
 	}
 }
 
-/*
 func TestCreateDevelerTileNavMesh(t *testing.T) {
-testCreateTileMesh(t, "develer")
+	testCreateTileMesh(t, "develer")
 }
 
+/*
 func TestCreateDungeonTileNavMesh(t *testing.T) {
 testCreateTileMesh(t, "dungeon")
 }
