@@ -20,7 +20,7 @@ func TestCalcPolyCenter(t *testing.T) {
 		{0x460007, d3.Vec3{11.460253, 0.189468, 14.758746}},
 	}
 
-	mesh, err = loadTestNavMesh("navmesh.bin")
+	mesh, err = loadTestNavMesh("mesh2.bin")
 	checkt(t, err)
 
 	for _, tt := range polyTests {
@@ -64,7 +64,7 @@ func TestFindNearestPolySpecialCases(t *testing.T) {
 		},
 	}
 
-	mesh, err = loadTestNavMesh("navmesh.bin")
+	mesh, err = loadTestNavMesh("mesh2.bin")
 	checkt(t, err)
 
 	for _, tt := range pathTests {

@@ -29,7 +29,7 @@ func TestFindNearestPolyInTile(t *testing.T) {
 		},
 	}
 
-	mesh, err = loadTestNavMesh("navmesh.bin")
+	mesh, err = loadTestNavMesh("mesh2.bin")
 	checkt(t, err)
 
 	for _, tt := range pathTests {
