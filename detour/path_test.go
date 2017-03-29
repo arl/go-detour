@@ -69,7 +69,7 @@ func TestFindPathFindStraightPath(t *testing.T) {
 		},
 	}
 
-	mesh, err = loadTestNavMesh("nav_test.org.bin")
+	mesh, err = loadTestNavMesh("mesh1.bin")
 	checkt(t, err)
 
 	for _, tt := range pathTests {

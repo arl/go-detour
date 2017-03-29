@@ -44,7 +44,8 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 	return bytes.Equal(f1, f2), nil
 }
 
-const testDataDir = "../../testdata/"
+const testDataDir = "../../testdata/sample/solomesh/"
+const OBJDir = "../../testdata/"
 
 func testCreateSoloMesh(t *testing.T, objName string) {
 	var (
@@ -57,8 +58,8 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 		ok       bool
 	)
 
-	path = testDataDir + objName + ".obj"
-	meshBinPath = testDataDir + objName + ".org.bin"
+	path = OBJDir + objName + ".obj"
+	meshBinPath = testDataDir + objName + ".bin"
 	outBin = "out.bin"
 
 	ctx = recast.NewBuildContext(true)
@@ -269,7 +270,7 @@ func TestRaycastSoloMesh(t *testing.T) {
 	)
 
 	objName := "nav_test"
-	path := testDataDir + objName + ".obj"
+	path := OBJDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := New(ctx)
