@@ -570,7 +570,7 @@ func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 }
 
 func computeTileHash(x, y, mask int32) int32 {
-	h1 := 0x8da6b343 // Large multiplicative constants;
+	h1 := 0x8da6b343 // Large multiplicative constants
 	h2 := 0xd8163841 // here arbitrarily chosen primes
 	n := h1*int(x) + h2*int(y)
 	return int32(n) & mask
@@ -1238,7 +1238,6 @@ func (m *NavMesh) connectExtLinks(tile, target *MeshTile, side int32) {
 						if tmin > tmax {
 							tmin, tmax = tmax, tmin
 						}
-						//panic("il doit y avoir des erreurs dans ce coin la car d'apres le diff deja on a bun max a 0 alors qu'il devrait etre a 255")
 						link.BMin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
 						link.BMax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					} else if dir == 2 || dir == 6 {
