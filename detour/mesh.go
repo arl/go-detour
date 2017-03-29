@@ -565,14 +565,8 @@ func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 		return 0
 	}
 
-	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0]))
-	ip := uint32(e / unsafe.Sizeof(*tile))
-
-	if ip >= uint32(len(m.Tiles)) {
-		panic(fmt.Sprintf("we should have ip < len(m.Tiles), instead ip = %d and len(m.Tiles) = %d", ip, len(m.Tiles)))
-	}
-
-	return m.encodePolyID(tile.Salt, ip, 0)
+	it := (uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0]))) / unsafe.Sizeof(*tile)
+	return m.encodePolyID(tile.Salt, uint32(it), 0)
 }
 
 func computeTileHash(x, y, mask int32) int32 {
@@ -978,10 +972,8 @@ func (m *NavMesh) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverP
 		return
 	}
 
-	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
-	ip := uint32(e / unsafe.Sizeof(*poly))
-
-	pd := &tile.DetailMeshes[ip]
+	ip := (uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))) / unsafe.Sizeof(*poly)
+	pd := &tile.DetailMeshes[uint32(ip)]
 
 	// Clamp point to be inside the polygon.
 	verts := make([]float32, VertsPerPolygon*3)

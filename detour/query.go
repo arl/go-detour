@@ -962,12 +962,8 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 		return Success
 	}
 
-	e := uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))
-	ip := uint32(e / unsafe.Sizeof(*poly))
-
-	assert.True(ip < uint32(len(tile.Polys)), "ip should be < len(tile.Polys), ip=%d, len(tile.Polys)=%d", ip, len(tile.Polys))
-
-	pd := &tile.DetailMeshes[ip]
+	ip := (uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))) / unsafe.Sizeof(*poly)
+	pd := &tile.DetailMeshes[uint32(ip)]
 
 	// Clamp point to be inside the polygon.
 	verts := make([]float32, VertsPerPolygon*3)
