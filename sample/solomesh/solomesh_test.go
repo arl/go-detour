@@ -91,43 +91,43 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 	}
 }
 
-func TestCreateDevelerNavMesh(t *testing.T) {
+func TestCreateDevelerSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "develer")
 }
 
-func TestCreateDungeonNavMesh(t *testing.T) {
+func TestCreateDungeonSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "dungeon")
 }
 
-func TestCreateCubeNavMesh(t *testing.T) {
+func TestCreateCubeSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "cube")
 }
 
-func TestCreateCube5DegreesNavMesh(t *testing.T) {
+func TestCreateCube5DegreesSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "cube5xdeg")
 }
 
-func TestCreateCube45DegreesNavMesh(t *testing.T) {
+func TestCreateCube45DegreesSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "cube45xdeg")
 }
 
-func TestCreateStair2NavMesh(t *testing.T) {
+func TestCreateStair2SoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "stair2")
 }
 
-func TestCreateStair3NavMesh(t *testing.T) {
+func TestCreateStair3SoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "stair3")
 }
 
-func TestCreateHillNavMesh(t *testing.T) {
+func TestCreateHillSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "hill")
 }
 
-func TestCreateTestNavMesh(t *testing.T) {
+func TestCreateTestSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "nav_test")
 }
 
-func benchmarkCreateNavMesh(b *testing.B, meshName string) {
+func benchmarkCreateSoloNavMesh(b *testing.B, meshName string) {
 	path := testDataDir + meshName + ".obj"
 
 	soloMesh := New(recast.NewBuildContext(false))
@@ -147,12 +147,12 @@ func benchmarkCreateNavMesh(b *testing.B, meshName string) {
 	}
 }
 
-func BenchmarkCreateDevelerNavMesh(b *testing.B) {
-	benchmarkCreateNavMesh(b, "develer")
+func BenchmarkCreateDevelerSoloNavMesh(b *testing.B) {
+	benchmarkCreateSoloNavMesh(b, "develer")
 }
 
-func BenchmarkCreateCubeNavMesh(b *testing.B) {
-	benchmarkCreateNavMesh(b, "cube")
+func BenchmarkCreateCubeSoloNavMesh(b *testing.B) {
+	benchmarkCreateSoloNavMesh(b, "cube")
 }
 
 func BenchmarkPathFindSoloMesh(b *testing.B) {
