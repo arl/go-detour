@@ -8,7 +8,6 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
@@ -130,8 +129,12 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		if _, err = tileHeader.WriteTo(f); err != nil {
 			return err
 		}
-
-		if _, err = f.Write(tile.Data); err != nil {
+		var data []byte = make([]byte, tile.DataSize)
+		// first Serialize the tile header
+		tile.Header.serialize(data)
+		// then the tile itself
+		tile.serialize(data[tile.Header.size():])
+		if _, err = f.Write(data); err != nil {
 			return err
 		}
 	}
@@ -324,6 +327,7 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 	// Build links freelist
 	tile.LinksFreeList = 0
 	tile.Links[hdr.MaxLinkCount-1].Next = nullLink
+
 	var i int32
 	for ; i < hdr.MaxLinkCount-1; i++ {
 		tile.Links[i].Next = uint32(i + 1)
@@ -331,7 +335,6 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 
 	// Init tile.
 	tile.Header = &hdr
-	tile.Data = data
 	tile.DataSize = int32(len(data))
 	tile.Flags = 0
 
@@ -372,8 +375,6 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 		}
 	}
 
-	// rewrite the modified tile into the data pointer
-	tile.serialize(data[tile.Header.size():])
 	return Success, m.TileRef(tile)
 }
 
@@ -448,9 +449,9 @@ func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
 	}
 
 	// Reset tile.
-	if data != nil {
-		data = tile.Data
-	}
+	//if data != nil {
+	//data = tile.Data
+	//}
 
 	tile.Header = nil
 	tile.Flags = 0
@@ -567,8 +568,9 @@ func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 	e := uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0]))
 	ip := uint32(e / unsafe.Sizeof(*tile))
 
-	assert.True(ip < uint32(len(m.Tiles)),
-		"we should have ip < len(m.Tiles), instead ip = %d and len(m.Tiles) = %d", ip, len(m.Tiles))
+	if ip >= uint32(len(m.Tiles)) {
+		panic(fmt.Sprintf("we should have ip < len(m.Tiles), instead ip = %d and len(m.Tiles) = %d", ip, len(m.Tiles)))
+	}
 
 	return m.encodePolyID(tile.Salt, ip, 0)
 }
@@ -1122,9 +1124,7 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 		}
 
 		// Make sure the location is on current mesh.
-		var v d3.Vec3
-		vidx := targetPoly.Verts[1] * 3
-		v = target.Verts[vidx : vidx+3]
+		var v d3.Vec3 = target.Verts[targetPoly.Verts[1]*3:]
 		v.Assign(nearestPt)
 
 		// Link off-mesh connection to target poly.
@@ -1221,14 +1221,12 @@ func (m *NavMesh) connectExtLinks(tile, target *MeshTile, side int32) {
 			}
 
 			// Create new links
-			idx := poly.Verts[j] * 3
-			va := tile.Verts[idx : idx+3]
-			idx = poly.Verts[(j+1)%int32(nv)] * 3
-
-			vb := tile.Verts[idx : idx+3]
+			va := tile.Verts[poly.Verts[j]*3:]
+			vb := tile.Verts[poly.Verts[(j+1)%int32(nv)]*3:]
 			nei := make([]PolyRef, 4)
 			neia := make([]float32, 4*2)
 			nnei := m.findConnectingPolys(va, vb, target, oppositeTile(dir), nei, neia, 4)
+
 			var k int32
 			for k = 0; k < nnei; k++ {
 				idx := allocLink(tile)
@@ -1248,6 +1246,7 @@ func (m *NavMesh) connectExtLinks(tile, target *MeshTile, side int32) {
 						if tmin > tmax {
 							tmin, tmax = tmax, tmin
 						}
+						//panic("il doit y avoir des erreurs dans ce coin la car d'apres le diff deja on a bun max a 0 alors qu'il devrait etre a 255")
 						link.BMin = uint8(f32.Clamp(tmin, 0.0, 1.0) * 255.0)
 						link.BMax = uint8(f32.Clamp(tmax, 0.0, 1.0) * 255.0)
 					} else if dir == 2 || dir == 6 {
@@ -1476,6 +1475,8 @@ func (m *NavMesh) neighbourTilesAt(x, y, side int32, tiles []*MeshTile, maxTiles
 //   layer   The tile's layer. (x, y, layer)
 //
 // Return The tile reference of the tile, or 0 if there is none.
+// TODO: verify that this function is equivalent with this other version
+// (commented out below)
 func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
 	// Find tile based on hash.
 	h := computeTileHash(x, y, m.TileLUTMask)
@@ -1492,14 +1493,32 @@ func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
 	return 0
 }
 
+/*
+func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
+	// Find tile based on hash.
+	h := computeTileHash(x, y, m.TileLUTMask)
+	tile := &m.posLookup[h]
+	for *tile != nil {
+		if (*tile).Header != nil &&
+			(*tile).Header.X == x &&
+			(*tile).Header.Y == y &&
+			(*tile).Header.Layer == layer {
+			return m.TileRef(*tile)
+		}
+		tile = &(*tile).Next
+	}
+	return 0
+}
+*/
+
 // TileRef returns the tile reference for the specified tile.
 func (m *NavMesh) TileRef(tile *MeshTile) TileRef {
 	if tile == nil {
 		return 0
 	}
 
-	it := uint32(uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0])))
-	return TileRef(m.encodePolyID(tile.Salt, it, 0))
+	it := (uintptr(unsafe.Pointer(tile)) - uintptr(unsafe.Pointer(&m.Tiles[0]))) / unsafe.Sizeof(*tile)
+	return TileRef(m.encodePolyID(tile.Salt, uint32(it), 0))
 }
 
 // IsValidPolyRef checks the validity of a polygon reference.
