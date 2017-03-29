@@ -177,7 +177,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, Success, 1},
 	}
 
-	mesh, err = loadTestNavMesh("navmesh.bin")
+	mesh, err = loadTestNavMesh("mesh2.bin")
 	checkt(t, err)
 
 	for _, tt := range pathTests {
