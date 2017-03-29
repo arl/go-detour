@@ -107,10 +107,12 @@ func TestCreateCube5DegreesTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "cube5xdeg")
 }
 
+*/
 func TestCreateCube45DegreesTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "cube45xdeg")
 }
 
+/*
 func TestCreateStair2TileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "stair2")
 }
