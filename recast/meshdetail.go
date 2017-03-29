@@ -27,7 +27,7 @@ func (pmd *PolyMeshDetail) Free() {
 	pmd = nil
 }
 
-const RC_UNSET_HEIGHT uint32 = 0xffff
+const RC_UNSET_HEIGHT = 0xffff
 
 type HeightPatch struct {
 	data                      []uint16
@@ -1050,20 +1050,13 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	poly []uint16, npoly int32,
 	verts []uint16, bs int32,
 	hp *HeightPatch, array *[]int32) {
-	/* // Note: Reads to the compact heightfield are offset by border size (bs)*/
-	//// since border size offset is already removed from the polymesh vertices.
-	//static const int offset[9*2] =
-	//{
-	//0,0, -1,-1, 0,-1, 1,-1, 1,0, 1,1, 0,1, -1,1, -1,0,
-	//};
 
 	// Find cell closest to a poly vertex
 	var (
-		startCellX, startCellY, startSpanIndex int32
-		dmin                                   int32
+		startCellX, startCellY int32
+		startSpanIndex         int32 = -1
+		dmin                   int32 = RC_UNSET_HEIGHT
 	)
-	startSpanIndex = -1
-	dmin = int32(RC_UNSET_HEIGHT)
 	for j := int32(0); j < npoly && dmin > 0; j++ {
 		for k := int32(0); k < 9 && dmin > 0; k++ {
 			ax := int32(verts[poly[j]*3+0]) + bsOffset[k*2+0]
@@ -1088,7 +1081,10 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		}
 	}
 
-	assert.True(startSpanIndex != -1, "startSpanIndex should be != 1, got %v", startSpanIndex)
+	if startSpanIndex == -1 {
+		panic(fmt.Sprintf("startSpanIndex should be != 1, got %v", startSpanIndex))
+	}
+
 	// Find center of the polygon
 	var pcx, pcy int32
 	for j := int32(0); j < npoly; j++ {
