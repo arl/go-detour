@@ -79,6 +79,8 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 	}
 
 	navMesh.SaveToFile(outBin)
+	defer os.Remove(outBin)
+
 	t.Logf("%v navmesh successfully built", objName)
 	ok, err = compareFiles(outBin, meshBinPath)
 	if err != nil {
