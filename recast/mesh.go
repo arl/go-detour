@@ -582,8 +582,7 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 		}
 		if hasRem {
 			// Collect edges which does not touch the removed vertex.
-			j := int32(0)
-			for k := nv - 1; j < nv; k = j {
+			for j, k := int32(0), nv-1; j < nv; k, j = j, j+1 {
 				if p[j] != rem && p[k] != rem {
 					e := edges[nedges*4:]
 					e[0] = int32(p[k])
@@ -592,8 +591,8 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 					e[3] = int32(mesh.Areas[i])
 					nedges++
 				}
-				j++
 			}
+
 			// Remove the polygon.
 			p2 := mesh.Polys[(mesh.NPolys-1)*nvp*2:]
 			if !compareSlicesUInt16(p, p2) {
