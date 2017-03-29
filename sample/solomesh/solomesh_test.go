@@ -45,7 +45,7 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 }
 
 const testDataDir = "../../testdata/sample/solomesh/"
-const OBJDir = "../../testdata/"
+const OBJDir = "../../testdata/obj/"
 
 func testCreateSoloMesh(t *testing.T, objName string) {
 	var (
