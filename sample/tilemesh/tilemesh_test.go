@@ -118,11 +118,11 @@ func TestCreateStair3TileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "stair3")
 }
 
-/*
 func TestCreateHillTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "hill")
 }
 
+/*
 func TestCreateTestTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "nav_test")
 }
