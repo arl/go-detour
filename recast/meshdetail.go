@@ -1067,9 +1067,8 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 				continue
 			}
 
-			c := chf.Cells[(ax+bs)+(az+bs)*chf.Width]
-			i := int32(c.Index)
-			for ni := int32(c.Index) + int32(c.Count); i < ni && dmin > 0; i++ {
+			c := &chf.Cells[(ax+bs)+(az+bs)*chf.Width]
+			for i, ni := int32(c.Index), int32(c.Index)+int32(c.Count); i < ni && dmin > 0; i++ {
 				d := iAbs(ay - int32(chf.Spans[i].Y))
 				if d < dmin {
 					startCellX = ax
