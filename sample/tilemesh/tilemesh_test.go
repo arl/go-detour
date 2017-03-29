@@ -76,7 +76,7 @@ func testCreateTileMesh(t *testing.T, objName string) {
 	}
 
 	navMesh.SaveToFile(outBin)
-	defer os.Remove(outBin)
+	//defer os.Remove(outBin)
 
 	t.Logf("%v navmesh successfully built", objName)
 	ok, err = compareFiles(outBin, meshBinPath)
@@ -102,12 +102,10 @@ func TestCreateCubeTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "cube")
 }
 
-/*
 func TestCreateCube5DegreesTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "cube5xdeg")
 }
 
-*/
 func TestCreateCube45DegreesTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "cube45xdeg")
 }
