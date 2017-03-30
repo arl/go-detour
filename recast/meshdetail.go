@@ -1,6 +1,8 @@
 package recast
 
 import (
+	"fmt"
+
 	assert "github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
@@ -361,19 +363,16 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 	)
 	verts = make([]float32, 256*3)
 
-	bounds := make([]*int32, mesh.NPolys*4)
-	for i := range bounds {
-		bounds[i] = new(int32)
-	}
+	bounds := make([]int32, mesh.NPolys*4)
 	poly := make([]float32, nvp*3)
 
 	// Find max size for a polygon area.
 	for i := int32(0); i < mesh.NPolys; i++ {
 		p := mesh.Polys[i*nvp*2:]
-		xmin := bounds[i*4+0]
-		xmax := bounds[i*4+1]
-		ymin := bounds[i*4+2]
-		ymax := bounds[i*4+3]
+		xmin := &bounds[i*4+0]
+		xmax := &bounds[i*4+1]
+		ymin := &bounds[i*4+2]
+		ymax := &bounds[i*4+3]
 
 		*xmin = chf.Width
 		*xmax = 0
@@ -432,10 +431,10 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 		}
 
 		// Get the height data from the area of the polygon.
-		hp.xmin = *bounds[i*4+0]
-		hp.ymin = *bounds[i*4+2]
-		hp.width = *bounds[i*4+1] - *bounds[i*4+0]
-		hp.height = *bounds[i*4+3] - *bounds[i*4+2]
+		hp.xmin = bounds[i*4+0]
+		hp.ymin = bounds[i*4+2]
+		hp.width = bounds[i*4+1] - bounds[i*4+0]
+		hp.height = bounds[i*4+3] - bounds[i*4+2]
 		getHeightData(ctx, chf, p, npoly, mesh.Verts, borderSize, &hp, &arr, int32(mesh.Regs[i]))
 
 		// Build detail mesh.
@@ -1094,7 +1093,6 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	pcy /= npoly
 
 	// Use seeds array as a stack for DFS
-	panic("untested")
 	*array = append([]int32{}, startCellX, startCellY, startSpanIndex)
 
 	dirs := []int32{0, 1, 2, 3}
@@ -1115,11 +1113,10 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 			break
 		}
 
-		panic("untested")
-		ci = (*array)[len(*array)-1]
-		cy = (*array)[len(*array)-1]
-		cx = (*array)[len(*array)-1]
-		*array = append([]int32{}, (*array)[:len(*array)-3]...)
+		// pop last 3 elements from the slice
+		ci, *array = (*array)[len(*array)-1], (*array)[:len(*array)-1]
+		cy, *array = (*array)[len(*array)-1], (*array)[:len(*array)-1]
+		cx, *array = (*array)[len(*array)-1], (*array)[:len(*array)-1]
 
 		if cx == pcx && cy == pcy {
 			break
@@ -1242,9 +1239,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 			y := hp.ymin + hy + bs
 			for hx := int32(0); hx < hp.width; hx++ {
 				x := hp.xmin + hx + bs
-				c := chf.Cells[x+y*chf.Width]
-				i := int32(c.Index)
-				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
+				c := &chf.Cells[x+y*chf.Width]
+
+				for i, ni := int32(c.Index), int32(c.Index+uint32(c.Count)); i < ni; i++ {
 					s := &chf.Spans[i]
 					if int32(s.Reg) == region {
 						// Store height
