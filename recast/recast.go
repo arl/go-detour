@@ -50,7 +50,7 @@ func calcTriNormal(v0, v1, v2, norm d3.Vec3) {
 }
 
 // Sets the area id of all triangles with a slope below the specified value
-// to #RC_WALKABLE_AREA.
+// to 'WalkableArea'.
 //
 //  Arguments:
 //   ctx                The build context to use during the operation.
@@ -87,7 +87,7 @@ func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 }
 
 // ClearUnwalkableTriangles sets the area id of all triangles with a slope
-// greater than or equal to the specified value to RC_NULL_AREA.
+// greater than or equal to the specified value to 'nullArea'.
 //
 //  Arguments:
 //   ctx                The build context to use during the operation.
@@ -219,7 +219,7 @@ func SetCon(s *CompactSpan, dir, i int32) {
 //   dir     The direction to check. [Limits: 0 <= value < 4]
 //
 // Return the neighbor connection data for the specified direction,
-// RC_NOT_CONNECTED if there is no connection.
+// 'notConnected' if there is no connection.
 func GetCon(s *CompactSpan, dir int32) int32 {
 	shift := uint32(dir * 6)
 	return int32((s.Con >> shift) & 0x3f)

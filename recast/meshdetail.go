@@ -29,7 +29,7 @@ func (pmd *PolyMeshDetail) Free() {
 	pmd = nil
 }
 
-const RC_UNSET_HEIGHT = 0xffff
+const unsetHeight = 0xffff
 
 type HeightPatch struct {
 	data                      []uint16
@@ -187,7 +187,7 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 	ix = int32Clamp(ix-hp.xmin, 0, hp.width-1)
 	iz = int32Clamp(iz-hp.ymin, 0, hp.height-1)
 	h := hp.data[ix+iz*hp.width]
-	if uint32(h) == RC_UNSET_HEIGHT {
+	if uint32(h) == unsetHeight {
 		// Special case when data might be bad.
 		// Walk adjacent cells in a spiral up to 'radius', and look
 		// for a pixel which has a valid height.
@@ -209,7 +209,7 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 
 			if nx >= 0 && nz >= 0 && nx < hp.width && nz < hp.height {
 				nh := hp.data[nx+nz*hp.width]
-				if uint32(nh) != RC_UNSET_HEIGHT {
+				if uint32(nh) != unsetHeight {
 					d := math32.Abs(float32(nh)*ch - fy)
 					if d < dmin {
 						h = nh
@@ -225,18 +225,22 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 			// | | |__| | |
 			// | |______| |
 			// |__________|
-			// We want to find the best height as close to the center cell as possible. This means that
-			// if we find a height in one of the neighbor cells to the center, we don't want to
-			// expand further out than the 8 neighbors - we want to limit our search to the closest
+			// We want to find the best height as close to the center cell as
+			// possible. This means that if we find a height in one of the
+			// neighbor cells to the center, we don't want to expand further out
+			// than the 8 neighbors - we want to limit our search to the closest
 			// of these "rings", but the best height in the ring.
-			// For example, the center is just 1 cell. We checked that at the entrance to the function.
-			// The next "ring" contains 8 cells (marked 1 above). Those are all the neighbors to the center cell.
-			// The next one again contains 16 cells (marked 2). In general each ring has 8 additional cells, which
-			// can be thought of as adding 2 cells around the "center" of each side when we expand the ring.
-			// Here we detect if we are about to enter the next ring, and if we are and we have found
-			// a height, we abort the search.
+			// For example, the center is just 1 cell. We checked that at the
+			// entrance to the function.
+			// The next "ring" contains 8 cells (marked 1 above). Those are all
+			// the neighbors to the center cell.
+			// The next one again contains 16 cells (marked 2). In general each
+			// ring has 8 additional cells, which can be thought of as adding 2
+			// cells around the "center" of each side when we expand the ring.
+			// Here we detect if we are about to enter the next ring, and if we
+			// are and we have found a height, we abort the search.
 			if i+1 == nextRingIterStart {
-				if uint32(h) != RC_UNSET_HEIGHT {
+				if uint32(h) != unsetHeight {
 					break
 				}
 
@@ -1054,7 +1058,7 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	var (
 		startCellX, startCellY int32
 		startSpanIndex         int32 = -1
-		dmin                   int32 = RC_UNSET_HEIGHT
+		dmin                   int32 = unsetHeight
 	)
 	for j := int32(0); j < npoly && dmin > 0; j++ {
 		for k := int32(0); k < 9 && dmin > 0; k++ {
@@ -1313,7 +1317,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 				continue
 			}
 
-			if uint32(hp.data[hx+hy*hp.width]) != RC_UNSET_HEIGHT {
+			if uint32(hp.data[hx+hy*hp.width]) != unsetHeight {
 				continue
 			}
 
