@@ -1233,9 +1233,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 
 	empty := true
 
-	// We cannot sample from this poly if it was created from polys
-	// of different regions. If it was then it could potentially be overlapping
-	// with polys of that region and the heights sampled here could be wrong.
+	// We cannot sample from this poly if it was created from polys of different
+	// regions. If it was then it could potentially be overlapping with polys of
+	// that region and the heights sampled here could be wrong.
 	if region != int32(multipleRegs) {
 		// Copy the height from the same region, and mark region borders
 		// as seed points to fill the rest.
@@ -1276,9 +1276,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 		}
 	}
 
-	// if the polygon does not contain any points from the current region (rare, but happens)
-	// or if it could potentially be overlapping polygons of the same region,
-	// then use the center as the seed point.
+	// if the polygon does not contain any points from the current region (rare,
+	// but happens) or if it could potentially be overlapping polygons of the
+	// same region, then use the center as the seed point.
 	if empty {
 		seedArrayWithPolyCenter(ctx, chf, poly, npoly, verts, bs, hp, queue)
 	}
@@ -1286,9 +1286,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 	const RETRACT_SIZE = 256
 	var head int
 
-	// We assume the seed is centered in the polygon, so a BFS to collect
-	// height data will ensure we do not move onto overlapping polygons and
-	// sample wrong heights.
+	// We assume the seed is centered in the polygon, so a BFS to collect height
+	// data will ensure we do not move onto overlapping polygons and sample
+	// wrong heights.
 	for head*3 < len(*queue) {
 		cx := (*queue)[head*3+0]
 		cy := (*queue)[head*3+1]
