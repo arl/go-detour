@@ -599,7 +599,7 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 				copy(p, p2[:nvp])
 			}
 
-			for idx := int32(nvp); i < nvp; i++ {
+			for idx := int32(nvp); idx < nvp; idx++ {
 				p[idx] = 0xffff
 			}
 
