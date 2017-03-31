@@ -14,6 +14,38 @@ import (
 )
 
 // A NavMesh is a navigation mesh based on tiles of convex polygons.
+//
+// The navigation mesh consists of one or more tiles defining three primary
+// types of structural data:
+// - A polygon mesh which defines most of the navigation graph. (See recast.PolyMesh
+//   for its structure.)
+// - A detail mesh used for determining surface height on the polygon mesh. (See
+//   recast.PolyMeshDetail for its structure.)
+// - Off-mesh connections, which define custom point-to-point edges within the
+//   navigation graph.
+//
+// The general build process is as follows:
+// - Create recast.PolyMesh and recast.PolyMeshDetail data using the recast
+//   build pipeline.
+// - Optionally, create off-mesh connection data.
+// - Combine the source data into a NavMeshCreateParams structure.
+// - Create a tile data array using CreateNavMeshData().
+// - Allocate at detour.NavMesh object and initialize it. (For single tile
+//   navigation meshes, the tile data is loaded during this step.)
+// - For multi-tile navigation meshes, load the tile data using
+//   TileNavMesh.addTile().
+//
+// Notes:
+//
+// - This class is usually used in conjunction with the NavMeshQuery class for
+//   pathfinding.
+// - Technically, all navigation meshes are tiled. A 'solo' mesh is simply a
+//   navigation mesh initialized to have only a single tile.
+// - This class does not implement any asynchronous methods. So the
+//   detour.Status result of all methods will always contain either a success or
+//   failure flag.
+//
+// see NavMeshQuery, CreateNavMeshData, NavMeshCreateParams
 type NavMesh struct {
 	Params                NavMeshParams // Current initialization params. TODO: do not store this info twice.
 	Orig                  d3.Vec3       // Origin of the tile (0,0)
