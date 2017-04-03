@@ -299,10 +299,10 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 	// Just allocate the mesh flags array. The user is resposible to fill it.
 	mesh.Flags = make([]uint16, mesh.NPolys)
 	if mesh.NVerts > 0xffff {
-		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many vertices %d (max %d). Data can be corrupted.", mesh.NVerts, 0xffff)
+		ctx.Errorf("BuildPolyMesh: The resulting mesh has too many vertices %d (max %d). Data can be corrupted.", mesh.NVerts, 0xffff)
 	}
 	if mesh.NPolys > 0xffff {
-		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many polygons %d (max %d). Data can be corrupted.", mesh.NPolys, 0xffff)
+		ctx.Errorf("BuildPolyMesh: The resulting mesh has too many polygons %d (max %d). Data can be corrupted.", mesh.NPolys, 0xffff)
 	}
 
 	return mesh, true
