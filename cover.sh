@@ -12,6 +12,7 @@
 ##   -k, --keep    Do not remove generated report profiles.
 ##   --dont-send   Do not send to goveralls nor open the browser
 ##                 (implies --keep)
+##   -x, --exclude Exclude package paths containing a given string.
 ##
 
 usage() {
@@ -31,6 +32,7 @@ main() {
   DRY_RUN=0
   KEEP=0
   DONT_SEND=0
+  EXCLUDE=0
 
   while [ $# -gt 0 ]; do
     case $1 in
@@ -45,6 +47,11 @@ main() {
     (--dont-send)
       DONT_SEND=1;
       KEEP=1;
+      shift
+      ;;
+    (-x|--exclude)
+      EXCLUDE=$2;
+      shift
       shift
       ;;
     (-h|--help)
@@ -79,7 +86,11 @@ main() {
   [ -z "$GOVERALLS" ] && die "goveralls not found, run 'go get github.com/mattn/goveralls'"
 
   # create list of project packages, excluding vendored (with govendor)
-  PKGS=$($GOVENDOR list -no-status +local)
+  if [ $EXCLUDE -eq 0 ]; then
+    PKGS=$($GOVENDOR list -no-status +local)
+  else
+    PKGS=$($GOVENDOR list -no-status +local | grep -v $EXCLUDE)
+  fi
   export PKGS
 
   # make comma-separated
