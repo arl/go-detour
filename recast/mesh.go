@@ -778,7 +778,7 @@ func removeVertex(ctx *BuildContext, mesh *PolyMesh, rem uint16, maxTris int32) 
 				}
 
 				last := polys[(npolys-1)*nvp:]
-				if compareSlicesUInt16(pb, last) {
+				if !compareSlicesUInt16(pb, last) {
 					copy(pb, last[:nvp])
 				}
 				pregs[bestPb] = pregs[npolys-1]
