@@ -129,10 +129,8 @@ func TestCreateTestSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "nav_test")
 }
 
-// TODO: at one point, rename this OBJ file, the test function and the target
-// binary. Instead of `bug` it would be better call it CavernEntry or something...
-func TestCreateBugSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "bug")
+func TestCreateTwistedSoloNavMesh(t *testing.T) {
+	testCreateSoloMesh(t, "twisted")
 }
 
 func benchmarkCreateSoloNavMesh(b *testing.B, meshName string) {
