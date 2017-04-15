@@ -15,184 +15,6 @@ type bvItem struct {
 	i          int32
 }
 
-type compareItemX []bvItem
-
-// Len is the number of elements in the collection.
-func (s compareItemX) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s compareItemX) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	if a.BMin[0] < b.BMin[0] {
-		return true
-	}
-	if a.BMin[0] > b.BMin[0] {
-		return false
-	}
-
-	// if x are equal, compare y
-	if a.BMin[1] < b.BMin[1] {
-		return true
-	}
-	if a.BMin[1] > b.BMin[1] {
-		return false
-	}
-
-	// if y are equal, compare z
-	if a.BMin[2] < b.BMin[2] {
-		return true
-	}
-	if a.BMin[2] > b.BMin[2] {
-		return false
-	}
-
-	// compare bmax
-	if a.BMax[0] < b.BMax[0] {
-		return true
-	}
-	if a.BMax[0] > b.BMax[0] {
-		return false
-	}
-	if a.BMax[1] < b.BMax[1] {
-		return true
-	}
-	if a.BMax[1] > b.BMax[1] {
-		return false
-	}
-	if a.BMax[2] < b.BMax[2] {
-		return true
-	}
-	return false
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s compareItemX) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-type compareItemY []bvItem
-
-// Len is the number of elements in the collection.
-func (s compareItemY) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s compareItemY) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	if a.BMin[1] < b.BMin[1] {
-		return true
-	}
-	if a.BMin[1] > b.BMin[1] {
-		return false
-	}
-
-	// if y are equal, compare z
-	if a.BMin[2] < b.BMin[2] {
-		return true
-	}
-	if a.BMin[2] > b.BMin[2] {
-		return false
-	}
-
-	// if z are equal, compare x
-	if a.BMin[0] < b.BMin[0] {
-		return true
-	}
-	if a.BMin[0] > b.BMin[0] {
-		return false
-	}
-
-	// compare bmax
-	if a.BMax[0] < b.BMax[0] {
-		return true
-	}
-	if a.BMax[0] > b.BMax[0] {
-		return false
-	}
-	if a.BMax[1] < b.BMax[1] {
-		return true
-	}
-	if a.BMax[1] > b.BMax[1] {
-		return false
-	}
-	if a.BMax[2] < b.BMax[2] {
-		return true
-	}
-	return false
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s compareItemY) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-type compareItemZ []bvItem
-
-// Len is the number of elements in the collection.
-func (s compareItemZ) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s compareItemZ) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	if a.BMin[2] < b.BMin[2] {
-		return true
-	}
-	if a.BMin[2] > b.BMin[2] {
-		return false
-	}
-	// if z are equal, compare x
-	if a.BMin[0] < b.BMin[0] {
-		return true
-	}
-	if a.BMin[0] > b.BMin[0] {
-		return false
-	}
-	// if x are equal, compare y
-	if a.BMin[1] < b.BMin[1] {
-		return true
-	}
-	if a.BMin[1] > b.BMin[1] {
-		return false
-	}
-
-	// compare bmax
-	if a.BMax[0] < b.BMax[0] {
-		return true
-	}
-	if a.BMax[0] > b.BMax[0] {
-		return false
-	}
-	if a.BMax[1] < b.BMax[1] {
-		return true
-	}
-	if a.BMax[1] > b.BMax[1] {
-		return false
-	}
-	if a.BMax[2] < b.BMax[2] {
-		return true
-	}
-	return false
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s compareItemZ) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
 func calcExtends(items []bvItem, imin, imax int32, bmin, bmax []uint16) {
 	bmin[0] = items[imin].BMin[0]
 	bmin[1] = items[imin].BMin[1]
@@ -248,33 +70,166 @@ func subdivide(items []bvItem, nitems, imin, imax int32, curNode *int32, nodes [
 
 	if inum == 1 {
 		// Leaf
-		node.Bmin[0] = items[imin].BMin[0]
-		node.Bmin[1] = items[imin].BMin[1]
-		node.Bmin[2] = items[imin].BMin[2]
+		node.BMin[0] = items[imin].BMin[0]
+		node.BMin[1] = items[imin].BMin[1]
+		node.BMin[2] = items[imin].BMin[2]
 
-		node.Bmax[0] = items[imin].BMax[0]
-		node.Bmax[1] = items[imin].BMax[1]
-		node.Bmax[2] = items[imin].BMax[2]
+		node.BMax[0] = items[imin].BMax[0]
+		node.BMax[1] = items[imin].BMax[1]
+		node.BMax[2] = items[imin].BMax[2]
 
 		node.I = items[imin].i
 	} else {
 		// Split
-		calcExtends(items, imin, imax, node.Bmin[:], node.Bmax[:])
+		calcExtends(items, imin, imax, node.BMin[:], node.BMax[:])
 
 		axis := longestAxis(
-			node.Bmax[0]-node.Bmin[0],
-			node.Bmax[1]-node.Bmin[1],
-			node.Bmax[2]-node.Bmin[2])
+			node.BMax[0]-node.BMin[0],
+			node.BMax[1]-node.BMin[1],
+			node.BMax[2]-node.BMin[2])
 
 		if axis == 0 {
 			// Sort along x-axis
-			sort.Sort(compareItemX(items[imin : imin+inum]))
+			sort.Slice(items[imin:imin+inum],
+				func(i, j int) bool {
+					a := items[int(imin)+i]
+					b := items[int(imin)+j]
+
+					if a.BMin[0] < b.BMin[0] {
+						return true
+					}
+					if a.BMin[0] > b.BMin[0] {
+						return false
+					}
+
+					// if x are equal, compare y
+					if a.BMin[1] < b.BMin[1] {
+						return true
+					}
+					if a.BMin[1] > b.BMin[1] {
+						return false
+					}
+
+					// if y are equal, compare z
+					if a.BMin[2] < b.BMin[2] {
+						return true
+					}
+					if a.BMin[2] > b.BMin[2] {
+						return false
+					}
+
+					// compare bmax
+					if a.BMax[0] < b.BMax[0] {
+						return true
+					}
+					if a.BMax[0] > b.BMax[0] {
+						return false
+					}
+					if a.BMax[1] < b.BMax[1] {
+						return true
+					}
+					if a.BMax[1] > b.BMax[1] {
+						return false
+					}
+					if a.BMax[2] < b.BMax[2] {
+						return true
+					}
+					return false
+				})
 		} else if axis == 1 {
 			// Sort along y-axis
-			sort.Sort(compareItemY(items[imin : imin+inum]))
+			sort.Slice(items[imin:imin+inum],
+				func(i, j int) bool {
+					a := items[int(imin)+i]
+					b := items[int(imin)+j]
+
+					if a.BMin[1] < b.BMin[1] {
+						return true
+					}
+					if a.BMin[1] > b.BMin[1] {
+						return false
+					}
+
+					// if y are equal, compare z
+					if a.BMin[2] < b.BMin[2] {
+						return true
+					}
+					if a.BMin[2] > b.BMin[2] {
+						return false
+					}
+
+					// if z are equal, compare x
+					if a.BMin[0] < b.BMin[0] {
+						return true
+					}
+					if a.BMin[0] > b.BMin[0] {
+						return false
+					}
+
+					// compare bmax
+					if a.BMax[0] < b.BMax[0] {
+						return true
+					}
+					if a.BMax[0] > b.BMax[0] {
+						return false
+					}
+					if a.BMax[1] < b.BMax[1] {
+						return true
+					}
+					if a.BMax[1] > b.BMax[1] {
+						return false
+					}
+					if a.BMax[2] < b.BMax[2] {
+						return true
+					}
+					return false
+				})
 		} else {
 			// Sort along z-axis
-			sort.Sort(compareItemZ(items[imin : imin+inum]))
+			sort.Slice(items[imin:imin+inum],
+				func(i, j int) bool {
+					a := items[int(imin)+i]
+					b := items[int(imin)+j]
+
+					if a.BMin[2] < b.BMin[2] {
+						return true
+					}
+					if a.BMin[2] > b.BMin[2] {
+						return false
+					}
+					// if z are equal, compare x
+					if a.BMin[0] < b.BMin[0] {
+						return true
+					}
+					if a.BMin[0] > b.BMin[0] {
+						return false
+					}
+					// if x are equal, compare y
+					if a.BMin[1] < b.BMin[1] {
+						return true
+					}
+					if a.BMin[1] > b.BMin[1] {
+						return false
+					}
+
+					// compare bmax
+					if a.BMax[0] < b.BMax[0] {
+						return true
+					}
+					if a.BMax[0] > b.BMax[0] {
+						return false
+					}
+					if a.BMax[1] < b.BMax[1] {
+						return true
+					}
+					if a.BMax[1] > b.BMax[1] {
+						return false
+					}
+					if a.BMax[2] < b.BMax[2] {
+						return true
+					}
+					return false
+				})
 		}
 
 		isplit := imin + inum/2
@@ -587,7 +542,7 @@ type NavMeshCreateParams struct {
 //
 // Return true if the tile data was successfully created.
 //
-// see NavMesh, NavMesh.addTile()
+// see NavMesh, NavMesh.AddTile()
 func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	if params.Nvp > int32(VertsPerPolygon) {
 		return nil, fmt.Errorf("wrong value for params.Nvp")
@@ -776,8 +731,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 	hdr.PolyCount = int32(totPolyCount)
 	hdr.VertCount = int32(totVertCount)
 	hdr.MaxLinkCount = maxLinkCount
-	copy(hdr.Bmin[:], params.BMin[:])
-	copy(hdr.Bmax[:], params.BMax[:])
+	copy(hdr.BMin[:], params.BMin[:])
+	copy(hdr.BMax[:], params.BMax[:])
 	hdr.DetailMeshCount = params.PolyCount
 	hdr.DetailVertCount = uniqueDetailVertCount
 	hdr.DetailTriCount = detailTriCount

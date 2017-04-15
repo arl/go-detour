@@ -397,8 +397,9 @@ func floodRegion(x, y, i int32,
 	srcDist[i] = 0
 
 	var (
-		lev   uint16
-		count int32
+		ci, cy, cx int32
+		lev        uint16
+		count      int32
 	)
 	if level >= 2 {
 		lev = lev - 2
@@ -406,17 +407,10 @@ func floodRegion(x, y, i int32,
 
 	for len(*stack) > 0 {
 
-		// pop
-		ci := (*stack)[len(*stack)-1]
-		*stack = (*stack)[:len(*stack)-1]
-
-		// pop
-		cy := (*stack)[len(*stack)-1]
-		*stack = (*stack)[:len(*stack)-1]
-
-		// pop
-		cx := (*stack)[len(*stack)-1]
-		*stack = (*stack)[:len(*stack)-1]
+		// pop 3 last elements
+		ci, *stack = (*stack)[len(*stack)-1], (*stack)[:len(*stack)-1]
+		cy, *stack = (*stack)[len(*stack)-1], (*stack)[:len(*stack)-1]
+		cx, *stack = (*stack)[len(*stack)-1], (*stack)[:len(*stack)-1]
 
 		cs := &chf.Spans[ci]
 

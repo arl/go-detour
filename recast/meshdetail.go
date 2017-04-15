@@ -1,6 +1,8 @@
 package recast
 
 import (
+	"fmt"
+
 	assert "github.com/aurelien-rainone/assertgo"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 	"github.com/aurelien-rainone/math32"
@@ -27,7 +29,7 @@ func (pmd *PolyMeshDetail) Free() {
 	pmd = nil
 }
 
-const RC_UNSET_HEIGHT uint32 = 0xffff
+const unsetHeight = 0xffff
 
 type HeightPatch struct {
 	data                      []uint16
@@ -185,7 +187,7 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 	ix = int32Clamp(ix-hp.xmin, 0, hp.width-1)
 	iz = int32Clamp(iz-hp.ymin, 0, hp.height-1)
 	h := hp.data[ix+iz*hp.width]
-	if uint32(h) == RC_UNSET_HEIGHT {
+	if uint32(h) == unsetHeight {
 		// Special case when data might be bad.
 		// Walk adjacent cells in a spiral up to 'radius', and look
 		// for a pixel which has a valid height.
@@ -207,7 +209,7 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 
 			if nx >= 0 && nz >= 0 && nx < hp.width && nz < hp.height {
 				nh := hp.data[nx+nz*hp.width]
-				if uint32(nh) != RC_UNSET_HEIGHT {
+				if uint32(nh) != unsetHeight {
 					d := math32.Abs(float32(nh)*ch - fy)
 					if d < dmin {
 						h = nh
@@ -223,18 +225,22 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 			// | | |__| | |
 			// | |______| |
 			// |__________|
-			// We want to find the best height as close to the center cell as possible. This means that
-			// if we find a height in one of the neighbor cells to the center, we don't want to
-			// expand further out than the 8 neighbors - we want to limit our search to the closest
+			// We want to find the best height as close to the center cell as
+			// possible. This means that if we find a height in one of the
+			// neighbor cells to the center, we don't want to expand further out
+			// than the 8 neighbors - we want to limit our search to the closest
 			// of these "rings", but the best height in the ring.
-			// For example, the center is just 1 cell. We checked that at the entrance to the function.
-			// The next "ring" contains 8 cells (marked 1 above). Those are all the neighbors to the center cell.
-			// The next one again contains 16 cells (marked 2). In general each ring has 8 additional cells, which
-			// can be thought of as adding 2 cells around the "center" of each side when we expand the ring.
-			// Here we detect if we are about to enter the next ring, and if we are and we have found
-			// a height, we abort the search.
+			// For example, the center is just 1 cell. We checked that at the
+			// entrance to the function.
+			// The next "ring" contains 8 cells (marked 1 above). Those are all
+			// the neighbors to the center cell.
+			// The next one again contains 16 cells (marked 2). In general each
+			// ring has 8 additional cells, which can be thought of as adding 2
+			// cells around the "center" of each side when we expand the ring.
+			// Here we detect if we are about to enter the next ring, and if we
+			// are and we have found a height, we abort the search.
 			if i+1 == nextRingIterStart {
-				if uint32(h) != RC_UNSET_HEIGHT {
+				if uint32(h) != unsetHeight {
 					break
 				}
 
@@ -361,19 +367,16 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 	)
 	verts = make([]float32, 256*3)
 
-	bounds := make([]*int32, mesh.NPolys*4)
-	for i := range bounds {
-		bounds[i] = new(int32)
-	}
+	bounds := make([]int32, mesh.NPolys*4)
 	poly := make([]float32, nvp*3)
 
 	// Find max size for a polygon area.
 	for i := int32(0); i < mesh.NPolys; i++ {
 		p := mesh.Polys[i*nvp*2:]
-		xmin := bounds[i*4+0]
-		xmax := bounds[i*4+1]
-		ymin := bounds[i*4+2]
-		ymax := bounds[i*4+3]
+		xmin := &bounds[i*4+0]
+		xmax := &bounds[i*4+1]
+		ymin := &bounds[i*4+2]
+		ymax := &bounds[i*4+3]
 
 		*xmin = chf.Width
 		*xmax = 0
@@ -432,10 +435,10 @@ func BuildPolyMeshDetail(ctx *BuildContext, mesh *PolyMesh, chf *CompactHeightfi
 		}
 
 		// Get the height data from the area of the polygon.
-		hp.xmin = *bounds[i*4+0]
-		hp.ymin = *bounds[i*4+2]
-		hp.width = *bounds[i*4+1] - *bounds[i*4+0]
-		hp.height = *bounds[i*4+3] - *bounds[i*4+2]
+		hp.xmin = bounds[i*4+0]
+		hp.ymin = bounds[i*4+2]
+		hp.width = bounds[i*4+1] - bounds[i*4+0]
+		hp.height = bounds[i*4+3] - bounds[i*4+2]
 		getHeightData(ctx, chf, p, npoly, mesh.Verts, borderSize, &hp, &arr, int32(mesh.Regs[i]))
 
 		// Build detail mesh.
@@ -1050,20 +1053,13 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	poly []uint16, npoly int32,
 	verts []uint16, bs int32,
 	hp *HeightPatch, array *[]int32) {
-	/* // Note: Reads to the compact heightfield are offset by border size (bs)*/
-	//// since border size offset is already removed from the polymesh vertices.
-	//static const int offset[9*2] =
-	//{
-	//0,0, -1,-1, 0,-1, 1,-1, 1,0, 1,1, 0,1, -1,1, -1,0,
-	//};
 
 	// Find cell closest to a poly vertex
 	var (
-		startCellX, startCellY, startSpanIndex int32
-		dmin                                   int32
+		startCellX, startCellY int32
+		startSpanIndex         int32 = -1
+		dmin                   int32 = unsetHeight
 	)
-	startSpanIndex = -1
-	dmin = int32(RC_UNSET_HEIGHT)
 	for j := int32(0); j < npoly && dmin > 0; j++ {
 		for k := int32(0); k < 9 && dmin > 0; k++ {
 			ax := int32(verts[poly[j]*3+0]) + bsOffset[k*2+0]
@@ -1074,9 +1070,8 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 				continue
 			}
 
-			c := chf.Cells[(ax+bs)+(az+bs)*chf.Width]
-			i := int32(c.Index)
-			for ni := int32(c.Index) + int32(c.Count); i < ni && dmin > 0; i++ {
+			c := &chf.Cells[(ax+bs)+(az+bs)*chf.Width]
+			for i, ni := int32(c.Index), int32(c.Index)+int32(c.Count); i < ni && dmin > 0; i++ {
 				d := iAbs(ay - int32(chf.Spans[i].Y))
 				if d < dmin {
 					startCellX = ax
@@ -1088,7 +1083,10 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 		}
 	}
 
-	assert.True(startSpanIndex != -1, "startSpanIndex should be != 1, got %v", startSpanIndex)
+	if startSpanIndex == -1 {
+		panic(fmt.Sprintf("startSpanIndex should be != 1, got %v", startSpanIndex))
+	}
+
 	// Find center of the polygon
 	var pcx, pcy int32
 	for j := int32(0); j < npoly; j++ {
@@ -1099,7 +1097,6 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 	pcy /= npoly
 
 	// Use seeds array as a stack for DFS
-	panic("untested")
 	*array = append([]int32{}, startCellX, startCellY, startSpanIndex)
 
 	dirs := []int32{0, 1, 2, 3}
@@ -1120,11 +1117,10 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 			break
 		}
 
-		panic("untested")
-		ci = (*array)[len(*array)-1]
-		cy = (*array)[len(*array)-1]
-		cx = (*array)[len(*array)-1]
-		*array = append([]int32{}, (*array)[:len(*array)-3]...)
+		// pop last 3 elements from the slice
+		ci, *array = (*array)[len(*array)-1], (*array)[:len(*array)-1]
+		cy, *array = (*array)[len(*array)-1], (*array)[:len(*array)-1]
+		cx, *array = (*array)[len(*array)-1], (*array)[:len(*array)-1]
 
 		if cx == pcx && cy == pcy {
 			break
@@ -1237,9 +1233,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 
 	empty := true
 
-	// We cannot sample from this poly if it was created from polys
-	// of different regions. If it was then it could potentially be overlapping
-	// with polys of that region and the heights sampled here could be wrong.
+	// We cannot sample from this poly if it was created from polys of different
+	// regions. If it was then it could potentially be overlapping with polys of
+	// that region and the heights sampled here could be wrong.
 	if region != int32(multipleRegs) {
 		// Copy the height from the same region, and mark region borders
 		// as seed points to fill the rest.
@@ -1247,9 +1243,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 			y := hp.ymin + hy + bs
 			for hx := int32(0); hx < hp.width; hx++ {
 				x := hp.xmin + hx + bs
-				c := chf.Cells[x+y*chf.Width]
-				i := int32(c.Index)
-				for ni := int32(c.Index) + int32(c.Count); i < ni; i++ {
+				c := &chf.Cells[x+y*chf.Width]
+
+				for i, ni := int32(c.Index), int32(c.Index+uint32(c.Count)); i < ni; i++ {
 					s := &chf.Spans[i]
 					if int32(s.Reg) == region {
 						// Store height
@@ -1280,9 +1276,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 		}
 	}
 
-	// if the polygon does not contain any points from the current region (rare, but happens)
-	// or if it could potentially be overlapping polygons of the same region,
-	// then use the center as the seed point.
+	// if the polygon does not contain any points from the current region (rare,
+	// but happens) or if it could potentially be overlapping polygons of the
+	// same region, then use the center as the seed point.
 	if empty {
 		seedArrayWithPolyCenter(ctx, chf, poly, npoly, verts, bs, hp, queue)
 	}
@@ -1290,9 +1286,9 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 	const RETRACT_SIZE = 256
 	var head int
 
-	// We assume the seed is centered in the polygon, so a BFS to collect
-	// height data will ensure we do not move onto overlapping polygons and
-	// sample wrong heights.
+	// We assume the seed is centered in the polygon, so a BFS to collect height
+	// data will ensure we do not move onto overlapping polygons and sample
+	// wrong heights.
 	for head*3 < len(*queue) {
 		cx := (*queue)[head*3+0]
 		cy := (*queue)[head*3+1]
@@ -1321,7 +1317,7 @@ func getHeightData(ctx *BuildContext, chf *CompactHeightfield,
 				continue
 			}
 
-			if uint32(hp.data[hx+hy*hp.width]) != RC_UNSET_HEIGHT {
+			if uint32(hp.data[hx+hy*hp.width]) != unsetHeight {
 				continue
 			}
 
