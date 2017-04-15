@@ -133,8 +133,8 @@ func TestCreateTwistedSoloNavMesh(t *testing.T) {
 	testCreateSoloMesh(t, "twisted")
 }
 
-func benchmarkCreateSoloNavMesh(b *testing.B, meshName string) {
-	path := testDataDir + meshName + ".obj"
+func benchmarkCreateSoloNavMesh(b *testing.B, objName string) {
+	path := OBJDir + objName + ".obj"
 
 	soloMesh := New(recast.NewBuildContext(false))
 	r, err := os.Open(path)
@@ -195,7 +195,7 @@ func BenchmarkPathFindSoloMesh(b *testing.B) {
 	)
 
 	objName := "nav_test"
-	path := testDataDir + objName + ".obj"
+	path := OBJDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := New(ctx)

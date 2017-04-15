@@ -6,7 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
+	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
 func check(t *testing.T, err error) {
@@ -92,9 +94,21 @@ func TestCreateDevelerTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "develer")
 }
 
+// FIXME: generated binaries are different because of an issue with the
+// stabiblity of the sorting functions used for BvTree (see createBvTree). This
+// has no influence over the generated navmesh but that means that we can't just
+// compare the produced binaries.
 /*
 func TestCreateDungeonTileNavMesh(t *testing.T) {
-testCreateTileMesh(t, "dungeon")
+	testCreateTileMesh(t, "dungeon")
+}
+
+func TestCreateTwistedTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "twisted")
+}
+
+func TestCreateTestTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "nav_test")
 }
 */
 
@@ -122,13 +136,8 @@ func TestCreateHillTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "hill")
 }
 
-/*
-func TestCreateTestTileNavMesh(t *testing.T) {
-	testCreateTileMesh(t, "nav_test")
-}
-
-func benchmarkCreateTileNavMesh(b *testing.B, meshName string) {
-	path := testDataDir + meshName + ".obj"
+func benchmarkCreateTileNavMesh(b *testing.B, objName string) {
+	path := OBJDir + objName + ".obj"
 
 	soloMesh := New(recast.NewBuildContext(false))
 	r, err := os.Open(path)
@@ -189,7 +198,7 @@ func BenchmarkPathFindTileMesh(b *testing.B) {
 	)
 
 	objName := "nav_test"
-	path := testDataDir + objName + ".obj"
+	path := OBJDir + objName + ".obj"
 
 	ctx := recast.NewBuildContext(false)
 	soloMesh := New(ctx)
@@ -245,6 +254,9 @@ func BenchmarkPathFindTileMesh(b *testing.B) {
 	}
 }
 
+// FIXME: to check on the original tool (this has just be stupidly copy-pasted
+// from the solomesh test
+/*
 func TestRaycastTileMesh(t *testing.T) {
 	type want struct {
 		t                float32
