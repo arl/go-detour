@@ -286,44 +286,46 @@ func dividePoly(in []float32, nin int32,
 		d[i] = x - in[i*3+axis]
 	}
 
-	var m, n int32
-	j := nin - 1
-	for i := int32(0); i < nin; /*j=i, */ i++ {
-		ina := d[j] >= 0
-		inb := d[i] >= 0
+	var (
+		m, n     int32
+		s        float32
+		ina, inb bool
+	)
+	for i, j := int32(0), nin-1; i < nin; j, i = i, i+1 {
+		ina = d[j] >= 0
+		inb = d[i] >= 0
 		if ina != inb {
-			s := d[j] / (d[j] - d[i])
+			s = d[j] / (d[j] - d[i])
 			out1[m*3+0] = in[j*3+0] + (in[i*3+0]-in[j*3+0])*s
 			out1[m*3+1] = in[j*3+1] + (in[i*3+1]-in[j*3+1])*s
 			out1[m*3+2] = in[j*3+2] + (in[i*3+2]-in[j*3+2])*s
 
-			copy(out2[n*3:n*3+3], out1[m*3:m*3+3])
+			copy(out2[n*3:], out1[m*3:(m+1)*3])
 			m++
 			n++
 			// add the i'th point to the right polygon. Do NOT add points that
 			// are on the dividing line since these were already added above
 			if d[i] > 0 {
-				copy(out1[m*3:m*3+3], in[i*3:i*3+3])
+				copy(out1[m*3:], in[i*3:(i+1)*3])
 				m++
 			} else if d[i] < 0 {
-				copy(out2[n*3:n*3+3], in[i*3:i*3+3])
+				copy(out2[n*3:], in[i*3:(i+1)*3])
 				n++
 			}
 		} else {
 			// same side add the i'th point to the right polygon. Addition is
 			// done even for points on the dividing line
 			if d[i] >= 0 {
-				copy(out1[m*3:m*3+3], in[i*3:i*3+3])
+				copy(out1[m*3:], in[i*3:(i+1)*3])
 				m++
 				if d[i] != 0 {
 					j = i
 					continue
 				}
 			}
-			copy(out2[n*3:n*3+3], in[i*3:i*3+3])
+			copy(out2[n*3:], in[i*3:(i+1)*3])
 			n++
 		}
-		j = i
 	}
 
 	return m, n
