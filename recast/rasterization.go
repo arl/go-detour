@@ -175,7 +175,7 @@ func rasterizeTri(v0, v1, v2 []float32,
 	for y := y0; y <= y1; y++ {
 		// Clip polygon to row. Store the remaining polygon as well
 		cz := bmin[2] + float32(y)*cs
-		dividePoly(in, nvIn, inrow, &nvrow, p1, &nvIn, cz+cs, 2)
+		nvrow, nvIn = dividePoly(in, nvIn, inrow, p1, cz+cs, 2)
 		in, p1 = p1, in
 		if nvrow < 3 {
 			continue
@@ -202,7 +202,7 @@ func rasterizeTri(v0, v1, v2 []float32,
 		for x := x0; x <= x1; x++ {
 			// Clip polygon to column. store the remaining polygon as well
 			cx := bmin[0] + float32(x)*cs
-			dividePoly(inrow, nv2, p1, &nv, p2, &nv2, cx+cs, 0)
+			nv, nv2 = dividePoly(inrow, nv2, p1, p2, cx+cs, 0)
 			inrow, p2 = p2, inrow
 			if nv < 3 {
 				continue
@@ -279,9 +279,8 @@ func int32Clamp(a, low, high int32) int32 {
 
 // divides a convex polygons into two convex polygons on both sides of a line
 func dividePoly(in []float32, nin int32,
-	out1 []float32, nout1 *int32,
-	out2 []float32, nout2 *int32,
-	x float32, axis int32) {
+	out1 []float32, out2 []float32,
+	x float32, axis int32) (nout1, nout2 int32) {
 	var d [12]float32
 	for i := int32(0); i < nin; i++ {
 		d[i] = x - in[i*3+axis]
@@ -327,6 +326,5 @@ func dividePoly(in []float32, nin int32,
 		j = i
 	}
 
-	*nout1 = m
-	*nout2 = n
+	return m, n
 }
