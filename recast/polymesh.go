@@ -1,6 +1,8 @@
 package recast
 
-import "github.com/aurelien-rainone/assertgo"
+import (
+	"github.com/aurelien-rainone/assertgo"
+)
 
 // PolyMesh represents a polygon mesh suitable for use in building a navigation
 // mesh.
@@ -115,7 +117,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 	tmpPoly := polys[maxVertsPerCont*nvp:]
 
 	for i := int32(0); i < cset.NConts; i++ {
-		cont := cset.Conts[i]
+		cont := &cset.Conts[i]
 
 		// Skip null contours.
 		if cont.NVerts < 3 {
@@ -140,7 +142,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 							printf("\t\t%d,%d,%d,%d,\n", v[0], v[1], v[2], v[3]);
 						}
 						printf("\t};\n\tconst int nverts = sizeof(verts)/(sizeof(int)*4);\n");*/
-			ctx.Warningf("rcBuildPolyMesh: Bad triangulation Contour %d.", i)
+			ctx.Warningf("BuildPolyMesh: Bad triangulation Contour %d.", i)
 			ntris = -ntris
 		}
 
@@ -229,7 +231,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 			mesh.Areas[mesh.NPolys] = cont.Area
 			mesh.NPolys++
 			if mesh.NPolys > maxTris {
-				ctx.Errorf("rcBuildPolyMesh: Too many polygons %d (max:%d).", mesh.NPolys, maxTris)
+				ctx.Errorf("BuildPolyMesh: Too many polygons %d (max:%d).", mesh.NPolys, maxTris)
 				return nil, false
 			}
 		}
@@ -243,7 +245,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 			}
 			if !removeVertex(ctx, mesh, uint16(i), maxTris) {
 				// Failed to remove vertex
-				ctx.Errorf("rcBuildPolyMesh: Failed to remove edge vertex %d.", i)
+				ctx.Errorf("BuildPolyMesh: Failed to remove edge vertex %d.", i)
 				return nil, false
 			}
 			// Remove vertex
@@ -258,7 +260,7 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 
 	// Calculate adjacency.
 	if !buildMeshAdjacency(mesh.Polys, mesh.NPolys, mesh.NVerts, nvp) {
-		ctx.Errorf("rcBuildPolyMesh: Adjacency failed.")
+		ctx.Errorf("BuildPolyMesh: Adjacency failed.")
 		return nil, false
 	}
 
@@ -299,10 +301,10 @@ func BuildPolyMesh(ctx *BuildContext, cset *ContourSet, nvp int32) (*PolyMesh, b
 	// Just allocate the mesh flags array. The user is resposible to fill it.
 	mesh.Flags = make([]uint16, mesh.NPolys)
 	if mesh.NVerts > 0xffff {
-		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many vertices %d (max %d). Data can be corrupted.", mesh.NVerts, 0xffff)
+		ctx.Errorf("BuildPolyMesh: The resulting mesh has too many vertices %d (max %d). Data can be corrupted.", mesh.NVerts, 0xffff)
 	}
 	if mesh.NPolys > 0xffff {
-		ctx.Errorf("rcBuildPolyMesh: The resulting mesh has too many polygons %d (max %d). Data can be corrupted.", mesh.NPolys, 0xffff)
+		ctx.Errorf("BuildPolyMesh: The resulting mesh has too many polygons %d (max %d). Data can be corrupted.", mesh.NPolys, 0xffff)
 	}
 
 	return mesh, true

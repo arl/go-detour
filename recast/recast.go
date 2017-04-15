@@ -10,10 +10,10 @@ import (
 // CalcBounds calculates the bounding box of an array of vertices.
 //
 //  Arguments:
-//  verts     An array of vertices. [(x, y, z) * nv]
-//  nv        The number of vertices in the verts array.
-//  bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
-//  bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
+//   verts     An array of vertices. [(x, y, z) * nv]
+//   nv        The number of vertices in the verts array.
+//   bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
+//   bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
 func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
@@ -38,7 +38,7 @@ func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 // 	Returns:
 //   w         The width along the x-axis. [Limit: >= 0] [Units: vx]
 //   h         The height along the z-axis. [Limit: >= 0] [Units: vx]
-func CalcGridSize(bmin, bmax [3]float32, cs float32) (w, h int32) {
+func CalcGridSize(bmin, bmax []float32, cs float32) (w, h int32) {
 	w = int32((bmax[0]-bmin[0])/cs + 0.5)
 	h = int32((bmax[2]-bmin[2])/cs + 0.5)
 	return
@@ -50,7 +50,7 @@ func calcTriNormal(v0, v1, v2, norm d3.Vec3) {
 }
 
 // Sets the area id of all triangles with a slope below the specified value
-// to #RC_WALKABLE_AREA.
+// to 'WalkableArea'.
 //
 //  Arguments:
 //   ctx                The build context to use during the operation.
@@ -87,7 +87,7 @@ func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 }
 
 // ClearUnwalkableTriangles sets the area id of all triangles with a slope
-// greater than or equal to the specified value to RC_NULL_AREA.
+// greater than or equal to the specified value to 'nullArea'.
 //
 //  Arguments:
 //   ctx                The build context to use during the operation.
@@ -219,7 +219,7 @@ func SetCon(s *CompactSpan, dir, i int32) {
 //   dir     The direction to check. [Limits: 0 <= value < 4]
 //
 // Return the neighbor connection data for the specified direction,
-// RC_NOT_CONNECTED if there is no connection.
+// 'notConnected' if there is no connection.
 func GetCon(s *CompactSpan, dir int32) int32 {
 	shift := uint32(dir * 6)
 	return int32((s.Con >> shift) & 0x3f)

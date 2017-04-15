@@ -14,24 +14,25 @@ import (
 // TODO: rename SoloMeshBuilder or something like that to show that this is
 // not actually a navmesh, but more an api to build and manage one
 type SoloMesh struct {
-	ctx           *recast.BuildContext
-	geom          recast.InputGeom
-	meshName      string
-	cfg           recast.Config
+	ctx      *recast.BuildContext
+	geom     recast.InputGeom
+	meshName string
+	cfg      recast.Config
+	// TODO: remove partitionType, it is part of BuildSettings already
 	partitionType sample.PartitionType
-	settings      Settings
+	settings      recast.BuildSettings
 }
 
 // New creates a new solo mesh with default build settings.
 func New(ctx *recast.BuildContext) *SoloMesh {
-	sm := &SoloMesh{settings: NewSettings()}
+	sm := &SoloMesh{settings: DefaultSettings()}
 	sm.ctx = ctx
 	sm.partitionType = sample.PartitionMonotone
 	return sm
 }
 
 // SetSettings sets the build settings for this solo mesh.
-func (sm *SoloMesh) SetSettings(s Settings) {
+func (sm *SoloMesh) SetSettings(s recast.BuildSettings) {
 	sm.settings = s
 }
 
@@ -47,7 +48,13 @@ func (sm *SoloMesh) InputGeom() *recast.InputGeom {
 }
 
 // Build builds the navigation mesh for the input geometry provided
+// TODO: should return an error instead of bool
 func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
+	if sm.geom.Mesh() == nil {
+		// TODO: error "no vertices and triangles"
+		return nil, false
+	}
+
 	bmin := sm.geom.NavMeshBoundsMin()
 	bmax := sm.geom.NavMeshBoundsMax()
 	verts := sm.geom.Mesh().Verts()
@@ -83,15 +90,15 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 
 	sm.cfg.Cs = cellSize
 	sm.cfg.Ch = cellHeight
-	sm.cfg.WalkableSlopeAngle = sm.settings.WalkableSlopeAngle
+	sm.cfg.WalkableSlopeAngle = sm.settings.AgentMaxSlope
 	sm.cfg.WalkableHeight = int32(math32.Ceil(agentHeight / sm.cfg.Ch))
 	sm.cfg.WalkableClimb = int32(math32.Floor(agentMaxClimb / sm.cfg.Ch))
 	sm.cfg.WalkableRadius = int32(math32.Ceil(agentRadius / sm.cfg.Cs))
 	sm.cfg.MaxEdgeLen = int32(float32(edgeMaxLen) / cellSize)
 	sm.cfg.MaxSimplificationError = edgeMaxError
-	sm.cfg.MinRegionArea = regionMinSize * regionMinSize       // Note: area = size*size
-	sm.cfg.MergeRegionArea = regionMergeSize * regionMergeSize // Note: area = size*size
-	sm.cfg.MaxVertsPerPoly = vertsPerPoly
+	sm.cfg.MinRegionArea = int32(regionMinSize * regionMinSize)       // Note: area = size*size
+	sm.cfg.MergeRegionArea = int32(regionMergeSize * regionMergeSize) // Note: area = size*size
+	sm.cfg.MaxVertsPerPoly = int32(vertsPerPoly)
 
 	if detailSampleDist < 0.9 {
 		sm.cfg.DetailSampleDist = 0
@@ -103,9 +110,9 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Set the area where the navigation will be build.
 	// Here the bounds of the input mesh are used, but the
 	// area could be specified by an user defined box, etc.
-	sm.cfg.BMin = bmin
-	sm.cfg.BMax = bmax
-	sm.cfg.Width, sm.cfg.Height = recast.CalcGridSize(sm.cfg.BMin, sm.cfg.BMax, sm.cfg.Cs)
+	copy(sm.cfg.BMin[:], bmin[:3])
+	copy(sm.cfg.BMax[:], bmax[:3])
+	sm.cfg.Width, sm.cfg.Height = recast.CalcGridSize(sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs)
 
 	// Reset build times gathering.
 	sm.ctx.ResetTimers()
@@ -125,7 +132,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	var solid *recast.Heightfield
 	solid = recast.NewHeightfield(sm.cfg.Width, sm.cfg.Height, sm.cfg.BMin[:], sm.cfg.BMax[:], sm.cfg.Cs, sm.cfg.Ch)
 
-	// Allocate array that can hold triangle area types.
+	// Allocate array that can hold triangle flags.
 	// If you have multiple meshes you need to process, allocate
 	// and array which can hold the max number of triangles you need to process.
 	triAreas := make([]uint8, ntris)
@@ -135,7 +142,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// the are type for each of the meshes and rasterize them.
 	recast.MarkWalkableTriangles(sm.ctx, sm.cfg.WalkableSlopeAngle, verts, nverts, tris, ntris, triAreas)
 	if !recast.RasterizeTriangles(sm.ctx, verts, nverts, tris, triAreas, ntris, solid, sm.cfg.WalkableClimb) {
-		sm.ctx.Errorf("buildNavigation: Could not rasterize triangles.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not rasterize triangles.")
 		return nil, false
 	}
 
@@ -155,13 +162,13 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// between walkable cells will be calculated.
 	chf := &recast.CompactHeightfield{}
 	if !recast.BuildCompactHeightfield(sm.ctx, sm.cfg.WalkableHeight, sm.cfg.WalkableClimb, solid, chf) {
-		sm.ctx.Errorf("buildNavigation: Could not build compact data.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not build compact data.")
 		return nil, false
 	}
 
 	// Erode the walkable area by agent radius.
 	if !recast.ErodeWalkableArea(sm.ctx, sm.cfg.WalkableRadius, chf) {
-		sm.ctx.Errorf("buildNavigation: Could not erode.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not erode.")
 		return nil, false
 	}
 
@@ -213,28 +220,28 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 		// Prepare for region partitioning, by calculating distance field along the walkable surface.
 		//if (!rcBuildDistanceField(m_ctx, *m_chf))
 		//{
-		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build distance field.");
+		//m_ctx.log(RC_LOG_ERROR, "SoloMesh.Build: Could not build distance field.");
 		//return navData, false
 		//}
 
 		//// Partition the walkable surface into simple regions without holes.
 		//if (!rcBuildRegions(m_ctx, *m_chf, 0, m_cfg.minRegionArea, m_cfg.mergeRegionArea))
 		//{
-		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build watershed regions.");
+		//m_ctx.log(RC_LOG_ERROR, "SoloMesh.Build: Could not build watershed regions.");
 		//return navData, false
 		//}
 	} else if sm.partitionType == sample.PartitionMonotone {
 		// Partition the walkable surface into simple regions without holes.
 		// Monotone partitioning does not need distancefield.
 		if !recast.BuildRegionsMonotone(sm.ctx, chf, 0, sm.cfg.MinRegionArea, sm.cfg.MergeRegionArea) {
-			sm.ctx.Errorf("buildNavigation: Could not build monotone regions.")
+			sm.ctx.Errorf("SoloMesh.Build: Could not build monotone regions.")
 			return nil, false
 		}
 	} else {
 		// SAMPLE_PARTITION_LAYERS
 		// Partition the walkable surface into simple regions without holes.
 		//if !rcBuildLayerRegions(m_ctx, *m_chf, 0, m_cfg.minRegionArea) {
-		//m_ctx.log(RC_LOG_ERROR, "buildNavigation: Could not build layer regions.")
+		//m_ctx.log(RC_LOG_ERROR, "SoloMesh.Build: Could not build layer regions.")
 		//return navData, false
 		//}
 	}
@@ -246,7 +253,7 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	// Create contours.
 	cset := &recast.ContourSet{}
 	if !recast.BuildContours(sm.ctx, chf, sm.cfg.MaxSimplificationError, sm.cfg.MaxEdgeLen, cset, recast.ContourTessWallEdges) {
-		sm.ctx.Errorf("buildNavigation: Could not create contours.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not create contours.")
 		return nil, false
 	}
 
@@ -261,23 +268,24 @@ func (sm *SoloMesh) Build() (*detour.NavMesh, bool) {
 	)
 	pmesh, ret = recast.BuildPolyMesh(sm.ctx, cset, sm.cfg.MaxVertsPerPoly)
 	if !ret {
-		sm.ctx.Errorf("buildNavigation: Could not triangulate contours.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not triangulate contours.")
 		return nil, false
 	}
 
 	//
-	// Step 7. Create detail mesh which allows to access approximate height on each polygon.
+	// Step 7. Create detail mesh which allows to access approximate height on
+	// each polygon.
 	//
 
 	var dmesh *recast.PolyMeshDetail
 	dmesh, ret = recast.BuildPolyMeshDetail(sm.ctx, pmesh, chf, sm.cfg.DetailSampleDist, sm.cfg.DetailSampleMaxError)
 	if !ret {
-		sm.ctx.Errorf("buildNavigation: Could not build detail mesh.")
+		sm.ctx.Errorf("SoloMesh.Build: Could not build detail mesh.")
 		return nil, false
 	}
 
-	// At this point the navigation mesh data is ready, you can access it from m_pmesh.
-	// See duDebugDrawPolyMesh or dtCreateNavMeshData as examples how to access the data.
+	// At this point the navigation mesh data is ready, you can access it from
+	// pmesh.
 
 	//
 	// (Optional) Step 8. Create Detour data from Recast poly mesh.

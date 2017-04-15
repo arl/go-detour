@@ -41,23 +41,35 @@ func TestFindPathFindStraightPath(t *testing.T) {
 		wantStraightPath []d3.Vec3
 	}{
 		{
-			d3.Vec3{5, 0, 10},
-			d3.Vec3{50, 0, 30},
-			[]PolyRef{0x440000, 0x460007, 0x520007, 0x540003, 0x5c0001, 0x5e0000, 0x600000, 0x620000},
+			d3.Vec3{37.298489, -1.776901, 11.652311},
+			d3.Vec3{42.457218, 7.797607, 17.778244},
+			[]PolyRef{
+				0x18c,
+				0x18a,
+				0x156,
+				0x157,
+				0x159,
+				0x158,
+				0x160,
+				0x15f,
+				0x174,
+				0x175,
+				0x176,
+				0x19d,
+				0x19f},
 			[]d3.Vec3{
-				d3.NewVec3XYZ(5, 0, 10),
-				d3.NewVec3XYZ(3.900252, 0.189468, 11.998747),
-				d3.NewVec3XYZ(14.700253, 0.189468, 19.198748),
-				d3.NewVec3XYZ(15.900252, 0.189468, 19.198748),
-				d3.NewVec3XYZ(24.3, 0.189468, 28.798748),
-				d3.NewVec3XYZ(31.8, 0.189468, 32.098747),
-				d3.NewVec3XYZ(39.9, 0.189468, 32.098747),
-				d3.NewVec3XYZ(50, 0, 30),
+				d3.NewVec3XYZ(37.298489, -1.776901, 11.652311),
+				d3.NewVec3XYZ(35.310688, -0.469517, 5.899849),
+				d3.NewVec3XYZ(34.410686, -0.669517, -1.600151),
+				d3.NewVec3XYZ(35.610683, -0.069517, -1.900150),
+				d3.NewVec3XYZ(36.510685, 0.730483, -0.400150),
+				d3.NewVec3XYZ(41.010685, 7.930483, 15.199852),
+				d3.NewVec3XYZ(42.457218, 7.797607, 17.778244),
 			},
 		},
 	}
 
-	mesh, err = loadTestNavMesh("navmesh.bin")
+	mesh, err = loadTestNavMesh("mesh1.bin")
 	checkt(t, err)
 
 	for _, tt := range pathTests {
@@ -72,10 +84,10 @@ func TestFindPathFindStraightPath(t *testing.T) {
 
 		st, query = NewNavMeshQuery(mesh, 1000)
 		if StatusFailed(st) {
-			t.Errorf("query creation failed with status 0x%x\n", st)
+			t.Fatalf("query creation failed with status 0x%x\n", st)
 		}
 		// define the extents vector for the nearest polygon query
-		extents := d3.NewVec3XYZ(0, 2, 0)
+		extents := d3.NewVec3XYZ(2, 4, 2)
 
 		// create a default query filter
 		filter = NewStandardQueryFilter()
@@ -83,19 +95,19 @@ func TestFindPathFindStraightPath(t *testing.T) {
 		// get org polygon reference
 		st, orgRef, org = query.FindNearestPoly(tt.org, extents, filter)
 		if StatusFailed(st) {
-			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
+			t.Fatalf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
 		}
 		if !mesh.IsValidPolyRef(orgRef) {
-			t.Errorf("orgRef %d is not a valid poly ref", orgRef)
+			t.Fatalf("orgRef %d is not a valid poly ref", orgRef)
 		}
 
 		// get dst polygon reference
 		st, dstRef, dst = query.FindNearestPoly(tt.dst, extents, filter)
 		if StatusFailed(st) {
-			t.Errorf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
+			t.Fatalf("couldn't find nearest poly of %v, status: 0x%x\n", tt.org, st)
 		}
 		if !mesh.IsValidPolyRef(dstRef) {
-			t.Errorf("dstRef %d is not a valid poly ref", dstRef)
+			t.Fatalf("dstRef %d is not a valid poly ref", dstRef)
 		}
 
 		// FindPath
@@ -105,11 +117,11 @@ func TestFindPathFindStraightPath(t *testing.T) {
 		path = make([]PolyRef, 100)
 		pathCount, st = query.FindPath(orgRef, dstRef, org, dst, filter, path)
 		if StatusFailed(st) {
-			t.Errorf("query.FindPath failed with 0x%x\n", st)
+			t.Fatalf("query.FindPath failed with 0x%x\n", st)
 		}
 
 		if !reflect.DeepEqual(tt.wantPath, path[:pathCount]) {
-			t.Errorf("found path is not correct, want %#v, got %#v", tt.wantPath, path[:pathCount])
+			t.Fatalf("found path is not correct, want %#v, got %#v", tt.wantPath, path[:pathCount])
 		}
 
 		// FindStraightPath
@@ -142,7 +154,7 @@ func TestFindPathFindStraightPath(t *testing.T) {
 			t.Errorf("straightPath end is not flagged StraightPathEnd")
 		}
 
-		for i := 0; i < pathCount; i++ {
+		for i := 0; i < straightPathCount; i++ {
 			if !straightPath[i].Approx(tt.wantStraightPath[i]) {
 				t.Errorf("straightPath[%d] = %v, want %v", i, straightPath[i], tt.wantStraightPath[i])
 			}
@@ -165,7 +177,7 @@ func TestFindPathSpecialCases(t *testing.T) {
 		{"org == dst", d3.Vec3{5, 0, 10}, d3.Vec3{5, 0, 10}, Success, 1},
 	}
 
-	mesh, err = loadTestNavMesh("navmesh.bin")
+	mesh, err = loadTestNavMesh("mesh2.bin")
 	checkt(t, err)
 
 	for _, tt := range pathTests {

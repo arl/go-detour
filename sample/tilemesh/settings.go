@@ -1,11 +1,11 @@
-package solomesh
+package tilemesh
 
 import (
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/go-detour/sample"
 )
 
-// DefaultSettings returns a recast.BuildSettings with default values for solo
+// DefaultSettings returns a recast.BuildSettings with default values for tile
 // mesh sample.
 func DefaultSettings() recast.BuildSettings {
 	return recast.BuildSettings{
@@ -23,5 +23,6 @@ func DefaultSettings() recast.BuildSettings {
 		DetailSampleDist:     float32(6),
 		DetailSampleMaxError: float32(1),
 		PartitionType:        int32(sample.PartitionMonotone),
+		TileSize:             32,
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/go-detour/sample/solomesh"
+	"github.com/aurelien-rainone/go-detour/sample/tilemesh"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,7 @@ var cfgVal, inputVal string
 func init() {
 	RootCmd.AddCommand(buildCmd)
 	buildCmd.Flags().StringVar(&cfgVal, "config", "recast.yml", "build settings")
-	buildCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tiled'")
+	buildCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tile'")
 	buildCmd.Flags().StringVar(&inputVal, "input", "", "input geometry OBJ file (required)")
 }
 
@@ -51,8 +52,9 @@ func doBuild(cmd *cobra.Command, args []string) {
 	switch typeVal {
 
 	case "solo":
+
 		// unmarshall build settings
-		var cfg solomesh.Settings
+		var cfg recast.BuildSettings
 		err = unmarshalYAMLFile(cfgVal, &cfg)
 		check(err)
 
@@ -68,6 +70,26 @@ func doBuild(cmd *cobra.Command, args []string) {
 			check(err)
 		}
 		navMesh, ok = soloMesh.Build()
+
+	case "tile":
+
+		// unmarshall build settings
+		var cfg recast.BuildSettings
+		err = unmarshalYAMLFile(cfgVal, &cfg)
+		check(err)
+
+		// read input geometry
+		tileMesh := tilemesh.New(ctx)
+		var r *os.File
+		r, err = os.Open(inputVal)
+		check(err)
+		defer r.Close()
+
+		tileMesh.SetSettings(cfg)
+		if err = tileMesh.LoadGeometry(r); err != nil {
+			check(err)
+		}
+		navMesh, ok = tileMesh.Build()
 
 	default:
 		fmt.Printf("unknown (or unimplemented) navmesh type '%v'\n", typeVal)

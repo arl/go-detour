@@ -203,12 +203,8 @@ func (np *NodePool) NodeIdx(node *Node) uint32 {
 		return 0
 	}
 
-	e := uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.nodes[0]))
-	ip := uint32(e / unsafe.Sizeof(*node))
-
-	assert.True(ip < uint32(len(np.nodes)), "ip should be < len(np.Npdes), ip=%d, len(np.Nodes)=%d", ip, len(np.nodes))
-
-	return ip + 1
+	ip := (uintptr(unsafe.Pointer(node)) - uintptr(unsafe.Pointer(&np.nodes[0]))) / unsafe.Sizeof(*node)
+	return uint32(ip + 1)
 }
 
 // NodeAtIdx returns the node at given index.

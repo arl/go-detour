@@ -6,18 +6,18 @@ import (
 	"github.com/aurelien-rainone/math32"
 )
 
-type chunkyTriMeshNode struct {
-	bmin [2]float32
-	bmax [2]float32
-	i, n int32
+type ChunkyTriMeshNode struct {
+	BMin [2]float32
+	BMax [2]float32
+	I, N int32
 }
 
-type chunkyTriMesh struct {
-	nodes           []chunkyTriMeshNode
-	nnodes          int32
-	tris            []int32
-	ntris           int32
-	maxTrisPerChunk int32
+type ChunkyTriMesh struct {
+	Nodes           []ChunkyTriMeshNode
+	Nnodes          int32
+	Tris            []int32
+	Ntris           int32
+	MaxTrisPerChunk int32
 }
 
 type BoundsItem struct {
@@ -58,64 +58,8 @@ func longestAxis(x, y float32) int {
 	return 0
 }
 
-type alongXAxis []BoundsItem
-
-// Len is the number of elements in the collection.
-func (s alongXAxis) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s alongXAxis) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	switch {
-	case a.bmin[0] < b.bmin[0]:
-		return true
-	case a.bmin[0] > b.bmin[0]:
-		return false
-	default:
-		return false
-	}
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s alongXAxis) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-type alongYAxis []BoundsItem
-
-// Len is the number of elements in the collection.
-func (s alongYAxis) Len() int {
-	return len(s)
-}
-
-// Less reports whether the element with
-// index i should sort before the element with index j.
-func (s alongYAxis) Less(i, j int) bool {
-	a := s[i]
-	b := s[j]
-
-	switch {
-	case a.bmin[1] < b.bmin[1]:
-		return true
-	case a.bmin[1] > b.bmin[1]:
-		return false
-	default:
-		return false
-	}
-}
-
-// Swap swaps the elements with indexes i and j.
-func (s alongYAxis) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
 func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
-	curNode *int32, nodes []chunkyTriMeshNode, maxNodes int32,
+	curNode *int32, nodes []ChunkyTriMeshNode, maxNodes int32,
 	curTri *int32, outTris, inTris []int32) {
 
 	inum := imax - imin
@@ -125,38 +69,39 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 		return
 	}
 
-	node := nodes[*curNode]
+	node := &nodes[*curNode]
 	(*curNode)++
 
 	if inum <= trisPerChunk {
 		// Leaf
-		calcExtends(items, nitems, imin, imax, node.bmin[:], node.bmax[:])
+		calcExtends(items, nitems, imin, imax, node.BMin[:], node.BMax[:])
 
 		// Copy triangles.
-		node.i = *curTri
-		node.n = inum
+		node.I = *curTri
+		node.N = inum
 
 		for i := imin; i < imax; i++ {
-			src := inTris[items[i].i*3 : 3+items[i].i*3]
-			dst := outTris[(*curTri)*3 : 3+(*curTri)*3]
+			src := inTris[items[i].i*3:]
+			dst := outTris[(*curTri)*3:]
 			(*curTri)++
-			dst[0] = src[0]
-			dst[1] = src[1]
-			dst[2] = src[2]
+			copy(dst, src[:3])
 		}
 	} else {
 		// Split
-		calcExtends(items, nitems, imin, imax, node.bmin[:], node.bmax[:])
+		calcExtends(items, nitems, imin, imax, node.BMin[:], node.BMax[:])
 
-		axis := longestAxis(node.bmax[0]-node.bmin[0],
-			node.bmax[1]-node.bmin[1])
+		axis := longestAxis(node.BMax[0]-node.BMin[0],
+			node.BMax[1]-node.BMin[1])
 
 		if axis == 0 {
 			// Sort along x-axis
-			sort.Sort(alongXAxis(items[imin : imin+inum]))
-		} else if axis == 1 {
+			sort.SliceStable(items[imin:imin+inum],
+				func(i, j int) bool { return items[int(imin)+i].bmin[0] < items[int(imin)+j].bmin[0] })
+
+		} else {
 			// Sort along y-axis
-			sort.Sort(alongYAxis(items[imin : imin+inum]))
+			sort.SliceStable(items[imin:imin+inum],
+				func(i, j int) bool { return items[int(imin)+i].bmin[1] < items[int(imin)+j].bmin[1] })
 		}
 
 		isplit := imin + inum/2
@@ -168,25 +113,25 @@ func subdivide(items []BoundsItem, nitems, imin, imax, trisPerChunk int32,
 
 		iescape := (*curNode) - icur
 		// Negative index means escape.
-		node.i = -iescape
+		node.I = -iescape
 	}
 }
 
 // Creates partitioned triangle mesh (AABB tree),
 // where each node contains at max trisPerChunk triangles.
-func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int32, cm *chunkyTriMesh) bool {
+func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int32, cm *ChunkyTriMesh) bool {
 	nchunks := (ntris + trisPerChunk - 1) / trisPerChunk
-	cm.nodes = make([]chunkyTriMeshNode, nchunks*4)
-	if len(cm.nodes) == 0 {
+	cm.Nodes = make([]ChunkyTriMeshNode, nchunks*4)
+	if len(cm.Nodes) == 0 {
 		return false
 	}
 
-	cm.tris = make([]int32, ntris*3)
-	if len(cm.tris) == 0 {
+	cm.Tris = make([]int32, ntris*3)
+	if len(cm.Tris) == 0 {
 		return false
 	}
 
-	cm.ntris = ntris
+	cm.Ntris = ntris
 
 	// Build tree
 	items := make([]BoundsItem, ntris)
@@ -196,7 +141,7 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 
 	for i := int32(0); i < ntris; i++ {
 		t := tris[i*3 : i*3+3]
-		it := items[i]
+		it := &items[i]
 		it.i = i
 		// Calc triangle XZ bounds.
 		it.bmax[0] = verts[t[0]*3+0]
@@ -223,22 +168,22 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 	}
 
 	var curTri, curNode int32
-	subdivide(items, ntris, 0, ntris, trisPerChunk, &curNode, cm.nodes, nchunks*4, &curTri, cm.tris, tris)
+	subdivide(items, ntris, 0, ntris, trisPerChunk, &curNode, cm.Nodes, nchunks*4, &curTri, cm.Tris, tris)
 
 	items = nil
 
-	cm.nnodes = curNode
+	cm.Nnodes = curNode
 
 	// Calc max tris per node.
-	cm.maxTrisPerChunk = 0
-	for i := int32(0); i < cm.nnodes; i++ {
-		node := cm.nodes[i]
-		isLeaf := node.i >= 0
+	cm.MaxTrisPerChunk = 0
+	for i := int32(0); i < cm.Nnodes; i++ {
+		node := &cm.Nodes[i]
+		isLeaf := node.I >= 0
 		if !isLeaf {
 			continue
 		}
-		if node.n > cm.maxTrisPerChunk {
-			cm.maxTrisPerChunk = node.n
+		if node.N > cm.MaxTrisPerChunk {
+			cm.MaxTrisPerChunk = node.N
 		}
 	}
 
@@ -246,29 +191,30 @@ func createChunkyTriMesh(verts []float32, tris []int32, ntris, trisPerChunk int3
 }
 
 func checkOverlapRect(amin, amax, bmin, bmax [2]float32) bool {
-	overlap := true
-
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
-		overlap = false
+		return false
 	}
 
 	if amin[1] > bmax[1] || amax[1] < bmin[1] {
-		overlap = false
+		return false
 	}
-	return overlap
+	return true
 }
 
 // Returns the chunk indices which overlap the input rectable.
-func (cm *chunkyTriMesh) chunksOverlappingRect(bmin, bmax [2]float32, ids []int32, maxIds int32) bool {
+func (cm *ChunkyTriMesh) ChunksOverlappingRect(bmin, bmax [2]float32, ids []int32) int {
 	// Traverse tree
-	var i, n int32
-	for i < cm.nnodes {
-		node := &cm.nodes[i]
-		overlap := checkOverlapRect(bmin, bmax, node.bmin, node.bmax)
-		isLeafNode := node.i >= 0
+	var (
+		i int32
+		n int
+	)
+	for i < cm.Nnodes {
+		node := &cm.Nodes[i]
+		overlap := checkOverlapRect(bmin, bmax, node.BMin, node.BMax)
+		isLeafNode := node.I >= 0
 
 		if isLeafNode && overlap {
-			if n < maxIds {
+			if n < len(ids) {
 				ids[n] = i
 				n++
 			}
@@ -277,12 +223,12 @@ func (cm *chunkyTriMesh) chunksOverlappingRect(bmin, bmax [2]float32, ids []int3
 		if overlap || isLeafNode {
 			i++
 		} else {
-			escapeIndex := -node.i
+			escapeIndex := -node.I
 			i += escapeIndex
 		}
 	}
 
-	return n != 0
+	return n
 }
 
 func checkOverlapSegment(p, q, bmin, bmax [2]float32) bool {
@@ -323,13 +269,13 @@ func checkOverlapSegment(p, q, bmin, bmax [2]float32) bool {
 }
 
 // Returns the chunk indices which overlap the input segment.
-func (cm *chunkyTriMesh) chunksOverlappingSegment(p, q [2]float32, ids []int32, maxIds int32) int32 {
+func (cm *ChunkyTriMesh) chunksOverlappingSegment(p, q [2]float32, ids []int32, maxIds int32) int32 {
 	// Traverse tree
 	var i, n int32
-	for i < cm.nnodes {
-		node := &cm.nodes[i]
-		overlap := checkOverlapSegment(p, q, node.bmin, node.bmax)
-		isLeafNode := node.i >= 0
+	for i < cm.Nnodes {
+		node := &cm.Nodes[i]
+		overlap := checkOverlapSegment(p, q, node.BMin, node.BMax)
+		isLeafNode := node.I >= 0
 
 		if isLeafNode && overlap {
 			if n < maxIds {
@@ -341,7 +287,7 @@ func (cm *chunkyTriMesh) chunksOverlappingSegment(p, q [2]float32, ids []int32, 
 		if overlap || isLeafNode {
 			i++
 		} else {
-			escapeIndex := -node.i
+			escapeIndex := -node.I
 			i += escapeIndex
 		}
 	}

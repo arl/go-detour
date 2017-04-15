@@ -1,7 +1,6 @@
 # go-detour - port of [Recast & Detour](https://github.com/recastnavigation/recastnavigation) in Go
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/aurelien-rainone/go-detour) [![Build Status](https://travis-ci.org/aurelien-rainone/go-detour.svg?branch=master)](https://travis-ci.org/aurelien-rainone/go-detour) [![Coverage Status](https://coveralls.io/repos/github/aurelien-rainone/go-detour/badge.svg?branch=master)](https://coveralls.io/github/aurelien-rainone/go-detour?branch=master)
 
-
 ## Recast library
 
 Recast is state of the art navigation mesh construction toolset for games.
@@ -81,6 +80,10 @@ either the `recast` Go package or the cli tool in order to have **identical resu
 *todo*:
 ... speak about the package structure or at least explain the big idea ...
 
+
+## Minimum Go Version
+
+Go 1.8+ is required
 
 ## Credits
 

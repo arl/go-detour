@@ -85,10 +85,6 @@ type MeshTile struct {
 	// [Size: MeshHeader.OffMeshConCount]
 	OffMeshCons []OffMeshConnection
 
-	// The tile data.
-	// Not directly accessed under normal situations.
-	Data []uint8
-
 	// Size of the tile data.
 	DataSize int32
 
@@ -144,8 +140,8 @@ func (s *MeshTile) unserialize(hdr *MeshHeader, src []byte) {
 
 		l.Edge = src[off+8]
 		l.Side = src[off+9]
-		l.Bmin = src[off+10]
-		l.Bmax = src[off+11]
+		l.BMin = src[off+10]
+		l.BMax = src[off+11]
 		off += 12
 	}
 
@@ -172,12 +168,12 @@ func (s *MeshTile) unserialize(hdr *MeshHeader, src []byte) {
 	s.BvTree = make([]BvNode, hdr.BvNodeCount)
 	for i := range s.BvTree {
 		t := &s.BvTree[i]
-		t.Bmin[0] = little.Uint16(src[off:])
-		t.Bmin[1] = little.Uint16(src[off+2:])
-		t.Bmin[2] = little.Uint16(src[off+4:])
-		t.Bmax[0] = little.Uint16(src[off+6:])
-		t.Bmax[1] = little.Uint16(src[off+8:])
-		t.Bmax[2] = little.Uint16(src[off+10:])
+		t.BMin[0] = little.Uint16(src[off:])
+		t.BMin[1] = little.Uint16(src[off+2:])
+		t.BMin[2] = little.Uint16(src[off+4:])
+		t.BMax[0] = little.Uint16(src[off+6:])
+		t.BMax[1] = little.Uint16(src[off+8:])
+		t.BMax[2] = little.Uint16(src[off+10:])
 		t.I = int32(little.Uint32(src[off+12:]))
 		off += 16
 	}
@@ -245,8 +241,8 @@ func serializeTileData(dst []byte,
 
 		dst[off+8] = l.Edge
 		dst[off+9] = l.Side
-		dst[off+10] = l.Bmin
-		dst[off+11] = l.Bmax
+		dst[off+10] = l.BMin
+		dst[off+11] = l.BMax
 		off += 12
 	}
 
@@ -268,12 +264,12 @@ func serializeTileData(dst []byte,
 
 	for i := range bvtree {
 		t := &bvtree[i]
-		little.PutUint16(dst[off:], t.Bmin[0])
-		little.PutUint16(dst[off+2:], t.Bmin[1])
-		little.PutUint16(dst[off+4:], t.Bmin[2])
-		little.PutUint16(dst[off+6:], t.Bmax[0])
-		little.PutUint16(dst[off+8:], t.Bmax[1])
-		little.PutUint16(dst[off+10:], t.Bmax[2])
+		little.PutUint16(dst[off:], t.BMin[0])
+		little.PutUint16(dst[off+2:], t.BMin[1])
+		little.PutUint16(dst[off+4:], t.BMin[2])
+		little.PutUint16(dst[off+6:], t.BMax[0])
+		little.PutUint16(dst[off+8:], t.BMax[1])
+		little.PutUint16(dst[off+10:], t.BMax[2])
 		little.PutUint32(dst[off+12:], uint32(t.I))
 		off += 16
 	}

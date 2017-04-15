@@ -107,7 +107,7 @@ func TestCalcGridSize(t *testing.T) {
 
 	cellSize := float32(1.5)
 
-	w, h := CalcGridSize(bmin, bmax, cellSize)
+	w, h := CalcGridSize(bmin[:], bmax[:], cellSize)
 	if w != 1 {
 		t.Fatalf("width should be 1, got %v", w)
 	}
@@ -127,7 +127,7 @@ func TestCreateHeightfield(t *testing.T) {
 	cellSize := float32(1.5)
 	cellHeight := float32(2)
 
-	w, h := CalcGridSize(bmin, bmax, cellSize)
+	w, h := CalcGridSize(bmin[:], bmax[:], cellSize)
 	hf := NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 
 	if hf.Width != w {
@@ -265,7 +265,7 @@ func TestAddSpan(t *testing.T) {
 	cellSize := float32(1.5)
 	cellHeight := float32(2)
 
-	w, h := CalcGridSize(bmin, bmax, cellSize)
+	w, h := CalcGridSize(bmin[:], bmax[:], cellSize)
 
 	var (
 		hf           *Heightfield
@@ -425,7 +425,7 @@ func TestRasterizeTriangle(t *testing.T) {
 	cellSize := float32(0.5)
 	cellHeight := float32(0.5)
 
-	w, h := CalcGridSize(bmin, bmax, cellSize)
+	w, h := CalcGridSize(bmin[:], bmax[:], cellSize)
 
 	var solid *Heightfield
 	solid = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
@@ -478,7 +478,7 @@ func TestRasterizeTriangles(t *testing.T) {
 	cellSize := float32(0.5)
 	cellHeight := float32(0.5)
 
-	w, h := CalcGridSize(bmin, bmax, cellSize)
+	w, h := CalcGridSize(bmin[:], bmax[:], cellSize)
 
 	var (
 		solid        *Heightfield

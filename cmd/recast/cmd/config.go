@@ -7,6 +7,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/aurelien-rainone/go-detour/sample/solomesh"
+	"github.com/aurelien-rainone/go-detour/sample/tilemesh"
 	"github.com/spf13/cobra"
 )
 
@@ -28,13 +29,20 @@ var (
 
 func init() {
 	RootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tiled'")
+	configCmd.Flags().StringVar(&typeVal, "type", "solo", "navmesh type, 'solo' or 'tile'")
 
-	// register solo mesh configs
-	if buf, err := yaml.Marshal(solomesh.NewSettings()); err != nil {
+	// register the default build config for solo mesh
+	if buf, err := yaml.Marshal(solomesh.DefaultSettings()); err != nil {
 		fmt.Println("couldn't register solomesh default settings,", err)
 	} else {
 		defaultCfgs["solo"] = buf
+	}
+
+	// register the default build config for tile mesh
+	if buf, err := yaml.Marshal(tilemesh.DefaultSettings()); err != nil {
+		fmt.Println("couldn't register tilemesh default settings,", err)
+	} else {
+		defaultCfgs["tile"] = buf
 	}
 
 	// navmesh default type flag

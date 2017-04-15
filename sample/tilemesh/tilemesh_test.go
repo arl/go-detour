@@ -1,4 +1,4 @@
-package solomesh
+package tilemesh
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
 )
 
 func check(t *testing.T, err error) {
@@ -44,16 +43,16 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 	return bytes.Equal(f1, f2), nil
 }
 
-const testDataDir = "../../testdata/sample/solomesh/"
+const testDataDir = "../../testdata/sample/tilemesh/"
 const OBJDir = "../../testdata/obj/"
 
-func testCreateSoloMesh(t *testing.T, objName string) {
+func testCreateTileMesh(t *testing.T, objName string) {
 	var (
 		path, meshBinPath string
 		outBin            string
 		ctx               *recast.BuildContext
 
-		soloMesh *SoloMesh
+		tileMesh *TileMesh
 		err      error
 		ok       bool
 	)
@@ -63,16 +62,16 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 	outBin = "out.bin"
 
 	ctx = recast.NewBuildContext(true)
-	soloMesh = New(ctx)
+	tileMesh = New(ctx)
 
 	r, err := os.Open(path)
 	check(t, err)
 	defer r.Close()
-	if err = soloMesh.LoadGeometry(r); err != nil {
+	if err = tileMesh.LoadGeometry(r); err != nil {
 		ctx.DumpLog("")
 		t.Fatalf("couldn't load mesh %v", path)
 	}
-	navMesh, ok := soloMesh.Build()
+	navMesh, ok := tileMesh.Build()
 	if !ok {
 		ctx.DumpLog("")
 		t.Fatalf("couldn't build navmesh for %v", objName)
@@ -91,49 +90,53 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 	}
 }
 
-func TestCreateDevelerSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "develer")
+func TestCreateDevelerTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "develer")
 }
 
-func TestCreateDungeonSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "dungeon")
+// FIXME: generated binaries are different because of an issue with the
+// stabiblity of the sorting functions used for BvTree (see createBvTree). This
+// has no influence over the generated navmesh but that means that we can't just
+// compare the produced binaries.
+/*
+func TestCreateDungeonTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "dungeon")
 }
 
-func TestCreateCubeSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "cube")
+func TestCreateTwistedTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "twisted")
 }
 
-func TestCreateCube5DegreesSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "cube5xdeg")
+func TestCreateTestTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "nav_test")
+}
+*/
+
+func TestCreateCubeTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "cube")
 }
 
-func TestCreateCube45DegreesSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "cube45xdeg")
+func TestCreateCube5DegreesTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "cube5xdeg")
 }
 
-func TestCreateStair2SoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "stair2")
+func TestCreateCube45DegreesTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "cube45xdeg")
 }
 
-func TestCreateStair3SoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "stair3")
+func TestCreateStair2TileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "stair2")
 }
 
-func TestCreateHillSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "hill")
+func TestCreateStair3TileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "stair3")
 }
 
-// TODO: at one point, rename this OBJ file, the test function and the target
-// binary. Instead of `nav_test` call it something else...
-func TestCreateTestSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "nav_test")
+func TestCreateHillTileNavMesh(t *testing.T) {
+	testCreateTileMesh(t, "hill")
 }
 
-func TestCreateTwistedSoloNavMesh(t *testing.T) {
-	testCreateSoloMesh(t, "twisted")
-}
-
-func benchmarkCreateSoloNavMesh(b *testing.B, objName string) {
+func benchmarkCreateTileNavMesh(b *testing.B, objName string) {
 	path := OBJDir + objName + ".obj"
 
 	soloMesh := New(recast.NewBuildContext(false))
@@ -153,15 +156,15 @@ func benchmarkCreateSoloNavMesh(b *testing.B, objName string) {
 	}
 }
 
-func BenchmarkCreateDevelerSoloNavMesh(b *testing.B) {
-	benchmarkCreateSoloNavMesh(b, "develer")
+func BenchmarkCreateDevelerTileNavMesh(b *testing.B) {
+	benchmarkCreateTileNavMesh(b, "develer")
 }
 
-func BenchmarkCreateCubeSoloNavMesh(b *testing.B) {
-	benchmarkCreateSoloNavMesh(b, "cube")
+func BenchmarkCreateCubeTileNavMesh(b *testing.B) {
+	benchmarkCreateTileNavMesh(b, "cube")
 }
 
-func BenchmarkPathFindSoloMesh(b *testing.B) {
+func BenchmarkPathFindTileMesh(b *testing.B) {
 	benchs := []struct {
 		xstart, ystart, zstart float32
 		xend, yend, zend       float32
@@ -251,7 +254,10 @@ func BenchmarkPathFindSoloMesh(b *testing.B) {
 	}
 }
 
-func TestRaycastSoloMesh(t *testing.T) {
+// FIXME: to check on the original tool (this has just be stupidly copy-pasted
+// from the solomesh test
+/*
+func TestRaycastTileMesh(t *testing.T) {
 	type want struct {
 		t                float32
 		hitx, hity, hitz float32
@@ -343,3 +349,4 @@ func TestRaycastSoloMesh(t *testing.T) {
 		}
 	}
 }
+*/
