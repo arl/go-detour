@@ -15,11 +15,20 @@ import (
 const (
 	// HScale is the search heuristic scale.
 	HScale float32 = 0.999
-)
 
-// Raycast should calculate movement cost along the ray and fill RaycastHit.Cost
-// RaycastOptions
-const RaycastUseCosts int = 0x01
+	// Raycast should calculate movement cost along the ray and fill
+	// RaycastHit.Cost (RaycastOptions)
+	RaycastUseCosts int = 0x01
+
+	// Options for NavMeshQuery.InitSlicedFindPath and UpdateSlicedFindPath
+	// Use raycasts during pathfind to "shortcut" (raycast still consider costs)
+	// (FindPathOptions)
+	FindPathAnyAngle = 0x02
+
+	// Limit raycasting during any angle pahfinding.
+	// The limit is given as a multiple of the character radius.
+	RaycastLimitProportions = 50.0
+)
 
 // RaycastHit provides information about a raycast hit
 // filled by NavMeshQuery.Raycast
@@ -79,6 +88,13 @@ type queryData struct {
 	filter           QueryFilter
 	options          uint32
 	raycastLimitSqr  float32
+}
+
+func newQueryData() queryData {
+	return queryData{
+		startPos: d3.NewVec3(),
+		endPos:   d3.NewVec3(),
+	}
 }
 
 // NewNavMeshQuery initializes the query object.
@@ -425,12 +441,12 @@ func (q *NavMeshQuery) FindStraightPath(
 
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
-	if StatusFailed(q.closestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
+	if StatusFailed(q.ClosestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
 		return 0, Failure | InvalidParam
 	}
 
 	closestEndPos := d3.NewVec3()
-	if StatusFailed(q.closestPointOnPolyBoundary(path[len(path)-1], endPos, closestEndPos)) {
+	if StatusFailed(q.ClosestPointOnPolyBoundary(path[len(path)-1], endPos, closestEndPos)) {
 		return 0, Failure | InvalidParam
 	}
 
@@ -470,7 +486,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				if StatusFailed(q.portalPoints6(path[i], path[i+1], left, right, &fromType, &toType)) {
 					// Failed to get portal points, in practice this means that path[i+1] is invalid polygon.
 					// Clamp the end point to path[i], and return the path so far.
-					if StatusFailed(q.closestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
+					if StatusFailed(q.ClosestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
 						// This should only happen when the first polygon is invalid.
 						return 0, Failure | InvalidParam
 					}
@@ -921,14 +937,14 @@ func (q *NavMeshQuery) pathToNode(
 	return pathCount, Success
 }
 
-// closestPointOnPoly uses the detail polygons to find the surface height.
+// ClosestPointOnPoly uses the detail polygons to find the surface height.
 // (Most accurate.)
 //
 // pos does not have to be within the bounds of the polygon or navigation mesh.
-// See closestPointOnPolyBoundary() for a limited but faster option.
+// See ClosestPointOnPolyBoundary() for a limited but faster option.
 //
 // Note: this method may be used by multiple clients without side effects.
-func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
+func (q *NavMeshQuery) ClosestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
 		tile *MeshTile
@@ -1029,7 +1045,7 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 	return Success
 }
 
-// closestPointOnPolyBoundary uses the detail polygons to find the surface
+// ClosestPointOnPolyBoundary uses the detail polygons to find the surface
 // height. (Much faster than closestPointOnPoly())
 //
 // If the provided position lies within the polygon's xz-bounds (above or
@@ -1038,7 +1054,7 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 // within the bounds of the polybon or the navigation mesh.
 //
 // Note: this method may be used by multiple clients without side effects.
-func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.Vec3) Status {
+func (q *NavMeshQuery) ClosestPointOnPolyBoundary(ref PolyRef, pos, closest d3.Vec3) Status {
 	var (
 		tile *MeshTile
 		poly *Poly
@@ -1651,4 +1667,584 @@ func (q *NavMeshQuery) Raycast(
 
 	hit.PathCount = n
 	return
+}
+
+// This method is meant to be used for quick, short distance checks.
+//
+// If the path array is too small to hold the result, it will be filled as far
+// as possible from the start postion toward the end position.
+//
+// Using the Hit Parameter (t)
+//
+// If the hit parameter is a very high value (math32.MaxFloat32), then the ray
+// has hit the end position. In this case the path represents a valid corridor
+// to the end position and the value of @p hitNormal is undefined.
+//
+// If the hit parameter is zero, then the start position is on the wall that was
+// hit and the value of @p hitNormal is undefined.
+//
+// If 0 < t < 1.0 then the following applies:
+//
+//  distanceToHitBorder = distanceToEndPosition * t
+//  hitPoint = startPos + (endPos - startPos) * t
+//
+// Use Case Restriction
+//
+// The raycast ignores the y-value of the end position. (2D check.) This places
+// significant limits on how it can be used. For example:
+//
+// Consider a scene where there is a main floor with a second floor balcony that
+// hangs over the main floor. So the first floor mesh extends below the balcony
+// mesh. The start position is somewhere on the first floor. The end position is
+// on the balcony.
+//
+// The raycast will search toward the end position along the first floor mesh.
+// If it reaches the end position's xz-coordinates it will indicate FLT_MAX (no
+// wall hit), meaning it reached the end position. This is one example of why
+// this method is meant for short distance checks.
+//
+func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
+	filter QueryFilter,
+	hitNormal d3.Vec3, path []PolyRef, maxPath int) (pathCount int, t float32, st Status) {
+	var hit RaycastHit
+	hit.Path = path
+	hit.MaxPath = maxPath
+
+	hit, status := q.Raycast(startRef, startPos, endPos, filter, 0, 0)
+	copy(hitNormal, hit.HitNormal)
+	return hit.PathCount, hit.T, status
+}
+
+// Intializes a sliced path query.
+//
+// Common use case:
+//	-# Call initSlicedFindPath() to initialize the sliced path query.
+//	-# Call UpdateSlicedFindPath() until it returns complete.
+//	-# Call FinalizeSlicedFindPath() to get the path.
+//
+//  Arguments
+//   startRef The refrence id of the start polygon.
+//   endRef   The reference id of the end polygon.
+//   startPos A position within the start polygon. [(x, y, z)]
+//   endPos   A position within the end polygon. [(x, y, z)]
+//   filter   The polygon filter to apply to the query.
+//   options  query options (see: #dtFindPathOptions)
+//
+//  Returns
+//   The status flags for the query.
+//
+// Warning Calling any non-slice methods before calling finalizeSlicedFindPath()
+// or finalizeSlicedFindPathPartial() may result in corrupted data!
+//
+// The filter pointer is stored and used for the duration of the sliced path
+// query.
+func (q *NavMeshQuery) InitSlicedFindPath(startRef, endRef PolyRef,
+	startPos, endPos d3.Vec3,
+	filter QueryFilter, options uint32) Status {
+
+	if q.nav == nil {
+		panic("q.nav should not be nil")
+	}
+	if q.nodePool == nil {
+		panic("q.nodePool should not be nil")
+	}
+	if q.openList == nil {
+		panic("q.openList should not be nil")
+	}
+
+	// Init path state.
+	q.query = newQueryData()
+	q.query.status = Failure
+	q.query.startRef = startRef
+	q.query.endRef = endRef
+	copy(q.query.startPos, startPos)
+	copy(q.query.endPos, endPos)
+	q.query.filter = filter
+	q.query.options = options
+	q.query.raycastLimitSqr = math32.MaxFloat32
+
+	if startRef == 0 || endRef == 0 {
+		return Failure | InvalidParam
+	}
+
+	// Validate input
+	if !q.nav.IsValidPolyRef(startRef) || !q.nav.IsValidPolyRef(endRef) {
+		return Failure | InvalidParam
+	}
+
+	// trade quality with performance?
+	if options&FindPathAnyAngle != 0 {
+		// limiting to several times the character radius yields nice results.
+		// It is not sensitive so it is enough to compute it from the first tile.
+		tile := q.nav.TileByRef(TileRef(startRef))
+		agentRadius := tile.Header.WalkableRadius
+		q.query.raycastLimitSqr = agentRadius * agentRadius * RaycastLimitProportions * RaycastLimitProportions
+	}
+
+	if startRef == endRef {
+		q.query.status = Success
+		return Success
+	}
+
+	q.nodePool.Clear()
+	q.openList.clear()
+
+	startNode := q.nodePool.Node(startRef, 0)
+	copy(startNode.Pos, startPos)
+	startNode.PIdx = 0
+	startNode.Cost = 0
+	startNode.Total = startPos.Dist(endPos) * HScale
+	startNode.ID = startRef
+	startNode.Flags = nodeOpen
+	q.openList.push(startNode)
+
+	q.query.status = InProgress
+	q.query.lastBestNode = startNode
+	q.query.lastBestNodeCost = startNode.Total
+	return q.query.status
+}
+
+// Updates an in-progress sliced path query.
+//
+//  Arguments:
+//   maxIter   The maximum number of iterations to perform.
+//   doneIters The actual number of iterations completed. [opt]
+//
+//  Returns
+//   The status flags for the query.
+func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status {
+	if !StatusInProgress(q.query.status) {
+		return q.query.status
+	}
+
+	// Make sure the request is still valid.
+	if !q.nav.IsValidPolyRef(q.query.startRef) || !q.nav.IsValidPolyRef(q.query.endRef) {
+		q.query.status = Failure
+		return Failure
+	}
+
+	var rayHit RaycastHit
+	rayHit.MaxPath = 0
+
+	var iter int
+	for iter < maxIter && !q.openList.empty() {
+		iter++
+
+		// Remove node from open list and put it in closed list.
+		bestNode := q.openList.pop()
+		bestNode.Flags &= ^nodeOpen
+		bestNode.Flags |= nodeClosed
+
+		// Reached the goal, stop searching.
+		if bestNode.ID == q.query.endRef {
+			q.query.lastBestNode = bestNode
+			details := q.query.status & StatusDetailMask
+			q.query.status = Success | details
+			if doneIters != nil {
+				*doneIters = iter
+			}
+			return q.query.status
+		}
+
+		// Get current poly and tile.
+		// The API input has been cheked already, skip checking internal data.
+		var (
+			bestRef  PolyRef   = bestNode.ID
+			bestTile *MeshTile = nil
+			bestPoly *Poly     = nil
+		)
+		if StatusFailed(q.nav.TileAndPolyByRef(bestRef, &bestTile, &bestPoly)) {
+			// The polygon has disappeared during the sliced query, fail.
+			q.query.status = Failure
+			if doneIters != nil {
+				*doneIters = iter
+			}
+			return q.query.status
+		}
+
+		// Get parent and grand parent poly and tile.
+		var (
+			parentRef, grandpaRef PolyRef   = 0, 0
+			parentTile            *MeshTile = nil
+			parentPoly            *Poly     = nil
+			parentNode            *Node     = nil
+		)
+		if bestNode.PIdx != 0 {
+			parentNode = q.nodePool.NodeAtIdx(int32(bestNode.PIdx))
+			parentRef = parentNode.ID
+			if parentNode.PIdx != 0 {
+				grandpaRef = q.nodePool.NodeAtIdx(int32(parentNode.PIdx)).ID
+			}
+		}
+		if parentRef != 0 {
+			invalidParent := StatusFailed(q.nav.TileAndPolyByRef(parentRef, &parentTile, &parentPoly))
+			if invalidParent || (grandpaRef != 0 && !q.nav.IsValidPolyRef(grandpaRef)) {
+				// The polygon has disappeared during the sliced query, fail.
+				q.query.status = Failure
+				if doneIters != nil {
+					*doneIters = iter
+				}
+				return q.query.status
+			}
+		}
+
+		// decide whether to test raycast to previous nodes
+		tryLOS := false
+		if (q.query.options & FindPathAnyAngle) != 0 {
+			if (parentRef != 0) && (parentNode.Pos.DistSqr(bestNode.Pos) < q.query.raycastLimitSqr) {
+				tryLOS = true
+			}
+		}
+
+		for i := bestPoly.FirstLink; i != nullLink; i = bestTile.Links[i].Next {
+			neighbourRef := bestTile.Links[i].Ref
+
+			// Skip invalid ids and do not expand back to where we came from.
+			if neighbourRef == 0 || neighbourRef == parentRef {
+				continue
+			}
+
+			// Get neighbour poly and tile.
+			// The API input has been cheked already, skip checking internal data.
+			var (
+				neighbourTile *MeshTile = nil
+				neighbourPoly *Poly     = nil
+			)
+			q.nav.TileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
+
+			if !q.query.filter.PassFilter(neighbourRef, neighbourTile, neighbourPoly) {
+				continue
+			}
+
+			// get the neighbor node
+			neighbourNode := q.nodePool.Node(neighbourRef, 0)
+			if neighbourNode == nil {
+				q.query.status |= OutOfNodes
+				continue
+			}
+
+			// do not expand to nodes that were already visited from the same parent
+			if neighbourNode.PIdx != 0 && neighbourNode.PIdx == bestNode.PIdx {
+				continue
+			}
+
+			// If the node is visited the first time, calculate node position.
+			if neighbourNode.Flags == 0 {
+				q.edgeMidPoint(bestRef, bestPoly, bestTile,
+					neighbourRef, neighbourPoly, neighbourTile,
+					neighbourNode.Pos)
+			}
+
+			// Calculate cost and heuristic.
+			var (
+				cost      float32 = 0.0
+				heuristic float32 = 0.0
+			)
+
+			// raycast parent
+			foundShortCut := false
+			rayHit.PathCost = 0
+			rayHit.T = 0
+			if tryLOS {
+				rayHit, _ = q.Raycast(parentRef, parentNode.Pos, neighbourNode.Pos, q.query.filter, RaycastUseCosts, grandpaRef)
+				foundShortCut = rayHit.T >= 1.0
+			}
+
+			// update move cost
+			if foundShortCut {
+				// shortcut found using raycast. Using shorter cost instead
+				cost = parentNode.Cost + rayHit.PathCost
+			} else {
+				// No shortcut found.
+				curCost := q.query.filter.Cost(bestNode.Pos, neighbourNode.Pos,
+					parentRef, parentTile, parentPoly,
+					bestRef, bestTile, bestPoly,
+					neighbourRef, neighbourTile, neighbourPoly)
+				cost = bestNode.Cost + curCost
+			}
+
+			// Special case for last node.
+			if neighbourRef == q.query.endRef {
+				endCost := q.query.filter.Cost(neighbourNode.Pos, q.query.endPos,
+					bestRef, bestTile, bestPoly,
+					neighbourRef, neighbourTile, neighbourPoly,
+					0, nil, nil)
+
+				cost = cost + endCost
+				heuristic = 0
+			} else {
+				fmt.Println("neighbourNode.Pos", neighbourNode.Pos)
+				fmt.Println("q.query.endPos", q.query.endPos)
+				heuristic = neighbourNode.Pos.Dist(q.query.endPos) * HScale
+			}
+
+			total := cost + heuristic
+
+			// The node is already in open list and the new result is worse, skip.
+			if (neighbourNode.Flags&nodeOpen) != 0 && total >= neighbourNode.Total {
+				continue
+			}
+			// The node is already visited and process, and the new result is worse, skip.
+			if (neighbourNode.Flags&nodeClosed) != 0 && total >= neighbourNode.Total {
+				continue
+			}
+
+			// Add or update the node.
+			if foundShortCut {
+				neighbourNode.PIdx = bestNode.PIdx
+			} else {
+				neighbourNode.PIdx = q.nodePool.NodeIdx(bestNode)
+			}
+
+			neighbourNode.ID = neighbourRef
+			neighbourNode.Flags = (neighbourNode.Flags & ^(nodeClosed | nodeParentDetached))
+			neighbourNode.Cost = cost
+			neighbourNode.Total = total
+			if foundShortCut {
+				neighbourNode.Flags = (neighbourNode.Flags | nodeParentDetached)
+			}
+
+			if (neighbourNode.Flags & nodeOpen) != 0 {
+				// Already in open, update node location.
+				q.openList.modify(neighbourNode)
+			} else {
+				// Put the node in open list.
+				neighbourNode.Flags |= nodeOpen
+				q.openList.push(neighbourNode)
+			}
+
+			// Update nearest node to target so far.
+			if heuristic < q.query.lastBestNodeCost {
+				q.query.lastBestNodeCost = heuristic
+				q.query.lastBestNode = neighbourNode
+			}
+		}
+	}
+
+	// Exhausted all nodes, but could not find path.
+	if q.openList.empty() {
+		details := q.query.status & StatusDetailMask
+		q.query.status = Success | details
+	}
+
+	return q.query.status
+}
+
+// Finalizes and returns the results of a sliced path query.
+//
+//  Arguments:
+//   path      An ordered list of polygon references representing the path.
+//            (Start to end.) [(polyRef) * pathCount]
+//   maxPath   The max number of polygons the path array can hold. [Limit: >= 1]
+//
+//  Returns
+//   pathCount The number of polygons returned in the path array.
+//   st        The status flags for the query.
+// TODO: should remove maxPath as it should be the length of the path slice
+func (q *NavMeshQuery) FinalizeSlicedFindPath(path []PolyRef, maxPath int) (pathCount int, st Status) {
+	if StatusFailed(q.query.status) {
+		// Reset query.
+		q.query = queryData{}
+		return 0, Failure
+	}
+
+	var n int
+
+	if q.query.startRef == q.query.endRef {
+		// Special case: the search starts and ends at same poly.
+		path[n] = q.query.startRef
+		n++
+	} else {
+		// Reverse the path.
+		if q.query.lastBestNode == nil {
+			panic("q.query.lastBestNode should not be nil")
+		}
+
+		if q.query.lastBestNode.ID != q.query.endRef {
+			q.query.status |= PartialResult
+		}
+
+		var (
+			prev    *Node = nil
+			node    *Node = q.query.lastBestNode
+			prevRay int32 = 0
+		)
+		for {
+			next := q.nodePool.NodeAtIdx(int32(node.PIdx))
+			node.PIdx = q.nodePool.NodeIdx(prev)
+			prev = node
+			nextRay := node.Flags & nodeParentDetached
+			node.Flags = (node.Flags & ^nodeParentDetached) | NodeFlags(prevRay) // and store it in the reversed path's node
+			prevRay = int32(nextRay)
+			node = next
+			if node == nil {
+				break
+			}
+		}
+
+		// Store path
+		node = prev
+		for {
+			next := q.nodePool.NodeAtIdx(int32(node.PIdx))
+			var status Status
+			if (node.Flags & nodeParentDetached) != 0 {
+				var (
+					normal [3]float32
+					m      int
+				)
+				m, _, status = q.Raycast2(node.ID, node.Pos, next.Pos, q.query.filter, normal[:], path[n:], maxPath-n)
+				n += m
+				// raycast ends on poly boundary and the path might include the next poly boundary.
+				if path[n-1] == next.ID {
+					n-- // remove to avoid duplicates
+				}
+			} else {
+				path[n] = node.ID
+				n++
+				if n >= maxPath {
+					status = BufferTooSmall
+				}
+			}
+
+			if (status & StatusDetailMask) != 0 {
+				q.query.status |= status & StatusDetailMask
+				break
+			}
+			node = next
+			if node == nil {
+				break
+			}
+		}
+	}
+
+	details := q.query.status & StatusDetailMask
+
+	// Reset query.
+	q.query = queryData{}
+
+	return n, Success | details
+}
+
+// Finalizes and returns the results of an incomplete sliced path query,
+// returning the path to the furthest polygon on the existing path that was
+// visited during the search.
+//
+//  Arguments:
+//   existing     An array of polygon references for the existing path.
+//   existingSize The number of polygon in the existing array.
+//   path         An ordered list of polygon references representing the path.
+//                (Start to end.) [(polyRef) * pathCount]
+//   maxPath      The max number of polygons the path array can hold.
+//                [Limit: >= 1]
+//
+//  Returns
+//   pathCount    The number of polygons returned in the path array.
+//   st           The status flags for the query.
+func (q *NavMeshQuery) FinalizeSlicedFindPathPartial(existing []PolyRef, existingSize int, path []PolyRef, maxPath int) (pathCount int, st Status) {
+
+	if existingSize == 0 {
+		return 0, Failure
+	}
+
+	if StatusFailed(q.query.status) {
+		// Reset query.
+		q.query = queryData{}
+		return 0, Failure
+	}
+
+	var n int = 0
+
+	if q.query.startRef == q.query.endRef {
+		// Special case: the search starts and ends at same poly.
+		path[n] = q.query.startRef
+		n++
+	} else {
+		// Find furthest existing node that was visited.
+		var (
+			prev *Node
+			node []*Node = make([]*Node, 1)
+		)
+		for i := existingSize - 1; i >= 0; i-- {
+			panic("CHECK HERE")
+			q.nodePool.FindNodes(existing[i], node, 1)
+			// FIXME
+			// Original C/C++ code
+			//if node {
+			//break
+			//}
+			// seems to be equivalent to:
+			if node[0] != nil {
+				break
+			}
+		}
+
+		// TODO: same than before
+		// this is Original C/C++ code
+		//if !node {
+		if node[0] == nil {
+			q.query.status |= PartialResult
+			if q.query.lastBestNode == nil {
+				panic("q.query.lastBestNode should not be nil")
+			}
+			node[0] = q.query.lastBestNode
+		}
+
+		// Reverse the path.
+		var prevRay int32 = 0
+		for {
+			next := q.nodePool.NodeAtIdx(int32(node[0].PIdx))
+			node[0].PIdx = q.nodePool.NodeIdx(prev)
+			prev = node[0]
+			// keep track of whether parent is not adjacent (i.e. due to raycast shortcut)
+			nextRay := node[0].Flags & nodeParentDetached
+			// and store it in the reversed path's node
+			node[0].Flags = (node[0].Flags & ^nodeParentDetached) | NodeFlags(prevRay)
+			prevRay = int32(nextRay)
+			node[0] = next
+			if node[0] == nil {
+				break
+			}
+		}
+
+		// Store path
+		node[0] = prev
+		for {
+			next := q.nodePool.NodeAtIdx(int32(node[0].PIdx))
+			var status Status
+			if (node[0].Flags & nodeParentDetached) != 0 {
+				var (
+					normal [3]float32
+					m      int
+				)
+				m, _, status = q.Raycast2(node[0].ID, node[0].Pos, next.Pos, q.query.filter, normal[:], path[n:], maxPath-n)
+				n += m
+				// raycast ends on poly boundary and the path might include the next poly boundary.
+				if path[n-1] == next.ID {
+					n-- // remove to avoid duplicates
+				}
+			} else {
+				path[n] = node[0].ID
+				n++
+				if n >= maxPath {
+					status = BufferTooSmall
+				}
+			}
+
+			if (status & StatusDetailMask) != 0 {
+				q.query.status |= status & StatusDetailMask
+				break
+			}
+			node[0] = next
+			if node[0] == nil {
+				break
+			}
+		}
+	}
+
+	details := q.query.status & StatusDetailMask
+
+	// Reset query.
+	q.query = queryData{}
+
+	return n, Success | details
 }
