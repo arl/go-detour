@@ -602,9 +602,11 @@ func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 }
 
 func computeTileHash(x, y, mask int32) int32 {
-	h1 := 0x8da6b343 // Large multiplicative constants
-	h2 := 0xd8163841 // here arbitrarily chosen primes
-	n := h1*int(x) + h2*int(y)
+	const (
+		h1 int64 = 0x8da6b343 // Large multiplicative constants
+		h2 int64 = 0xd8163841 // here arbitrarily chosen primes
+	)
+	n := h1*int64(x) + h2*int64(y)
 	return int32(n) & mask
 }
 
