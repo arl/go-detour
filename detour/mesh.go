@@ -1518,6 +1518,22 @@ func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
 	return 0
 }
 
+func (m *NavMesh) TileByRef(ref TileRef) *MeshTile {
+	if ref == 0 {
+		return nil
+	}
+	tileIndex := m.decodePolyIDTile(PolyRef(ref))
+	tileSalt := m.decodePolyIDSalt(PolyRef(ref))
+	if int32(tileIndex) >= m.MaxTiles {
+		return nil
+	}
+	tile := &m.Tiles[tileIndex]
+	if tile.Salt != tileSalt {
+		return nil
+	}
+	return tile
+}
+
 /*
 func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
 	// Find tile based on hash.
