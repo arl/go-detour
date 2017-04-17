@@ -120,10 +120,10 @@ func (np *NodePool) Clear() {
 	np.nodeCount = 0
 }
 
-// Node returns a Node by ref and extra state information. If
-// there is none then allocate. There can be more than one node
-// for the same polyRef but with different extra state
-// information
+// Node returns a Node by ref and extra state information.
+//
+// If there is none then allocate. There can be more than one node for the same
+// polyRef but with different extra state information
 func (np *NodePool) Node(id PolyRef, state uint8) *Node {
 	bucket := hashRef(id) & uint32(np.hashSize-1)
 
@@ -159,8 +159,8 @@ func (np *NodePool) Node(id PolyRef, state uint8) *Node {
 	return node
 }
 
-// FindNode finds the node that corresponds to the given polygon
-// reference and having the given state
+// FindNode finds the node that corresponds to the given polygon reference and
+// having the given state
 func (np *NodePool) FindNode(id PolyRef, state uint8) *Node {
 	bucket := hashRef(id) & uint32(np.hashSize-1)
 	i := np.first[bucket]
@@ -173,11 +173,11 @@ func (np *NodePool) FindNode(id PolyRef, state uint8) *Node {
 	return nil
 }
 
-// FindNodes fills the provided nodes slices with nodes that
-// correspond to the given polygon reference.
+// FindNodes fills the provided nodes slices with nodes that correspond to the
+// given polygon reference.
 //
-// Note: No more than maxNodes will be returned (nodes should
-// have at least maxNodes elements)
+// Note: No more than maxNodes will be returned (nodes should have at least
+// maxNodes elements)
 func (np *NodePool) FindNodes(id PolyRef, nodes []*Node, maxNodes int32) uint32 {
 	assert.True(len(nodes) >= int(maxNodes), "nodes should contain at least maxNodes elements")
 
