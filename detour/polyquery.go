@@ -45,7 +45,7 @@ func (q *findNearestPolyQuery) process(tile *MeshTile, polys []*Poly, refs []Pol
 		)
 		posOverPoly := false
 		closestPtPoly = d3.NewVec3()
-		q.query.closestPointOnPoly(ref, q.center, closestPtPoly, &posOverPoly)
+		q.query.ClosestPointOnPoly(ref, q.center, closestPtPoly, &posOverPoly)
 
 		// If a point is directly over a polygon and closer than
 		// climb height, favor that instead of straight line nearest point.

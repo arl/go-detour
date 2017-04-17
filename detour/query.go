@@ -441,12 +441,12 @@ func (q *NavMeshQuery) FindStraightPath(
 
 	// TODO: Should this be callers responsibility?
 	closestStartPos := d3.NewVec3()
-	if StatusFailed(q.closestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
+	if StatusFailed(q.ClosestPointOnPolyBoundary(path[0], startPos, closestStartPos)) {
 		return 0, Failure | InvalidParam
 	}
 
 	closestEndPos := d3.NewVec3()
-	if StatusFailed(q.closestPointOnPolyBoundary(path[len(path)-1], endPos, closestEndPos)) {
+	if StatusFailed(q.ClosestPointOnPolyBoundary(path[len(path)-1], endPos, closestEndPos)) {
 		return 0, Failure | InvalidParam
 	}
 
@@ -486,7 +486,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				if StatusFailed(q.portalPoints6(path[i], path[i+1], left, right, &fromType, &toType)) {
 					// Failed to get portal points, in practice this means that path[i+1] is invalid polygon.
 					// Clamp the end point to path[i], and return the path so far.
-					if StatusFailed(q.closestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
+					if StatusFailed(q.ClosestPointOnPolyBoundary(path[i], endPos, closestEndPos)) {
 						// This should only happen when the first polygon is invalid.
 						return 0, Failure | InvalidParam
 					}
@@ -937,14 +937,14 @@ func (q *NavMeshQuery) pathToNode(
 	return pathCount, Success
 }
 
-// closestPointOnPoly uses the detail polygons to find the surface height.
+// ClosestPointOnPoly uses the detail polygons to find the surface height.
 // (Most accurate.)
 //
 // pos does not have to be within the bounds of the polygon or navigation mesh.
-// See closestPointOnPolyBoundary() for a limited but faster option.
+// See ClosestPointOnPolyBoundary() for a limited but faster option.
 //
 // Note: this method may be used by multiple clients without side effects.
-func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
+func (q *NavMeshQuery) ClosestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
 		tile *MeshTile
@@ -1045,7 +1045,7 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 	return Success
 }
 
-// closestPointOnPolyBoundary uses the detail polygons to find the surface
+// ClosestPointOnPolyBoundary uses the detail polygons to find the surface
 // height. (Much faster than closestPointOnPoly())
 //
 // If the provided position lies within the polygon's xz-bounds (above or
@@ -1054,7 +1054,7 @@ func (q *NavMeshQuery) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 // within the bounds of the polybon or the navigation mesh.
 //
 // Note: this method may be used by multiple clients without side effects.
-func (q *NavMeshQuery) closestPointOnPolyBoundary(ref PolyRef, pos, closest d3.Vec3) Status {
+func (q *NavMeshQuery) ClosestPointOnPolyBoundary(ref PolyRef, pos, closest d3.Vec3) Status {
 	var (
 		tile *MeshTile
 		poly *Poly
