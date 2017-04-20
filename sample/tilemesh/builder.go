@@ -529,6 +529,10 @@ func (tm *TileMesh) buildTileMesh(tx, ty int32, bmin, bmax []float32) []byte {
 	return navData
 }
 
+func (tm *TileMesh) NavMesh() *detour.NavMesh {
+	return &tm.navMesh
+}
+
 func (tm *TileMesh) BuildTile(pos d3.Vec3) {
 	bmin := tm.geom.NavMeshBoundsMin()
 	bmax := tm.geom.NavMeshBoundsMax()
