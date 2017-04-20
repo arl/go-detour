@@ -98,6 +98,68 @@ func distancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32)
 	return c
 }
 
+func projectPoly(axis d3.Vec3, poly []float32, npoly int32) (rmin, rmax float32) {
+	rmin = axis.Dot2D(poly[:3])
+	rmax = rmin
+	for i := int32(1); i < npoly; i++ {
+		d := axis.Dot2D(poly[i*3:])
+		if d < rmin {
+			rmin = d
+		}
+		if d > rmax {
+			rmax = d
+		}
+	}
+	return
+}
+
+func overlapRange(amin, amax, bmin, bmax, eps float32) bool {
+	return !((amin+eps) > bmax || (amax-eps) < bmin)
+}
+
+// OverlapPolyPoly2 determines if the two convex polygons overlap on the
+// xz-plane.
+//
+//  Arguments:
+//   polya    Polygon A vertices. [(x, y, z) * @p npolya]
+//   npolya   The number of vertices in polygon A.
+//   polyb    Polygon B vertices. [(x, y, z) * @p npolyb]
+//   npolyb   The number of vertices in polygon B.
+//
+//  Returns true if the two polygons overlap.
+//
+// All vertices are projected onto the xz-plane, so the y-values are ignored.
+func OverlapPolyPoly2D(polya []float32, npolya int32,
+	polyb []float32, npolyb int32) bool {
+	const eps = 1e-4
+
+	for i, j := int32(0), npolya-1; i < npolya; j, i = i, i+1 {
+		va := polya[j*3:]
+		vb := polya[i*3:]
+		n := []float32{vb[2] - va[2], 0, -(vb[0] - va[0])}
+		var amin, amax, bmin, bmax float32
+		amin, amax = projectPoly(n, polya, npolya)
+		bmin, bmax = projectPoly(n, polyb, npolyb)
+		if !overlapRange(amin, amax, bmin, bmax, eps) {
+			// Found separating axis
+			return false
+		}
+	}
+	for i, j := int32(0), npolyb-1; i < npolyb; j, i = i, i+1 {
+		va := polyb[j*3:]
+		vb := polyb[i*3:]
+		n := []float32{vb[2] - va[2], 0, -(vb[0] - va[0])}
+		var amin, amax, bmin, bmax float32
+		amin, amax = projectPoly(n, polya, npolya)
+		bmin, bmax = projectPoly(n, polyb, npolyb)
+		if !overlapRange(amin, amax, bmin, bmax, eps) {
+			// Found separating axis
+			return false
+		}
+	}
+	return true
+}
+
 func IntersectSegmentPoly2D(p0, p1 d3.Vec3, verts []float32, nverts int) (tmin, tmax float32, segMin, segMax int, res bool) {
 	const eps float32 = 0.00000001
 
