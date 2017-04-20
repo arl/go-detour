@@ -150,6 +150,7 @@ func IntersectSegmentPoly2D(p0, p1 d3.Vec3, verts []float32, nverts int) (tmin, 
 	return
 }
 
+// TODO: go-ify (return 2 params)
 func distancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
 	pqx := q[0] - p[0]
 	pqz := q[2] - p[2]
@@ -170,6 +171,7 @@ func distancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
 	return dx*dx + dz*dz
 }
 
+// TODO: go-ify (return 2 params)
 func closestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
 	v0 := c.Sub(a)
 	v1 := b.Sub(a)
