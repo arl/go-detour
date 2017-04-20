@@ -515,7 +515,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				// If starting really close the portal, advance.
 				if i == 0 {
 					var t float32
-					if distancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
+					if DistancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
 						continue
 					}
 				}
@@ -2377,7 +2377,7 @@ func (q *NavMeshQuery) FindLocalNeighbourhood(
 
 			// If the circle is not touching the next polygon, skip it.
 			var tseg float32
-			distSqr := distancePtSegSqr2D(centerPos, va[:], vb[:], &tseg)
+			distSqr := DistancePtSegSqr2D(centerPos, va[:], vb[:], &tseg)
 			if distSqr > radiusSqr {
 				continue
 			}

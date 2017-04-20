@@ -92,7 +92,7 @@ func distancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32)
 			(pt[0] < (vj[0]-vi[0])*(pt[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
 			c = !c
 		}
-		ed[j] = distancePtSegSqr2D(pt, vj, vi, &et[j])
+		ed[j] = DistancePtSegSqr2D(pt, vj, vi, &et[j])
 		j = int32(i)
 	}
 	return c
@@ -213,7 +213,7 @@ func IntersectSegmentPoly2D(p0, p1 d3.Vec3, verts []float32, nverts int) (tmin, 
 }
 
 // TODO: go-ify (return 2 params)
-func distancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
+func DistancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
 	pqx := q[0] - p[0]
 	pqz := q[2] - p[2]
 	dx := pt[0] - p[0]
