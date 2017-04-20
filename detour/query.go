@@ -2002,7 +2002,7 @@ func insertInterval(ints []segInterval, nints *int, maxInts int, tmin, tmax uint
 //  Returns
 //   Status the status flags for the query.
 func (q *NavMeshQuery) PolyWallSegments(ref PolyRef, filter QueryFilter,
-	segmentVerts []float32, segmentRefs *[]PolyRef, segmentCount *int, maxSegments int) Status {
+	segmentVerts []float32, segmentRefs []PolyRef, segmentCount *int, maxSegments int) Status {
 	if q.nav == nil {
 		panic("q.nav should not be nil")
 	}
@@ -2071,7 +2071,7 @@ func (q *NavMeshQuery) PolyWallSegments(ref PolyRef, filter QueryFilter,
 				copy(seg, vj[:3])
 				copy(seg[3:], vi[:3])
 				if segmentRefs != nil {
-					(*segmentRefs)[n] = neiRef
+					segmentRefs[n] = neiRef
 				}
 				n++
 			} else {
@@ -2098,7 +2098,7 @@ func (q *NavMeshQuery) PolyWallSegments(ref PolyRef, filter QueryFilter,
 					d3.Vec3Lerp(seg, vj, vi, tmin)
 					d3.Vec3Lerp(seg[3:], vj, vi, tmax)
 					if segmentRefs != nil {
-						(*segmentRefs)[n] = ints[k].ref
+						segmentRefs[n] = ints[k].ref
 					}
 					n++
 				} else {
@@ -2117,7 +2117,7 @@ func (q *NavMeshQuery) PolyWallSegments(ref PolyRef, filter QueryFilter,
 					d3.Vec3Lerp(seg, vj, vi, tmin)
 					d3.Vec3Lerp(seg[3:], vj, vi, tmax)
 					if segmentRefs != nil {
-						(*segmentRefs)[n] = 0
+						segmentRefs[n] = 0
 					}
 					n++
 				} else {
