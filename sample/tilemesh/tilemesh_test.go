@@ -2,12 +2,14 @@ package tilemesh
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/go-detour/recast"
+	"github.com/aurelien-rainone/go-detour/sample"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
 )
 
@@ -46,7 +48,7 @@ func compareFiles(fn1, fn2 string) (bool, error) {
 const testDataDir = "../../testdata/sample/tilemesh/"
 const OBJDir = "../../testdata/obj/"
 
-func testCreateTileMesh(t *testing.T, objName string) {
+func testCreateTileMesh(t *testing.T, objName string) *TileMesh {
 	var (
 		path, meshBinPath string
 		outBin            string
@@ -88,6 +90,9 @@ func testCreateTileMesh(t *testing.T, objName string) {
 	if !ok {
 		t.Fatalf("%v and %v are different", outBin, meshBinPath)
 	}
+
+	// return the tile mesh for eventual further processing/testing
+	return tileMesh
 }
 
 func TestCreateDevelerTileNavMesh(t *testing.T) {
@@ -134,6 +139,24 @@ func TestCreateStair3TileNavMesh(t *testing.T) {
 
 func TestCreateHillTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "hill")
+}
+
+func TestModifyDevelerNavMesh(t *testing.T) {
+	var tm *TileMesh = testCreateTileMesh(t, "develer")
+
+	// Create triangle.
+	verts := [12]float32{
+		0, 0, 0,
+		2, 0, 0,
+		2, 0, 2,
+		0, 0, 2,
+	}
+	fmt.Println(verts)
+
+	geom := tm.InputGeom()
+	geom.AddConvexVolume(verts[:], len(verts)/3, 0, 3, sample.PolyAreaGround)
+	//tm.RemoveTile(d3.NewVec3XYZ(3, 0, 3))
+	tm.NavMesh().SaveToFile("develer.tileless.bin")
 }
 
 func benchmarkCreateTileNavMesh(b *testing.B, objName string) {
