@@ -2245,3 +2245,217 @@ func (q *NavMeshQuery) FinalizeSlicedFindPathPartial(existing []PolyRef, existin
 
 	return n, Success | details
 }
+
+// This method is optimized for a small search radius and small number of result
+// polygons.
+//
+// Candidate polygons are found by searching the navigation graph beginning at
+// the start polygon.
+//
+// The same intersection test restrictions that apply to the
+// findPolysAroundCircle mehtod applies to this method.
+//
+// The value of the center point is used as the start point for cost
+// calculations.  It is not projected onto the surface of the mesh, so its
+// y-value will effect the costs.
+//
+// Intersection tests occur in 2D. All polygons and the search circle are
+// projected onto the xz-plane. So the y-value of the center point does not
+// effect intersection tests.
+//
+// If the result arrays are is too small to hold the entire result set, they
+// will be filled to capacity.
+func (q *NavMeshQuery) FindLocalNeighbourhood(
+	startRef PolyRef, centerPos d3.Vec3, radius float32, filter QueryFilter,
+	resultRef []PolyRef, resultParent *[]PolyRef, resultCount *int, maxResult int) Status {
+	if q.nav == nil {
+		panic("nav should not be nil")
+	}
+	if q.tinyNodePool == nil {
+		panic("tinyNodePool should not be nil")
+	}
+
+	*resultCount = 0
+
+	// Validate input
+	if startRef == 0 || !q.nav.IsValidPolyRef(startRef) {
+		return Failure | InvalidParam
+	}
+
+	const MAX_STACK = 48
+	var (
+		stack  [MAX_STACK]*Node
+		nstack int = 0
+	)
+
+	q.tinyNodePool.Clear()
+
+	startNode := q.tinyNodePool.Node(startRef, 0)
+	startNode.PIdx = 0
+	startNode.ID = startRef
+	startNode.Flags = nodeClosed
+	stack[nstack] = startNode
+	nstack++
+
+	radiusSqr := radius * radius
+
+	var (
+		pa [VertsPerPolygon * 3]float32
+		pb [VertsPerPolygon * 3]float32
+	)
+
+	var status Status = Success
+
+	var n int = 0
+	if n < maxResult {
+		resultRef[n] = startNode.ID
+		if resultParent != nil {
+			(*resultParent)[n] = 0
+		}
+		n++
+	} else {
+		status |= BufferTooSmall
+	}
+
+	for nstack != 0 {
+		// Pop front.
+		curNode := stack[0]
+		for i := 0; i < nstack-1; i++ {
+			stack[i] = stack[i+1]
+		}
+		nstack--
+
+		// Get poly and tile.
+		// The API input has been cheked already, skip checking internal data.
+		var (
+			curRef  PolyRef   = curNode.ID
+			curTile *MeshTile = nil
+			curPoly *Poly     = nil
+		)
+		q.nav.TileAndPolyByRefUnsafe(curRef, &curTile, &curPoly)
+
+		for i := curPoly.FirstLink; i != nullLink; i = curTile.Links[i].Next {
+			link := &curTile.Links[i]
+			neighbourRef := link.Ref
+			// Skip invalid neighbours.
+			if neighbourRef == 0 {
+				continue
+			}
+
+			// Skip if cannot allocate more nodes.
+			neighbourNode := q.tinyNodePool.Node(neighbourRef, 0)
+			if neighbourNode == nil {
+				continue
+			}
+			// Skip visited.
+			if (neighbourNode.Flags & nodeClosed) != 0 {
+				continue
+			}
+
+			// Expand to neighbour
+			var (
+				neighbourTile *MeshTile = nil
+				neighbourPoly *Poly     = nil
+			)
+			q.nav.TileAndPolyByRefUnsafe(neighbourRef, &neighbourTile, &neighbourPoly)
+
+			// Skip off-mesh connections.
+			if neighbourPoly.Type() == polyTypeOffMeshConnection {
+				continue
+			}
+
+			// Do not advance if the polygon is excluded by the filter.
+			if !filter.PassFilter(neighbourRef, neighbourTile, neighbourPoly) {
+				continue
+			}
+
+			// Find edge and calc distance to the edge.
+			var va, vb [3]float32
+			if q.portalPoints8(curRef, curPoly, curTile, neighbourRef, neighbourPoly, neighbourTile, va[:], vb[:]) == 0 {
+				continue
+			}
+
+			// If the circle is not touching the next polygon, skip it.
+			var tseg float32
+			distSqr := distancePtSegSqr2D(centerPos, va[:], vb[:], &tseg)
+			if distSqr > radiusSqr {
+				continue
+			}
+
+			// Mark node visited, this is done before the overlap test so that
+			// we will not visit the poly again if the test fails.
+			neighbourNode.Flags |= nodeClosed
+			neighbourNode.PIdx = q.tinyNodePool.NodeIdx(curNode)
+
+			// Check that the polygon does not collide with existing polygons.
+
+			// Collect vertices of the neighbour poly.
+			npa := neighbourPoly.VertCount
+			var vidx uint16
+			for k := uint8(0); k < npa; k++ {
+				vidx = neighbourPoly.Verts[k] * 3
+				copy(pa[k*3:], neighbourTile.Verts[vidx:vidx+3])
+			}
+
+			overlap := false
+			for j := 0; j < n; j++ {
+				pastRef := resultRef[j]
+
+				// Connected polys do not overlap.
+				connected := false
+				for k := curPoly.FirstLink; k != nullLink; k = curTile.Links[k].Next {
+					if curTile.Links[k].Ref == pastRef {
+						connected = true
+						break
+					}
+				}
+				if connected {
+					continue
+				}
+
+				// Potentially overlapping.
+				var (
+					pastTile *MeshTile = nil
+					pastPoly *Poly     = nil
+				)
+				q.nav.TileAndPolyByRefUnsafe(pastRef, &pastTile, &pastPoly)
+
+				// Get vertices and test overlap
+				npb := pastPoly.VertCount
+				var vidx uint16
+				for k := uint8(0); k < npb; k++ {
+					vidx = pastPoly.Verts[k] * 3
+					copy(pb[k*3:], pastTile.Verts[vidx:vidx+3])
+				}
+
+				if OverlapPolyPoly2D(pa[:], int32(npa), pb[:], int32(npb)) {
+					overlap = true
+					break
+				}
+			}
+			if overlap {
+				continue
+			}
+
+			// This poly is fine, store and advance to the poly.
+			if n < maxResult {
+				resultRef[n] = neighbourRef
+				if resultParent != nil {
+					(*resultParent)[n] = curRef
+				}
+				n++
+			} else {
+				status |= BufferTooSmall
+			}
+
+			if nstack < MAX_STACK {
+				stack[nstack] = neighbourNode
+				nstack++
+			}
+		}
+	}
+
+	*resultCount = n
+
+	return status
+}
