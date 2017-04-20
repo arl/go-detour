@@ -8,7 +8,7 @@ func hashPos2(x, y, n int32) int32 {
 	return ((x * 73856093) ^ (y * 19349663)) & (n - 1)
 }
 
-type Item struct {
+type item struct {
 	id   uint16
 	x, y int16
 	next uint16
@@ -18,7 +18,7 @@ type ProximityGrid struct {
 	cellSize    float32
 	invCellSize float32
 
-	pool     []Item
+	pool     []item
 	poolHead int
 	poolSize int
 
@@ -47,7 +47,7 @@ func NewProximityGrid(poolSize int, cellSize float32) *ProximityGrid {
 	// Allocate pool of items.
 	pg.poolSize = poolSize
 	pg.poolHead = 0
-	pg.pool = make([]Item, poolSize)
+	pg.pool = make([]item, poolSize)
 
 	pg.Clear()
 	return pg
