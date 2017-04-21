@@ -141,22 +141,24 @@ func TestCreateHillTileNavMesh(t *testing.T) {
 	testCreateTileMesh(t, "hill")
 }
 
-func TestModifyDevelerNavMesh(t *testing.T) {
+func TestConvexVolumes(t *testing.T) {
 	var tm *TileMesh = testCreateTileMesh(t, "develer")
 
 	// Create triangle.
 	verts := [12]float32{
-		0, 0, 0,
-		2, 0, 0,
-		2, 0, 2,
-		0, 0, 2,
+		45.638279, -0.000004, 27.330086,
+		47.537388, 0.000004, 27.179577,
+		47.273746, 0.000000, 28.910891,
+		45.678337, 0.000004, 29.147795,
 	}
 	fmt.Println(verts)
+	const height = 3
 
 	geom := tm.InputGeom()
-	geom.AddConvexVolume(verts[:], len(verts)/3, 0, 3, sample.PolyAreaGround)
-	//tm.RemoveTile(d3.NewVec3XYZ(3, 0, 3))
-	tm.NavMesh().SaveToFile("develer.tileless.bin")
+	geom.AddConvexVolume(verts[:], len(verts)/3, 0, height, sample.PolyAreaGround)
+
+	// we should just perform a pathfinding before and after the addition of
+	// the convex volum to check that it actually modifies the path
 }
 
 func benchmarkCreateTileNavMesh(b *testing.B, objName string) {
