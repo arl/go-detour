@@ -1717,6 +1717,189 @@ func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
 	return hit.PathCount, hit.T, status
 }
 
+type segInterval struct {
+	ref        PolyRef
+	tmin, tmax uint16
+}
+
+func insertInterval(ints []segInterval, nints *int, maxInts int, tmin, tmax uint16, ref PolyRef) {
+	if *nints+1 > maxInts {
+		return
+	}
+	// Find insertion point.
+	var idx int
+	for idx < *nints {
+		if tmax <= ints[idx].tmin {
+			break
+		}
+		idx++
+	}
+	// Move current results.
+	if (*nints - idx) != 0 {
+		copy(ints[idx+1:], ints[idx:*nints])
+	}
+	// Store
+	ints[idx].ref = ref
+	ints[idx].tmin = tmin
+	ints[idx].tmax = tmax
+	(*nints)++
+}
+
+// PolyWall returns the segments for the specified polygon, optionally including
+// portals.
+//
+// If the segmentRefs parameter is provided, then all polygon segments will be
+// returned. Otherwise only the wall segments are returned.
+//
+// A segment that is normally a portal will be included in the result set as a
+// wall if the filter results in the neighbor polygon becoomming impassable.
+//
+// The segmentVerts and segmentRefs buffers should normally be sized for the
+// maximum segments per polygon of the source navigation mesh.
+//
+//  Arguments:
+//   re           The reference id of the polygon.
+//   filter       The polygon filter to apply to the query.
+//   segmentVerts The segments. [(ax, ay, az, bx, by, bz) * segmentCount]
+//   segmentRefs  The reference ids of each segment's neighbor polygon.
+//                Or zero if the segment is a wall.
+//                [(parentRef) * segmentCount]
+//   segmentCount The number of segments returned.
+//   maxSegments  The maximum number of segments the result arrays can hold.
+//
+//  Returns
+//   Status the status flags for the query.
+func (q *NavMeshQuery) PolyWallSegments(ref PolyRef, filter QueryFilter,
+	segmentVerts []float32, segmentRefs *[]PolyRef, segmentCount *int, maxSegments int) Status {
+	if q.nav == nil {
+		panic("q.nav should not be nil")
+	}
+
+	*segmentCount = 0
+
+	var (
+		tile *MeshTile
+		poly *Poly
+	)
+
+	if StatusFailed(q.nav.TileAndPolyByRef(ref, &tile, &poly)) {
+		return Failure | InvalidParam
+	}
+
+	const MAX_INTERVAL = 16
+	var (
+		n            int
+		ints         [MAX_INTERVAL]segInterval
+		nints        int
+		storePortals = segmentRefs != nil
+	)
+
+	var status Status = Success
+
+	for i, j := 0, int(poly.VertCount)-1; i < int(poly.VertCount); j, i = i, i+1 {
+		// Skip non-solid edges.
+		nints = 0
+		if (poly.Neis[j] & extLink) != 0 {
+			// Tile border.
+			for k := poly.FirstLink; k != nullLink; k = tile.Links[k].Next {
+				link := &tile.Links[k]
+				if int(link.Edge) == j {
+					if link.Ref != 0 {
+						var (
+							neiTile *MeshTile
+							neiPoly *Poly
+						)
+						q.nav.TileAndPolyByRefUnsafe(link.Ref, &neiTile, &neiPoly)
+						if filter.PassFilter(link.Ref, neiTile, neiPoly) {
+							insertInterval(ints[:], &nints, MAX_INTERVAL, uint16(link.BMin), uint16(link.BMax), link.Ref)
+						}
+					}
+				}
+			}
+		} else {
+			// Internal edge
+			var neiRef PolyRef
+			if poly.Neis[j] != 0 {
+				idx := poly.Neis[j] - 1
+				neiRef = q.nav.polyRefBase(tile) | PolyRef(idx)
+				if !filter.PassFilter(neiRef, tile, &tile.Polys[idx]) {
+					neiRef = 0
+				}
+			}
+
+			// If the edge leads to another polygon and portals are not stored, skip.
+			if neiRef != 0 && !storePortals {
+				continue
+			}
+
+			if n < maxSegments {
+				vj := tile.Verts[poly.Verts[j]*3:]
+				vi := tile.Verts[poly.Verts[i]*3:]
+				seg := segmentVerts[n*6:]
+				copy(seg, vj[:3])
+				copy(seg[3:], vi[:3])
+				if segmentRefs != nil {
+					(*segmentRefs)[n] = neiRef
+				}
+				n++
+			} else {
+				status |= BufferTooSmall
+			}
+
+			continue
+		}
+
+		// Add sentinels
+		insertInterval(ints[:], &nints, MAX_INTERVAL, math.MaxUint16, 0, 0)
+		insertInterval(ints[:], &nints, MAX_INTERVAL, 255, 256, 0)
+
+		// Store segments.
+		vj := tile.Verts[poly.Verts[j]*3:]
+		vi := tile.Verts[poly.Verts[i]*3:]
+		for k := 1; k < nints; k++ {
+			// Portal segment.
+			if storePortals && (ints[k].ref != 0) {
+				tmin := float32(ints[k].tmin) / 255.0
+				tmax := float32(ints[k].tmax) / 255.0
+				if n < maxSegments {
+					seg := segmentVerts[n*6:]
+					d3.Vec3Lerp(seg, vj, vi, tmin)
+					d3.Vec3Lerp(seg[3:], vj, vi, tmax)
+					if segmentRefs != nil {
+						(*segmentRefs)[n] = ints[k].ref
+					}
+					n++
+				} else {
+					status |= BufferTooSmall
+				}
+			}
+
+			// Wall segment.
+			imin := ints[k-1].tmax
+			imax := ints[k].tmin
+			if imin != imax {
+				tmin := float32(imin) / 255.0
+				tmax := float32(imax) / 255.0
+				if n < maxSegments {
+					seg := segmentVerts[n*6:]
+					d3.Vec3Lerp(seg, vj, vi, tmin)
+					d3.Vec3Lerp(seg[3:], vj, vi, tmax)
+					if segmentRefs != nil {
+						(*segmentRefs)[n] = 0
+					}
+					n++
+				} else {
+					status |= BufferTooSmall
+				}
+			}
+		}
+	}
+
+	*segmentCount = n
+
+	return status
+}
+
 // Intializes a sliced path query.
 //
 // Common use case:
