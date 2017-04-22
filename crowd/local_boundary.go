@@ -116,8 +116,7 @@ func (lb *LocalBoundary) update(ref detour.PolyRef, pos d3.Vec3, collisionQueryR
 		for k := 0; k < nsegs; k++ {
 			s := segs[k*6:]
 			// Skip too distant segments.
-			var tseg float32
-			distSqr := detour.DistancePtSegSqr2D(pos, s, s[3:], &tseg)
+			distSqr, _ := detour.DistancePtSegSqr2D(pos, s, s[3:])
 			if distSqr > collisionQueryRange*collisionQueryRange {
 				continue
 			}
