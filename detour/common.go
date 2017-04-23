@@ -118,7 +118,7 @@ func distancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32)
 			(pt[0] < (vj[0]-vi[0])*(pt[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
 			c = !c
 		}
-		ed[j] = DistancePtSegSqr2D(pt, vj, vi, &et[j])
+		ed[j], et[j] = DistancePtSegSqr2D(pt, vj, vi)
 		j = int32(i)
 	}
 	return c
@@ -238,29 +238,30 @@ func IntersectSegmentPoly2D(p0, p1 d3.Vec3, verts []float32, nverts int) (tmin, 
 	return
 }
 
-// TODO: go-ify (return 2 params)
-func DistancePtSegSqr2D(pt, p, q d3.Vec3, t *float32) float32 {
+// Returns the squared distance and t
+func DistancePtSegSqr2D(pt, p, q d3.Vec3) (dist, t float32) {
 	pqx := q[0] - p[0]
 	pqz := q[2] - p[2]
 	dx := pt[0] - p[0]
 	dz := pt[2] - p[2]
 	d := pqx*pqx + pqz*pqz
-	*t = pqx*dx + pqz*dz
+	t = pqx*dx + pqz*dz
 	if d > 0 {
-		*t /= d
+		t /= d
 	}
-	if *t < float32(0) {
-		*t = 0
-	} else if *t > 1 {
-		*t = 1
+	if t < float32(0) {
+		t = 0
+	} else if t > 1 {
+		t = 1
 	}
-	dx = p[0] + *t*pqx - pt[0]
-	dz = p[2] + *t*pqz - pt[2]
-	return dx*dx + dz*dz
+	dx = p[0] + t*pqx - pt[0]
+	dz = p[2] + t*pqz - pt[2]
+	return dx*dx + dz*dz, t
 }
 
-// TODO: go-ify (return 2 params)
-func closestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
+// Return the height and a boolean indicating if p lies in the triangle formed
+// by a, b and c
+func closestHeightPointTriangle(p, a, b, c d3.Vec3) (float32, bool) {
 	v0 := c.Sub(a)
 	v1 := b.Sub(a)
 	v2 := p.Sub(a)
@@ -282,11 +283,10 @@ func closestHeightPointTriangle(p, a, b, c d3.Vec3, h *float32) bool {
 
 	// If point lies inside the triangle, return interpolated ycoord.
 	if u >= -EPS && v >= -EPS && (u+v) <= 1+EPS {
-		*h = a[1] + v0[1]*u + v1[1]*v
-		return true
+		return a[1] + v0[1]*u + v1[1]*v, true
 	}
 
-	return false
+	return 0, false
 }
 
 func oppositeTile(side int32) int32 {

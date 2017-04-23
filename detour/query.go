@@ -514,8 +514,7 @@ func (q *NavMeshQuery) FindStraightPath(
 
 				// If starting really close the portal, advance.
 				if i == 0 {
-					var t float32
-					if DistancePtSegSqr2D(portalApex, left, right, &t) < math32.Sqr(0.001) {
+					if dist, _ := DistancePtSegSqr2D(portalApex, left, right); dist < math32.Sqr(0.001) {
 						continue
 					}
 				}
@@ -815,8 +814,7 @@ func (q *NavMeshQuery) MoveAlongSurface(startRef PolyRef, startPos, endPos d3.Ve
 				// Wall edge, calc distance.
 				vj := verts[j*3:]
 				vi := verts[i*3:]
-				var tseg float32
-				distSqr := DistancePtSegSqr2D(endPos, vj, vi, &tseg)
+				distSqr, tseg := DistancePtSegSqr2D(endPos, vj, vi)
 				if distSqr < bestDist {
 					// Update nearest distance.
 					d3.Vec3Lerp(bestPos, vj, vi, tseg)
@@ -839,8 +837,7 @@ func (q *NavMeshQuery) MoveAlongSurface(startRef PolyRef, startPos, endPos d3.Ve
 					// TODO: Maybe should use getPortalPoints(), but this one is way faster.
 					vj := verts[j*3:]
 					vi := verts[i*3:]
-					var tseg float32
-					distSqr := DistancePtSegSqr2D(searchPos, vj, vi, &tseg)
+					distSqr, _ := DistancePtSegSqr2D(searchPos, vj, vi)
 					if distSqr > searchRadSqr {
 						continue
 					}
@@ -1268,8 +1265,7 @@ func (q *NavMeshQuery) ClosestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, pos
 				v[k] = tile.DetailVerts[idx : idx+3]
 			}
 		}
-		var h float32
-		if closestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
+		if h, intriangle := closestHeightPointTriangle(closest, v[0], v[1], v[2]); intriangle {
 			closest[1] = h
 			break
 		}
@@ -2791,8 +2787,7 @@ func (q *NavMeshQuery) FindLocalNeighbourhood(
 			}
 
 			// If the circle is not touching the next polygon, skip it.
-			var tseg float32
-			distSqr := DistancePtSegSqr2D(centerPos, va[:], vb[:], &tseg)
+			distSqr, _ := DistancePtSegSqr2D(centerPos, va[:], vb[:])
 			if distSqr > radiusSqr {
 				continue
 			}

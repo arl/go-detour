@@ -1066,8 +1066,7 @@ func (m *NavMesh) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverP
 				v[k] = tile.DetailVerts[vidx : vidx+3]
 			}
 		}
-		var h float32
-		if closestHeightPointTriangle(closest, v[0], v[1], v[2], &h) {
+		if h, intriangle := closestHeightPointTriangle(closest, v[0], v[1], v[2]); intriangle {
 			closest[1] = h
 			break
 		}
