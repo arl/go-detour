@@ -82,6 +82,32 @@ func OverlapBounds(amin, amax, bmin, bmax []float32) bool {
 	return true
 }
 
+// PointInPolygon determines if the specified point is inside the convex polygon
+// on the xz-plane.
+//
+//  Arguments:
+//  pt        The point to check. [(x, y, z)]
+//  verts     The polygon vertices. [(x, y, z) * nverts]
+//  nverts    The number of vertices. [Limit: >= 3]
+//
+//  Return true if the point is inside the polygon.
+//
+// All points are projected onto the xz-plane, so the y-values are ignored.
+func PointInPolygon(pt d3.Vec3, verts []float32, nverts int) bool {
+	// TODO: Replace pnpoly with triArea2D tests?
+	var i, j int
+	c := false
+	for i, j = 0, nverts-1; i < nverts; j, i = i, i+1 {
+		vi := verts[i*3:]
+		vj := verts[j*3:]
+		if ((vi[2] > pt[2]) != (vj[2] > pt[2])) &&
+			(pt[0] < (vj[0]-vi[0])*(pt[2]-vi[2])/(vj[2]-vi[2])+vi[0]) {
+			c = !c
+		}
+	}
+	return c
+}
+
 func distancePtPolyEdgesSqr(pt, verts []float32, nverts int32, ed, et []float32) bool {
 	// TODO: Replace pnpoly with triArea2D tests?
 	c := false

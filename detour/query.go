@@ -662,6 +662,238 @@ func (q *NavMeshQuery) FindStraightPath(
 	return count, stat
 }
 
+// MoveAlongSurface moves from the start to the end position constrained to the
+// navigation mesh.
+//
+//  Arguments:
+//   startRef       The reference id of the start polygon.
+//   startPos       A position of the mover within the start polygon. [(x, y, x)]
+//   endPos         The desired end position of the mover. [(x, y, z)]
+//   filter         The polygon filter to apply to the query.
+//   resultPos      The result position of the mover. [(x, y, z)]
+//   visited        The reference ids of the polygons visited during the move.
+//   visitedCount   The number of polygons visited during the move.
+//   maxVisitedSize The maximum number of polygons the visited array can hold.
+//
+//  Returns the status flags for the query.
+//
+// This method is optimized for small delta movement and a small number of
+// polygons. If used for too great a distance, the result set will form an
+// incomplete path.
+//
+// resultPos will equal the endPos if the end is reached.  Otherwise the closest
+// reachable position will be returned.
+//
+// resultPos is not projected onto the surface of the navigation mesh. Use
+// PolyHeight if this is needed.
+//
+// This method treats the end position in the same manner as the Raycast method.
+// (As a 2D point.) See that method's documentation
+// for details.
+//
+// If the visited array is too small to hold the entire result set, it will be
+// filled as far as possible from the start position toward the end position.
+func (q *NavMeshQuery) MoveAlongSurface(startRef PolyRef, startPos, endPos d3.Vec3, filter QueryFilter, resultPos d3.Vec3, visited []PolyRef, visitedCount *int, maxVisitedSize int) Status {
+	if q.nav == nil {
+		panic("q.nav should not be nil")
+	}
+	if q.tinyNodePool == nil {
+		panic("q.tinyNodePool should not be nil")
+	}
+
+	*visitedCount = 0
+
+	// Validate input
+	if startRef == 0 {
+		return Failure | InvalidParam
+	}
+	if q.nav.IsValidPolyRef(startRef) {
+		return Failure | InvalidParam
+	}
+
+	const MAX_STACK = 48
+	var (
+		status Status = Success
+		stack  [MAX_STACK]*Node
+		nstack int = 0
+	)
+
+	q.tinyNodePool.Clear()
+
+	startNode := q.tinyNodePool.Node(startRef, 0)
+	startNode.PIdx = 0
+	startNode.Cost = 0
+	startNode.Total = 0
+	startNode.ID = startRef
+	startNode.Flags = nodeClosed
+	stack[nstack] = startNode
+	nstack++
+
+	var (
+		bestPos        = d3.NewVec3From(startPos)
+		bestDist       = math32.MaxFloat32
+		bestNode *Node = nil
+	)
+
+	// Search constraints
+	searchPos := startPos.Lerp(endPos, 0.5)
+	searchRadSqr := startPos.Dist(endPos)/2.0 + 0.001
+	searchRadSqr *= searchRadSqr
+
+	var verts [VertsPerPolygon * 3]float32
+
+	for nstack != 0 {
+		// Pop front.
+		curNode := stack[0]
+		for i := 0; i < nstack-1; i++ {
+			stack[i] = stack[i+1]
+		}
+		nstack--
+
+		// Get poly and tile.
+		// The API input has been cheked already, skip checking internal data.
+		var (
+			curRef            = curNode.ID
+			curTile *MeshTile = nil
+			curPoly *Poly     = nil
+		)
+		q.nav.TileAndPolyByRefUnsafe(curRef, &curTile, &curPoly)
+
+		// Collect vertices.
+		nverts := curPoly.VertCount
+		for i := uint8(0); i < nverts; i++ {
+			d3.Vec3Copy(verts[i*3:], curTile.Verts[curPoly.Verts[i]*3:])
+		}
+
+		// If target is inside the poly, stop search.
+		if PointInPolygon(endPos, verts[:], int(nverts)) {
+			bestNode = curNode
+			d3.Vec3Copy(bestPos, endPos)
+			break
+		}
+
+		// Find wall edges and find nearest point inside the walls.
+		for i, j := int32(0), int32(curPoly.VertCount-1); i < int32(curPoly.VertCount); j, i = i, i+1 {
+			// Find links to neighbours.
+			const MAX_NEIS = 8
+			var (
+				nneis int = 0
+				neis  [MAX_NEIS]PolyRef
+			)
+
+			if (curPoly.Neis[j] & extLink) != 0 {
+				// Tile border.
+				for k := curPoly.FirstLink; k != nullLink; k = curTile.Links[k].Next {
+					link := &curTile.Links[k]
+					if int32(link.Edge) == j {
+						if link.Ref != 0 {
+							var (
+								neiTile *MeshTile = nil
+								neiPoly *Poly     = nil
+							)
+							q.nav.TileAndPolyByRefUnsafe(link.Ref, &neiTile, &neiPoly)
+							if filter.PassFilter(link.Ref, neiTile, neiPoly) {
+								if nneis < MAX_NEIS {
+									neis[nneis] = link.Ref
+									nneis++
+								}
+							}
+						}
+					}
+				}
+			} else if curPoly.Neis[j] != 0 {
+				idx := uint32(curPoly.Neis[j] - 1)
+				ref := q.nav.polyRefBase(curTile) | PolyRef(idx)
+				if filter.PassFilter(ref, curTile, &curTile.Polys[idx]) {
+					// Internal edge, encode id.
+					neis[nneis] = ref
+					nneis++
+				}
+			}
+
+			if nneis == 0 {
+				// Wall edge, calc distance.
+				vj := verts[j*3:]
+				vi := verts[i*3:]
+				var tseg float32
+				distSqr := DistancePtSegSqr2D(endPos, vj, vi, &tseg)
+				if distSqr < bestDist {
+					// Update nearest distance.
+					d3.Vec3Lerp(bestPos, vj, vi, tseg)
+					bestDist = distSqr
+					bestNode = curNode
+				}
+			} else {
+				for k := 0; k < nneis; k++ {
+					// Skip if no node can be allocated.
+					neighbourNode := q.tinyNodePool.Node(neis[k], 0)
+					if neighbourNode == nil {
+						continue
+					}
+					// Skip if already visited.
+					if (neighbourNode.Flags & nodeClosed) != 0 {
+						continue
+					}
+
+					// Skip the link if it is too far from search constraint.
+					// TODO: Maybe should use getPortalPoints(), but this one is way faster.
+					vj := verts[j*3:]
+					vi := verts[i*3:]
+					var tseg float32
+					distSqr := DistancePtSegSqr2D(searchPos, vj, vi, &tseg)
+					if distSqr > searchRadSqr {
+						continue
+					}
+
+					// Mark as the node as visited and push to queue.
+					if nstack < MAX_STACK {
+						neighbourNode.PIdx = q.tinyNodePool.NodeIdx(curNode)
+						neighbourNode.Flags |= nodeClosed
+						stack[nstack] = neighbourNode
+						nstack++
+					}
+				}
+			}
+		}
+	}
+
+	var n int
+	if bestNode != nil {
+		// Reverse the path.
+		var prev, node *Node = nil, bestNode
+		for {
+			next := q.tinyNodePool.NodeAtIdx(int32(node.PIdx))
+			node.PIdx = q.tinyNodePool.NodeIdx(prev)
+			prev = node
+			node = next
+			if node == nil {
+				break
+			}
+		}
+
+		// Store result
+		node = prev
+		for {
+			visited[n] = node.ID
+			n++
+			if n >= maxVisitedSize {
+				status |= BufferTooSmall
+				break
+			}
+			node = q.tinyNodePool.NodeAtIdx(int32(node.PIdx))
+			if node == nil {
+				break
+			}
+		}
+	}
+
+	d3.Vec3Copy(resultPos, bestPos)
+
+	*visitedCount = n
+
+	return status
+}
+
 // appendPortals appends intermediate portal points to a straight path.
 func (q *NavMeshQuery) appendPortals(
 	startIdx, endIdx int,
