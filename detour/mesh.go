@@ -1502,8 +1502,7 @@ func (m *NavMesh) neighbourTilesAt(x, y, side int32, tiles []*MeshTile, maxTiles
 //   layer   The tile's layer. (x, y, layer)
 //
 // Return The tile reference of the tile, or 0 if there is none.
-// TODO: verify that this function is equivalent with this other version
-// (commented out below)
+// TODO: verify that this function is equivalent with the original version
 func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
 	// Find tile based on hash.
 	h := computeTileHash(x, y, m.TileLUTMask)
@@ -1535,24 +1534,6 @@ func (m *NavMesh) TileByRef(ref TileRef) *MeshTile {
 	}
 	return tile
 }
-
-/*
-func (m *NavMesh) TileRefAt(x, y, layer int32) TileRef {
-	// Find tile based on hash.
-	h := computeTileHash(x, y, m.TileLUTMask)
-	tile := &m.posLookup[h]
-	for *tile != nil {
-		if (*tile).Header != nil &&
-			(*tile).Header.X == x &&
-			(*tile).Header.Y == y &&
-			(*tile).Header.Layer == layer {
-			return m.TileRef(*tile)
-		}
-		tile = &(*tile).Next
-	}
-	return 0
-}
-*/
 
 // TileRef returns the tile reference for the specified tile.
 func (m *NavMesh) TileRef(tile *MeshTile) TileRef {
@@ -1622,4 +1603,92 @@ func (m *NavMesh) CalcTileLoc(pos d3.Vec3) (tx, ty int32) {
 	tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
 	ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))
 	return tx, ty
+}
+
+// OffMeshConnectionPolyEndPoints returns the end-points of an off-mesh
+// connection.
+
+// Connections are stored in the navigation mesh as special 2-vertex polygons
+// with a single edge. At least one of the vertices is expected to be inside a
+// normal polygon. So an off-mesh connection is "entered" from a normal polygon
+// at one of its endpoints. This is the polygon identified by the prevRef
+// parameter.
+func (m *NavMesh) OffMeshConnectionPolyEndPoints(prevRef, polyRef PolyRef, startPos, endPos d3.Vec3) Status {
+	var salt, it, ip uint32
+
+	if polyRef == 0 {
+		return Failure
+	}
+
+	// Get current polygon
+	m.DecodePolyID(polyRef, &salt, &it, &ip)
+	if it >= uint32(m.MaxTiles) {
+		return Failure | InvalidParam
+	}
+	if m.Tiles[it].Salt != salt || m.Tiles[it].Header == nil {
+		return Failure | InvalidParam
+	}
+	tile := &m.Tiles[it]
+	if ip >= uint32(tile.Header.PolyCount) {
+		return Failure | InvalidParam
+	}
+	poly := &tile.Polys[ip]
+
+	// Make sure that the current poly is indeed off-mesh link.
+	if poly.Type() != polyTypeOffMeshConnection {
+		return Failure
+	}
+
+	// Figure out which way to hand out the vertices.
+	var idx0, idx1 int = 0, 1
+
+	// Find link that points to first vertex.
+	for i := poly.FirstLink; i != nullLink; i = tile.Links[i].Next {
+		if tile.Links[i].Edge == 0 {
+			if tile.Links[i].Ref != prevRef {
+				idx0 = 1
+				idx1 = 0
+			}
+			break
+		}
+	}
+
+	d3.Vec3Copy(startPos, tile.Verts[poly.Verts[idx0]*3:])
+	d3.Vec3Copy(endPos, tile.Verts[poly.Verts[idx1]*3:])
+
+	return Success
+}
+
+func (m *NavMesh) OffMeshConnectionByRef(ref PolyRef) *OffMeshConnection {
+	var salt, it, ip uint32
+
+	if ref == 0 {
+		return nil
+	}
+
+	// Get current polygon
+	m.DecodePolyID(ref, &salt, &it, &ip)
+	if it >= uint32(m.MaxTiles) {
+		return nil
+	}
+	if m.Tiles[it].Salt != salt || m.Tiles[it].Header == nil {
+		return nil
+	}
+	tile := &m.Tiles[it]
+	if ip >= uint32(tile.Header.PolyCount) {
+		return nil
+	}
+	poly := &tile.Polys[ip]
+
+	// Make sure that the current poly is indeed off-mesh link.
+	if poly.Type() != polyTypeOffMeshConnection {
+		return nil
+	}
+
+	idx := ip - uint32(tile.Header.OffMeshBase)
+	if idx >= uint32(tile.Header.OffMeshConCount) {
+		panic("idx should be < tile.Header.OffMeshConCount")
+	}
+
+	return &tile.OffMeshCons[idx]
 }
