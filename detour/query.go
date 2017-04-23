@@ -1326,6 +1326,64 @@ func (q *NavMeshQuery) ClosestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 	return Success
 }
 
+// PolyHeight gets the height of the polygon at the provided position using the
+// height detail. (Most accurate.)
+//
+//  Arguments:
+//   ref       The reference id of the polygon.
+//   pos       A position within the xz-bounds of the polygon. [(x, y, z)]
+//
+//  Returns
+//   height    The height at the surface of the polygon.
+//   st        The status flags for the query.
+//
+// Will return Failure if the provided position is outside the xz-bounds of the
+// polygon.
+func (q *NavMeshQuery) PolyHeight(ref PolyRef, pos d3.Vec3) (height float32, st Status) {
+	if q.nav == nil {
+		panic("q.nav should not be nil")
+	}
+
+	var (
+		tile *MeshTile
+		poly *Poly
+	)
+	st = Failure | InvalidParam
+	if StatusFailed(q.nav.TileAndPolyByRef(ref, &tile, &poly)) {
+		return
+	}
+
+	if poly.Type() == polyTypeOffMeshConnection {
+		v0 := tile.Verts[poly.Verts[0]*3:]
+		v1 := tile.Verts[poly.Verts[1]*3:]
+		d0 := pos.Dist2D(v0)
+		d1 := pos.Dist2D(v1)
+		u := d0 / (d0 + d1)
+		return v0[1] + (v1[1]-v0[1])*u, Success
+	} else {
+		ip := (uintptr(unsafe.Pointer(poly)) - uintptr(unsafe.Pointer(&tile.Polys[0]))) / unsafe.Sizeof(*poly)
+		pd := &tile.DetailMeshes[int(ip)]
+		for j := uint8(0); j < pd.TriCount; j++ {
+			t := tile.DetailTris[(pd.TriBase+uint32(j))*4:]
+			v := [3]d3.Vec3{
+				d3.NewVec3(), d3.NewVec3(), d3.NewVec3(),
+			}
+			for k := 0; k < 3; k++ {
+				if t[k] < poly.VertCount {
+					d3.Vec3Copy(v[k], tile.Verts[poly.Verts[t[k]]*3:])
+				} else {
+					d3.Vec3Copy(v[k], tile.DetailVerts[(pd.VertBase+uint32(t[k]-poly.VertCount))*3:])
+				}
+			}
+			if h, intriangle := closestHeightPointTriangle(pos, v[0], v[1], v[2]); intriangle {
+				return h, Success
+			}
+		}
+	}
+
+	return
+}
+
 // FindNearestPoly finds the polygon nearest to the specified center point.
 //
 //  Arguments:
