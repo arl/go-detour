@@ -9,19 +9,27 @@ Recast is state of the art navigation mesh construction toolset for games.
 * It is fast which means swift turnaround times for level designers
 * It is open source so it comes with full source and you can customize it to your heart's content. 
 
-The Recast process starts with constructing a voxel mold from a level geometry 
-and then casting a navigation mesh over it. The process consists of three steps, 
-building the voxel mold, partitioning the mold into simple regions, peeling off 
-the regions as simple polygons.
+The Recast process starts with constructing a voxel mold from a level geometry
+and then casting a navigation mesh over it. The process consists of three
+steps, building the voxel mold, partitioning the mold into simple regions,
+peeling off the regions as simple polygons.
 
-1. The voxel mold is build from the input triangle mesh by rasterizing the triangles into a multi-layer heightfield. Some simple filters are  then applied to the mold to prune out locations where the character would not be able to move.
-2. The walkable areas described by the mold are divided into simple overlayed 2D regions. The resulting regions have only one non-overlapping contour, which simplifies the final step of the process tremendously.
-3. The navigation polygons are peeled off from the regions by first tracing the boundaries and then simplifying them. The resulting polygons are finally converted to convex polygons which makes them perfect for pathfinding and spatial reasoning about the level. 
+1. The voxel mold is build from the input triangle mesh by rasterizing the
+triangles into a multi-layer heightfield. Some simple filters are  then applied
+to the mold to prune out locations where the character would not be able to
+move.
+2. The walkable areas described by the mold are divided into simple overlayed
+2D regions. The resulting regions have only one non-overlapping contour, which
+simplifies the final step of the process tremendously.
+3. The navigation polygons are peeled off from the regions by first tracing the
+boundaries and then simplifying them. The resulting polygons are finally
+converted to convex polygons which makes them perfect for pathfinding and
+spatial reasoning about the level. 
 
 
 ## Recast command line interface
 
-This package embeds a *command line interface* tool named `recast` to build 
+This package embeds a *command line interface* tool named `recast` to build
 navigation meshes:
 
 ```
@@ -52,21 +60,29 @@ go get -u github.com/arl/go-detour/cmd/recast
 
 ## Detour library
 
-Recast is accompanied with Detour, path-finding and spatial reasoning toolkit. You can use any navigation mesh with Detour, but of course the data generated with Recast fits perfectly.
+Recast is accompanied with Detour, path-finding and spatial reasoning toolkit.
+You can use any navigation mesh with Detour, but of course the data generated
+with Recast fits perfectly.
 
-Detour offers simple static navigation mesh which is suitable for many simple cases, as well as tiled navigation mesh which allows you to plug in and out pieces of the mesh. The tiled mesh allows you to create systems where you stream new navigation data in and out as the player progresses the level, or you may regenerate tiles as the world changes. 
+Detour offers simple static navigation mesh which is suitable for many simple
+cases, as well as tiled navigation mesh which allows you to plug in and out
+pieces of the mesh. The tiled mesh allows you to create systems where you
+stream new navigation data in and out as the player progresses the level, or
+you may regenerate tiles as the world changes. 
 
 
 ## Compatibility with original **Detour & Recast**
 
-The Go version and the original works both with the same binary format to save navmeshes, that means:
+The Go version and the original works both with the same binary format to save
+navmeshes, that means:
 - you can use in the original **Detour** the navmeshes built in Go.
 - you can use in Go the navmeshes built with the original **Recast**.
 
-In other words, you can visualize and tweak your navmeshes with the handy GUI tool 
-[**RecastDemo**](https://github.com/recastnavigation/recastnavigation). Once you 
-are satisfied with the navmesh of your geometry, use the same build settings with 
-either the `recast` Go package or the cli tool in order to have **identical results**.
+In other words, you can visualize and tweak your navmeshes with the handy GUI
+tool [**RecastDemo**](https://github.com/recastnavigation/recastnavigation).
+Once you are satisfied with the navmesh of your geometry, use the same build
+settings with either the `recast` Go package or the cli tool in order to have
+**identical results**.
 
 
 ## Samples
