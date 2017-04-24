@@ -247,16 +247,6 @@ func subdivide(items []bvItem, nitems, imin, imax int32, curNode *int32, nodes [
 	}
 }
 
-func int32Clamp(a, low, high int32) int32 {
-	if a < low {
-		return low
-	} else if a > high {
-		return high
-	}
-
-	return a
-}
-
 func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 	// Build tree
 	quantFactor := float32(1.0) / params.Cs
@@ -281,13 +271,13 @@ func createBVTree(params *NavMeshCreateParams, nodes []BvNode) int32 {
 			}
 
 			// BV-tree uses cs for all dimensions
-			it.BMin[0] = uint16(int32Clamp(int32((bmin[0]-params.BMin[0])*quantFactor), 0, 0xffff))
-			it.BMin[1] = uint16(int32Clamp(int32((bmin[1]-params.BMin[1])*quantFactor), 0, 0xffff))
-			it.BMin[2] = uint16(int32Clamp(int32((bmin[2]-params.BMin[2])*quantFactor), 0, 0xffff))
+			it.BMin[0] = uint16(Int32Clamp(int32((bmin[0]-params.BMin[0])*quantFactor), 0, 0xffff))
+			it.BMin[1] = uint16(Int32Clamp(int32((bmin[1]-params.BMin[1])*quantFactor), 0, 0xffff))
+			it.BMin[2] = uint16(Int32Clamp(int32((bmin[2]-params.BMin[2])*quantFactor), 0, 0xffff))
 
-			it.BMax[0] = uint16(int32Clamp(int32((bmax[0]-params.BMin[0])*quantFactor), 0, 0xffff))
-			it.BMax[1] = uint16(int32Clamp(int32((bmax[1]-params.BMin[1])*quantFactor), 0, 0xffff))
-			it.BMax[2] = uint16(int32Clamp(int32((bmax[2]-params.BMin[2])*quantFactor), 0, 0xffff))
+			it.BMax[0] = uint16(Int32Clamp(int32((bmax[0]-params.BMin[0])*quantFactor), 0, 0xffff))
+			it.BMax[1] = uint16(Int32Clamp(int32((bmax[1]-params.BMin[1])*quantFactor), 0, 0xffff))
+			it.BMax[2] = uint16(Int32Clamp(int32((bmax[2]-params.BMin[2])*quantFactor), 0, 0xffff))
 		} else {
 			panic("UNTESTED")
 			p := params.Polys[i*params.Nvp*2:]

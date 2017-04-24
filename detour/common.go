@@ -292,3 +292,13 @@ func closestHeightPointTriangle(p, a, b, c d3.Vec3) (float32, bool) {
 func oppositeTile(side int32) int32 {
 	return (side + 4) & 0x7
 }
+
+func Int32Clamp(a, low, high int32) int32 {
+	if a < low {
+		return low
+	} else if a > high {
+		return high
+	}
+
+	return a
+}
