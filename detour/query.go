@@ -1173,6 +1173,7 @@ func (q *NavMeshQuery) pathToNode(
 // See ClosestPointOnPolyBoundary() for a limited but faster option.
 //
 // Note: this method may be used by multiple clients without side effects.
+// TODO: simplify API (go-idiomatic)
 func (q *NavMeshQuery) ClosestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) Status {
 	assert.True(q.nav != nil, "NavMesh should not be nil")
 	var (
