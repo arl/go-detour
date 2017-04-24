@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	DT_PATHQ_INVALID = 0
-	MAX_QUEUE        = 8
+	PathQInvalid = 0
+	MaxQueue     = 8
 )
 
 type PathQueueRef uint32
@@ -27,7 +27,7 @@ type pathQuery struct {
 }
 
 type PathQueue struct {
-	m_queue       [MAX_QUEUE]pathQuery
+	m_queue       [MaxQueue]pathQuery
 	m_nextHandle  PathQueueRef
 	m_maxPathSize int
 	m_queueHead   int
@@ -41,7 +41,7 @@ func NewPathQueue() *PathQueue {
 		m_queueHead:   0,
 		m_navquery:    nil,
 	}
-	for i := 0; i < MAX_QUEUE; i++ {
+	for i := 0; i < MaxQueue; i++ {
 		pq.m_queue[i].path = nil
 	}
 	return pq
@@ -49,7 +49,7 @@ func NewPathQueue() *PathQueue {
 
 func (pq *PathQueue) purge() {
 	pq.m_navquery = nil
-	for i := 0; i < MAX_QUEUE; i++ {
+	for i := 0; i < MaxQueue; i++ {
 		pq.m_queue[i].path = nil
 	}
 }
@@ -64,8 +64,8 @@ func (pq *PathQueue) Init(maxPathSize, maxSearchNodeCount int, nav *detour.NavMe
 	}
 
 	pq.m_maxPathSize = maxPathSize
-	for i := 0; i < MAX_QUEUE; i++ {
-		pq.m_queue[i].ref = DT_PATHQ_INVALID
+	for i := 0; i < MaxQueue; i++ {
+		pq.m_queue[i].ref = PathQInvalid
 		pq.m_queue[i].path = make([]detour.PolyRef, pq.m_maxPathSize)
 		if pq.m_queue[i].path == nil {
 			return false
@@ -83,11 +83,11 @@ func (pq *PathQueue) Update(maxIters int) {
 	// or upto maxIters pathfinder iterations has been consumed.
 	iterCount := maxIters
 
-	for i := 0; i < MAX_QUEUE; i++ {
-		q := &pq.m_queue[pq.m_queueHead%MAX_QUEUE]
+	for i := 0; i < MaxQueue; i++ {
+		q := &pq.m_queue[pq.m_queueHead%MaxQueue]
 
 		// Skip inactive requests.
-		if q.ref == DT_PATHQ_INVALID {
+		if q.ref == PathQInvalid {
 			pq.m_queueHead++
 			continue
 		}
@@ -97,7 +97,7 @@ func (pq *PathQueue) Update(maxIters int) {
 			// If the path result has not been read in few frames, free the slot.
 			q.keepAlive++
 			if q.keepAlive > MAX_KEEP_ALIVE {
-				q.ref = DT_PATHQ_INVALID
+				q.ref = PathQInvalid
 				q.status = 0
 			}
 
@@ -133,20 +133,20 @@ func (pq *PathQueue) Request(startRef, endRef detour.PolyRef,
 
 	// Find empty slot
 	var slot int = -1
-	for i := 0; i < MAX_QUEUE; i++ {
-		if pq.m_queue[i].ref == DT_PATHQ_INVALID {
+	for i := 0; i < MaxQueue; i++ {
+		if pq.m_queue[i].ref == PathQInvalid {
 			slot = i
 			break
 		}
 	}
 	// Could not find slot.
 	if slot == -1 {
-		return DT_PATHQ_INVALID
+		return PathQInvalid
 	}
 
 	var ref PathQueueRef = pq.m_nextHandle
 	pq.m_nextHandle++
-	if pq.m_nextHandle == DT_PATHQ_INVALID {
+	if pq.m_nextHandle == PathQInvalid {
 		pq.m_nextHandle++
 	}
 
@@ -167,7 +167,7 @@ func (pq *PathQueue) Request(startRef, endRef detour.PolyRef,
 }
 
 func (pq *PathQueue) GetRequestStatus(ref PathQueueRef) detour.Status {
-	for i := 0; i < MAX_QUEUE; i++ {
+	for i := 0; i < MaxQueue; i++ {
 		if pq.m_queue[i].ref == ref {
 			return pq.m_queue[i].status
 		}
@@ -176,12 +176,12 @@ func (pq *PathQueue) GetRequestStatus(ref PathQueueRef) detour.Status {
 }
 
 func (pq *PathQueue) GetPathResult(ref PathQueueRef, path []detour.PolyRef, pathSize *int, maxPath int) detour.Status {
-	for i := 0; i < MAX_QUEUE; i++ {
+	for i := 0; i < MaxQueue; i++ {
 		if pq.m_queue[i].ref == ref {
 			q := &pq.m_queue[i]
 			details := q.status & detour.StatusDetailMask
 			// Free request for reuse.
-			q.ref = DT_PATHQ_INVALID
+			q.ref = PathQInvalid
 			q.status = 0
 			// Copy path
 			var n int

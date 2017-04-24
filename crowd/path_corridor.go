@@ -3,6 +3,7 @@ package crowd
 import (
 	"github.com/aurelien-rainone/go-detour/detour"
 	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/aurelien-rainone/math32"
 )
 
 // A PathCorridor represents a dynamic polygon corridor used to plan agent
@@ -100,7 +101,7 @@ func (pc *PathCorridor) Reset(ref detour.PolyRef, pos d3.Vec3) {
 //   cornerFlags The flag for each corner. [(flag) * cornerCount]
 //               [Size: <= maxCorners]
 //   cornerPolys The polygon reference for each corner.
-//               [(polyRef) * cornerCount] [Size: <= @p maxCorners]
+//               [(polyRef) * cornerCount] [Size: <= maxCorners]
 //   maxCorners  The maximum number of corners the buffers can hold.
 //   navquery    The query object used to build the corridor.
 //   filter      The filter to apply to the operation.
@@ -119,7 +120,7 @@ func (pc *PathCorridor) Reset(ref detour.PolyRef, pos d3.Vec3) {
 //
 // If the target is within range, it will be the last corner and have a polygon
 // reference id of zero.
-func (pc *PathCorridor) FindCorners(cornerVerts []d3.Vec3, cornerFlags []uint8,
+func (pc *PathCorridor) FindCorners(cornerVerts []float32, cornerFlags []uint8,
 	cornerPolys []detour.PolyRef, maxCorners int,
 	navquery *detour.NavMeshQuery, filter detour.QueryFilter) int {
 
@@ -131,16 +132,21 @@ func (pc *PathCorridor) FindCorners(cornerVerts []d3.Vec3, cornerFlags []uint8,
 	}
 
 	const MIN_TARGET_DIST = 0.01
+	verts := make([]d3.Vec3, maxCorners)
+	for i := 0; i < maxCorners; i++ {
+		verts[i] = cornerVerts[i*3 : (i+1)*3]
+	}
 
 	ncorners, _ := navquery.FindStraightPath(pc.pos[:], pc.target[:], pc.path,
-		cornerVerts, cornerFlags, cornerPolys, int32(maxCorners))
+		verts, cornerFlags, cornerPolys, int32(maxCorners))
 
 	// Prune points in the beginning of the path which are too close.
 	for ncorners != 0 {
 		if (cornerFlags[0]&detour.StraightPathOffMeshConnection) != 0 ||
-			d3.Vec3Dist2DSqr(pc.pos[:], cornerVerts[0]) > MIN_TARGET_DIST*MIN_TARGET_DIST {
+			d3.Vec3Dist2DSqr(pc.pos[:], cornerVerts[:]) > math32.Sqr(MIN_TARGET_DIST) {
 			break
 		}
+		panic("TO BE CHECKED")
 		ncorners--
 		if ncorners != 0 {
 			copy(cornerFlags, cornerFlags[1:1+ncorners])
