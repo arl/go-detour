@@ -67,6 +67,7 @@ type BuildSettings struct {
 	TileSize float32
 }
 
+// InputGeom gathers the geometry used as input for navigation mesh building.
 type InputGeom struct {
 	chunkyMesh *ChunkyTriMesh
 	mesh       *MeshLoaderOBJ
@@ -87,6 +88,7 @@ type InputGeom struct {
 	volumeCount int32
 }
 
+// LoadOBJMesh loads the geometry from a reader on a OBJ file.
 func (ig *InputGeom) LoadOBJMesh(r io.Reader) error {
 	var err error
 	if ig.mesh != nil {
@@ -111,68 +113,104 @@ func (ig *InputGeom) LoadOBJMesh(r io.Reader) error {
 	return nil
 }
 
-// Method to return static mesh data.
+// Mesh returns static mesh data.
 func (ig *InputGeom) Mesh() *MeshLoaderOBJ {
 	return ig.mesh
 }
 
+// MeshBoundsMin return the min point of the mesh bounding box.
 func (ig *InputGeom) MeshBoundsMin() []float32 {
 	return ig.meshBMin[:3]
 }
 
+// MeshBoundsMin return the max point of the mesh bounding box.
 func (ig *InputGeom) MeshBoundsMax() []float32 {
 	return ig.meshBMax[:3]
 }
 
+// NavMeshBoundsMin return the min point of the navmesh bounding box.
+//
+// TODO: currently returns the same point as MeshBoundsMin but it should
+// normally depend on the nav mesh build settings
 func (ig *InputGeom) NavMeshBoundsMin() []float32 {
 	return ig.meshBMin[:3]
 }
 
+// NavMeshBoundsMax return the max point of the navmesh bounding box.
+//
+// TODO: currently returns the same point as MeshBoundsMax but it should
+// normally depend on the nav mesh build settings
 func (ig *InputGeom) NavMeshBoundsMax() []float32 {
 	return ig.meshBMax[:3]
 }
 
+// ChunkyMesh returns the underlying chunky triangle mesh.
 func (ig *InputGeom) ChunkyMesh() *ChunkyTriMesh {
 	return ig.chunkyMesh
 }
 
+// ConvexVolumes returns the whole slice of convex volumes added to the input
+// geometry
+//
+// Note: all convex volumes may not be valid, use ConvexVolumesCount in order
+// to only access the N first valid convex volumes.
 func (ig *InputGeom) ConvexVolumes() []ConvexVolume {
 	return ig.volumes[:]
 }
 
+// ConvexVolumesCount returns the length of the slice of convex volumes added to the input
+// geometry.
 func (ig *InputGeom) ConvexVolumesCount() int32 {
 	return ig.volumeCount
 }
 
+// OffMeshConnectionVerts returns the slice of verts of the off-mesh
+// connections.
 func (ig *InputGeom) OffMeshConnectionVerts() []float32 {
 	return ig.offMeshConVerts[:]
 }
 
+// OffMeshConnectionRads returns the slice of orientation, expressed in
+// radians, of the off-mesh connections.
 func (ig *InputGeom) OffMeshConnectionRads() []float32 {
 	return ig.offMeshConRads[:]
 }
 
+// OffMeshConnectionRads returns the slice of areas of the off-mesh
+// connections.
 func (ig *InputGeom) OffMeshConnectionAreas() []uint8 {
 	return ig.offMeshConAreas[:]
 }
 
+// OffMeshConnectionRads returns the slice of flags of the off-mesh
+// connections.
 func (ig *InputGeom) OffMeshConnectionFlags() []uint16 {
 	return ig.offMeshConFlags[:]
 }
 
+// OffMeshConnectionRads returns the slice of identifiers of the off-mesh
+// connections.
 func (ig *InputGeom) OffMeshConnectionId() []uint32 {
 	return ig.offMeshConID[:]
 }
 
+// OffMeshConnectionRads returns the slice of directions of the off-mesh
+// connections.
 func (ig *InputGeom) OffMeshConnectionDirs() []uint8 {
 	return ig.offMeshConDirs[:]
 }
 
+// OffMeshConnectionRads returns the length of the slice of the off-mesh
+// connections.
 func (ig *InputGeom) OffMeshConnectionCount() int32 {
 	return ig.offMeshConCount
 }
 
-func (ig *InputGeom) AddConvexVolume(verts []float32, nverts int, minh, maxh float32, area uint8) {
+// AddConvexVolume adds a new convex volume to the input geometry.
+//
+// The convex volume is defined by the verts slice [x, y, z] * Number of
+// vertices.
+func (ig *InputGeom) AddConvexVolume(verts []float32, minh, maxh float32, area uint8) {
 	if ig.volumeCount >= maxVolumes {
 		return
 	}
@@ -185,6 +223,7 @@ func (ig *InputGeom) AddConvexVolume(verts []float32, nverts int, minh, maxh flo
 	vol.Area = int32(area)
 }
 
+// DeleteConvexVolume deletes the ith convex volume.
 func (ig *InputGeom) DeleteConvexVolume(i int) {
 	ig.volumeCount--
 	// copy last volume over the deleted one
