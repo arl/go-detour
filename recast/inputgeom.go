@@ -216,10 +216,10 @@ func (ig *InputGeom) AddConvexVolume(verts []float32, minh, maxh float32, area u
 	}
 	vol := &ig.volumes[ig.volumeCount]
 	ig.volumeCount++
-	copy(vol.Verts[:], verts[3*nverts:])
+	copy(vol.Verts[:], verts)
 	vol.HMin = minh
 	vol.HMax = maxh
-	vol.NVerts = int32(nverts)
+	vol.NVerts = int32(len(verts))
 	vol.Area = int32(area)
 }
 
