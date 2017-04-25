@@ -15,7 +15,7 @@ const (
 // These are just sample areas to use consistent values across the samples.
 // The user should specify these based on his needs.
 const (
-	PolyAreaGround uint8 = iota
+	PolyAreaGround = iota
 	PolyAreaWater
 	PolyAreaRoad
 	PolyAreaDoor
@@ -24,10 +24,10 @@ const (
 )
 
 const (
-	PolyFlagsWalk     uint16 = 0x01 // Ability to walk (ground, grass, road)
-	PolyFlagsSwim     uint16 = 0x02 // Ability to swim (water).
-	PolyFlagsDoor     uint16 = 0x04 // Ability to move through doors.
-	PolyFlagsJump     uint16 = 0x08 // Ability to jump.
-	PolyFlagsDisabled uint16 = 0x10 // Disabled polygon
-	PolyFlagsAll      uint16 = 0xff // All abilities.
+	PolyFlagsWalk     = 0x01   // Ability to walk (ground, grass, road)
+	PolyFlagsSwim     = 0x02   // Ability to swim (water).
+	PolyFlagsDoor     = 0x04   // Ability to move through doors.
+	PolyFlagsJump     = 0x08   // Ability to jump.
+	PolyFlagsDisabled = 0x10   // Disabled polygon
+	PolyFlagsAll      = 0xffff // All abilities.
 )
