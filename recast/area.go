@@ -1,8 +1,8 @@
 package recast
 
 import (
-	"github.com/aurelien-rainone/assertgo"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/arl/assertgo"
+	"github.com/arl/gogeo/f32/d3"
 )
 
 // ErodeWalkableArea erodes the walkable area within the heightfield by the

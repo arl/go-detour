@@ -1,6 +1,6 @@
 package recast
 
-import "github.com/aurelien-rainone/assertgo"
+import "github.com/arl/assertgo"
 
 // Defines the number of bits allocated to rcSpan::smin and rcSpan::smax.
 const (

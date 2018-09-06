@@ -3,8 +3,8 @@ package detour
 import (
 	"log"
 
-	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/gogeo/f32/d3"
+	"github.com/arl/math32"
 )
 
 // Provides custom polygon query behavior.

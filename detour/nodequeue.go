@@ -4,7 +4,7 @@ import (
 	"log"
 	"unsafe"
 
-	"github.com/aurelien-rainone/assertgo"
+	assert "github.com/arl/assertgo"
 )
 
 type nodeQueue struct {

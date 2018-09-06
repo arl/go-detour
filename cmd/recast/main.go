@@ -1,6 +1,6 @@
 package main
 
-import "github.com/aurelien-rainone/go-detour/cmd/recast/cmd"
+import "github.com/arl/go-detour/cmd/recast/cmd"
 
 func main() {
 	cmd.Execute()

@@ -3,7 +3,7 @@ package detour
 import (
 	"testing"
 
-	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/arl/gogeo/f32/d3"
 )
 
 func TestFindNearestPolyInTile(t *testing.T) {

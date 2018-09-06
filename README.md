@@ -1,5 +1,5 @@
 # go-detour - port of [Recast & Detour](https://github.com/recastnavigation/recastnavigation) in Go
-[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/aurelien-rainone/go-detour) [![Build Status](https://travis-ci.org/aurelien-rainone/go-detour.svg?branch=master)](https://travis-ci.org/aurelien-rainone/go-detour) [![Coverage Status](https://coveralls.io/repos/github/aurelien-rainone/go-detour/badge.svg?branch=master)](https://coveralls.io/github/aurelien-rainone/go-detour?branch=master)
+[![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/arl/go-detour) [![Build Status](https://travis-ci.org/arl/go-detour.svg?branch=master)](https://travis-ci.org/arl/go-detour) [![Coverage Status](https://coveralls.io/repos/github/arl/go-detour/badge.svg?branch=master)](https://coveralls.io/github/arl/go-detour?branch=master)
 
 ## Recast library
 
@@ -46,7 +46,7 @@ Use "recast [command] --help" for more information about a command.
 Installation of the cli tool:
 
 ```
-go get -u github.com/aurelien-rainone/go-detour/cmd/recast
+go get -u github.com/arl/go-detour/cmd/recast
 ```
 
 
@@ -103,8 +103,8 @@ under the following:
 information.
 
 
-[1]: https://github.com/aurelien-rainone/go-detour "go-detour"
+[1]: https://github.com/arl/go-detour "go-detour"
 [2]: https://github.com/recastnavigation/recastnavigation "Recast & Detour"
 [3]: https://github.com/golang/go "The Go language"
-[4]: https://github.com/aurelien-rainone
+[4]: https://github.com/arl
 [5]: ./LICENSE "License"

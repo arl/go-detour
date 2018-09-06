@@ -3,7 +3,7 @@ package recast
 import (
 	"testing"
 
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/math32"
 )
 
 func require(t *testing.T, exp bool, err string) {

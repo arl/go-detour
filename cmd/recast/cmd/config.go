@@ -6,8 +6,8 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/aurelien-rainone/go-detour/sample/solomesh"
-	"github.com/aurelien-rainone/go-detour/sample/tilemesh"
+	"github.com/arl/go-detour/sample/solomesh"
+	"github.com/arl/go-detour/sample/tilemesh"
 	"github.com/spf13/cobra"
 )
 

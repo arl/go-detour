@@ -1,6 +1,6 @@
 package recast
 
-import "github.com/aurelien-rainone/assertgo"
+import "github.com/arl/assertgo"
 
 // FilterLowHangingWalkableObstacles marks non-walkable spans as walkable if
 // their maximum is within p walkableClimb of a walkable neighbor.

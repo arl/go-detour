@@ -3,8 +3,8 @@ package recast
 import (
 	"io"
 
-	"github.com/aurelien-rainone/gobj"
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/gobj"
+	"github.com/arl/math32"
 )
 
 type MeshLoaderOBJ struct {

@@ -1,6 +1,6 @@
 package detour
 
-import "github.com/aurelien-rainone/gogeo/f32/d3"
+import "github.com/arl/gogeo/f32/d3"
 
 // Poly defines a polygon within a MeshTile object.
 type Poly struct {

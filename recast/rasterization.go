@@ -1,9 +1,9 @@
 package recast
 
 import (
-	"github.com/aurelien-rainone/assertgo"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/assertgo"
+	"github.com/arl/gogeo/f32/d3"
+	"github.com/arl/math32"
 )
 
 // RasterizeTriangle rasterizes a triangle into the specified heightfield.

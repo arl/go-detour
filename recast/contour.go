@@ -3,7 +3,7 @@ package recast
 import (
 	"sort"
 
-	"github.com/aurelien-rainone/assertgo"
+	"github.com/arl/assertgo"
 )
 
 func cornerHeight(x, y, i, dir int32, chf *CompactHeightfield) (ch int32, isBorderVertex bool) {

@@ -1,6 +1,6 @@
 package recast
 
-import "github.com/aurelien-rainone/assertgo"
+import "github.com/arl/assertgo"
 
 // BuildRegionsMonotone builds region data for the heightfield using simple
 // monotone partitioning.

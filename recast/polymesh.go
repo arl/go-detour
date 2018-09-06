@@ -1,7 +1,7 @@
 package recast
 
 import (
-	"github.com/aurelien-rainone/assertgo"
+	"github.com/arl/assertgo"
 )
 
 // PolyMesh represents a polygon mesh suitable for use in building a navigation

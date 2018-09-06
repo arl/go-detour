@@ -3,7 +3,7 @@ package recast
 import (
 	"sort"
 
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/math32"
 )
 
 type ChunkyTriMeshNode struct {

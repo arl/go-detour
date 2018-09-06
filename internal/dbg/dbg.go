@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/aurelien-rainone/assertgo"
-	"github.com/aurelien-rainone/go-detour/detour"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
+	assert "github.com/arl/assertgo"
+	"github.com/arl/go-detour/detour"
+	"github.com/arl/gogeo/f32/d3"
 )
 
 func check(err error) {

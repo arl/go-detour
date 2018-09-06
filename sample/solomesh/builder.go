@@ -3,10 +3,10 @@ package solomesh
 import (
 	"io"
 
-	"github.com/aurelien-rainone/go-detour/detour"
-	"github.com/aurelien-rainone/go-detour/recast"
-	"github.com/aurelien-rainone/go-detour/sample"
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/go-detour/detour"
+	"github.com/arl/go-detour/recast"
+	"github.com/arl/go-detour/sample"
+	"github.com/arl/math32"
 )
 
 // SoloMesh allows building of single tile navigation meshes.

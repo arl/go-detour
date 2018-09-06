@@ -1,6 +1,6 @@
 package detour
 
-import "github.com/aurelien-rainone/gogeo/f32/d3"
+import "github.com/arl/gogeo/f32/d3"
 
 // QueryFilter defines polygon filtering and traversal
 // costs for navigation mesh query operations.

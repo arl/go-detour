@@ -5,9 +5,9 @@ import (
 	"sort"
 	"unsafe"
 
-	"github.com/aurelien-rainone/gogeo/f32"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/gogeo/f32"
+	"github.com/arl/gogeo/f32/d3"
+	"github.com/arl/math32"
 )
 
 type bvItem struct {

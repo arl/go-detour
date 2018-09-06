@@ -3,9 +3,9 @@ package recast
 import (
 	"fmt"
 
-	assert "github.com/aurelien-rainone/assertgo"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
+	assert "github.com/arl/assertgo"
+	"github.com/arl/gogeo/f32/d3"
+	"github.com/arl/math32"
 )
 
 // Contains triangle meshes that represent detailed height data associated

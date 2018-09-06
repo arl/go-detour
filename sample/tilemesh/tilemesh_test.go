@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aurelien-rainone/go-detour/detour"
-	"github.com/aurelien-rainone/go-detour/recast"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/arl/go-detour/detour"
+	"github.com/arl/go-detour/recast"
+	"github.com/arl/gogeo/f32/d3"
 )
 
 func check(t *testing.T, err error) {

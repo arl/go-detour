@@ -1,8 +1,8 @@
 package tilemesh
 
 import (
-	"github.com/aurelien-rainone/go-detour/recast"
-	"github.com/aurelien-rainone/go-detour/sample"
+	"github.com/arl/go-detour/recast"
+	"github.com/arl/go-detour/sample"
 )
 
 // DefaultSettings returns a recast.BuildSettings with default values for tile
