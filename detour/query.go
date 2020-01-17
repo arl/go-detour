@@ -1443,7 +1443,8 @@ func (q *NavMeshQuery) Raycast(
 	startPos, endPos d3.Vec3,
 	filter QueryFilter,
 	options int,
-	prevRef PolyRef) (hit RaycastHit, st Status) {
+	hit *RaycastHit,
+	prevRef PolyRef) (st Status) {
 
 	// Validate input
 	if startRef == 0 || !q.nav.IsValidPolyRef(startRef) {
@@ -1461,6 +1462,7 @@ func (q *NavMeshQuery) Raycast(
 		n                    int
 	)
 
+	lastPos = d3.NewVec3()
 	curPos = d3.NewVec3From(startPos)
 	dir = endPos.Sub(startPos)
 	hit.HitNormal = d3.NewVec3()
@@ -1710,7 +1712,7 @@ func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
 	hit.Path = path
 	hit.MaxPath = maxPath
 
-	hit, status := q.Raycast(startRef, startPos, endPos, filter, 0, 0)
+	status := q.Raycast(startRef, startPos, endPos, filter, 0, &hit, 0)
 	copy(hitNormal, hit.HitNormal)
 	return hit.PathCount, hit.T, status
 }
@@ -1946,7 +1948,7 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 			rayHit.PathCost = 0
 			rayHit.T = 0
 			if tryLOS {
-				rayHit, _ = q.Raycast(parentRef, parentNode.Pos, neighbourNode.Pos, q.query.filter, RaycastUseCosts, grandpaRef)
+				_ = q.Raycast(parentRef, parentNode.Pos, neighbourNode.Pos, q.query.filter, RaycastUseCosts, &rayHit, grandpaRef)
 				foundShortCut = rayHit.T >= 1.0
 			}
 
@@ -2027,6 +2029,10 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 		q.query.status = Success | details
 	}
 
+	if doneIters != nil {
+		*doneIters = iter
+	}
+
 	return q.query.status
 }
 
@@ -2048,7 +2054,7 @@ func (q *NavMeshQuery) FinalizeSlicedFindPath(path []PolyRef, maxPath int) (path
 		return 0, Failure
 	}
 
-	var n int
+	var n int = 0
 
 	if q.query.startRef == q.query.endRef {
 		// Special case: the search starts and ends at same poly.
@@ -2164,24 +2170,15 @@ func (q *NavMeshQuery) FinalizeSlicedFindPathPartial(existing []PolyRef, existin
 			prev *Node
 			node []*Node = make([]*Node, 1)
 		)
+		var numNodesFound uint32 = 0
 		for i := existingSize - 1; i >= 0; i-- {
-			panic("CHECK HERE")
-			q.nodePool.FindNodes(existing[i], node, 1)
-			// FIXME
-			// Original C/C++ code
-			//if node {
-			//break
-			//}
-			// seems to be equivalent to:
-			if node[0] != nil {
+			numNodesFound = q.nodePool.FindNodes(existing[i], node, 1)
+			if numNodesFound != 0 {
 				break
 			}
 		}
 
-		// TODO: same than before
-		// this is Original C/C++ code
-		//if !node {
-		if node[0] == nil {
+		if numNodesFound == 0 {
 			q.query.status |= PartialResult
 			if q.query.lastBestNode == nil {
 				panic("q.query.lastBestNode should not be nil")
