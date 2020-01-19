@@ -455,7 +455,7 @@ func (q *NavMeshQuery) FindStraightPath(
 		straightPath, straightPathFlags, straightPathRefs,
 		&count)
 	if stat != InProgress {
-		fmt.Println("FindStraightPath returns", stat, count)
+		//fmt.Println("FindStraightPath returns", stat, count)
 		return count, stat
 	}
 
@@ -508,7 +508,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					if count >= len(straightPath) {
 						stat |= BufferTooSmall
 					}
-					fmt.Println("FindStraightPath 2 returns", stat, count)
+					//fmt.Println("FindStraightPath 2 returns", stat, count)
 					return count, stat
 				}
 
@@ -544,7 +544,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, options)
 						if stat != InProgress {
-							fmt.Println("FindStraightPath 3 returns", stat, count)
+							//fmt.Println("FindStraightPath 3 returns", stat, count)
 							return count, stat
 						}
 					}
@@ -565,7 +565,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count)
 					if stat != InProgress {
-						fmt.Println("FindStraightPath 4 returns", stat, count)
+						//fmt.Println("FindStraightPath 4 returns", stat, count)
 						return count, stat
 					}
 
@@ -599,7 +599,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, options)
 						if stat != InProgress {
-							fmt.Println("FindStraightPath 5 returns", stat, count)
+							//fmt.Println("FindStraightPath 5 returns", stat, count)
 							return count, stat
 						}
 					}
@@ -620,7 +620,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count)
 					if stat != InProgress {
-						fmt.Println("FindStraightPath 6 returns", stat, count)
+						//fmt.Println("FindStraightPath 6 returns", stat, count)
 						return count, stat
 					}
 
@@ -643,7 +643,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				straightPath, straightPathFlags, straightPathRefs,
 				&count, options)
 			if stat != InProgress {
-				fmt.Println("FindStraightPath 7 returns", stat, count)
+				//fmt.Println("FindStraightPath 7 returns", stat, count)
 				return count, stat
 			}
 		}
@@ -658,7 +658,7 @@ func (q *NavMeshQuery) FindStraightPath(
 	if count >= len(straightPath) {
 		stat |= BufferTooSmall
 	}
-	fmt.Println("FindStraightPath 8 returns", stat, count)
+	//fmt.Println("FindStraightPath 8 returns", stat, count)
 	return count, stat
 }
 
@@ -1975,8 +1975,8 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 				cost = cost + endCost
 				heuristic = 0
 			} else {
-				fmt.Println("neighbourNode.Pos", neighbourNode.Pos)
-				fmt.Println("q.query.endPos", q.query.endPos)
+				//fmt.Println("neighbourNode.Pos", neighbourNode.Pos)
+				//fmt.Println("q.query.endPos", q.query.endPos)
 				heuristic = neighbourNode.Pos.Dist(q.query.endPos) * HScale
 			}
 
