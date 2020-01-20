@@ -13,9 +13,7 @@ before_install:
 - go get -u -v github.com/mattn/goveralls
 - go get -u -v github.com/wadey/gocovmerge
 - if ! go get -u -v github.com/golang/tools/cmd/cover; then go get -u -v golang.org/x/tools/cmd/cover; fi
-- go get -u -v github.com/golang/lint/golint
 
 script:
-# ./golint.bash
 - go test ./...
 - ./cover.sh
