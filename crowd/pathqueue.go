@@ -1,8 +1,8 @@
 package crowd
 
 import (
-	"github.com/aurelien-rainone/go-detour/detour"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
+	"github.com/arl/go-detour/detour"
+	"github.com/arl/gogeo/f32/d3"
 )
 
 const (

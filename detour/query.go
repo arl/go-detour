@@ -729,9 +729,9 @@ func (q *NavMeshQuery) MoveAlongSurface(startRef PolyRef, startPos, endPos d3.Ve
 	nstack++
 
 	var (
-		bestPos        = d3.NewVec3From(startPos)
-		bestDist       = math32.MaxFloat32
-		bestNode *Node = nil
+		bestPos          = d3.NewVec3From(startPos)
+		bestDist float32 = math.MaxFloat32
+		bestNode *Node   = nil
 	)
 
 	// Search constraints

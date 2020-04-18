@@ -1,9 +1,10 @@
 package crowd
 
 import (
-	"github.com/aurelien-rainone/go-detour/detour"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
+	"math"
+
+	"github.com/arl/go-detour/detour"
+	"github.com/arl/gogeo/f32/d3"
 )
 
 const (
@@ -80,9 +81,9 @@ func (lb *LocalBoundary) addSegment(dist float32, s []float32) {
 }
 
 func (lb *LocalBoundary) reset() {
-	lb.center[0] = math32.MaxFloat32
-	lb.center[1] = math32.MaxFloat32
-	lb.center[2] = math32.MaxFloat32
+	lb.center[0] = math.MaxFloat32
+	lb.center[1] = math.MaxFloat32
+	lb.center[2] = math.MaxFloat32
 	lb.npolys = 0
 	lb.nsegs = 0
 }
@@ -91,9 +92,9 @@ func (lb *LocalBoundary) update(ref detour.PolyRef, pos d3.Vec3, collisionQueryR
 	const maxSegsPerPoly = detour.VertsPerPolygon * 3
 
 	if ref == 0 {
-		lb.center[0] = math32.MaxFloat32
-		lb.center[1] = math32.MaxFloat32
-		lb.center[2] = math32.MaxFloat32
+		lb.center[0] = math.MaxFloat32
+		lb.center[1] = math.MaxFloat32
+		lb.center[2] = math.MaxFloat32
 		lb.nsegs = 0
 		lb.npolys = 0
 		return

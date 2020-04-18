@@ -1,10 +1,12 @@
 package crowd
 
 import (
-	"github.com/aurelien-rainone/go-detour/detour"
-	"github.com/aurelien-rainone/gogeo/f32"
-	"github.com/aurelien-rainone/gogeo/f32/d3"
-	"github.com/aurelien-rainone/math32"
+	"math"
+
+	"github.com/arl/go-detour/detour"
+	"github.com/arl/gogeo/f32"
+	"github.com/arl/gogeo/f32/d3"
+	"github.com/arl/math32"
 )
 
 type ObstacleCircle struct {
@@ -86,8 +88,10 @@ func (oad *ObstacleAvoidanceDebugData) addSample(vel d3.Vec3, ssize, pen, vpen, 
 
 func normalizeArray(arr []float32, n int) {
 	// Normalize penaly range.
-	minPen := math32.MaxFloat32
-	maxPen := -math32.MaxFloat32
+	var (
+		minPen float32 = math.MaxFloat32
+		maxPen float32 = -math.MaxFloat32
+	)
 	for i := 0; i < n; i++ {
 		if arr[i] < minPen {
 			minPen = arr[i]
@@ -237,7 +241,7 @@ func (oaq *ObstacleAvoidanceQuery) sampleVelocityGrid(pos d3.Vec3, rad, vmax flo
 	oaq.params = *params
 	oaq.invHorizTime = 1.0 / oaq.params.horizTime
 	oaq.vmax = vmax
-	oaq.invVmax = math32.MaxFloat32
+	oaq.invVmax = math.MaxFloat32
 	if vmax > 0 {
 		oaq.invVmax = 1.0 / vmax
 	}
@@ -253,7 +257,7 @@ func (oaq *ObstacleAvoidanceQuery) sampleVelocityGrid(pos d3.Vec3, rad, vmax flo
 	cs := vmax * 2 * (1 - oaq.params.velBias) / float32(oaq.params.gridSize-1)
 	half := float32(oaq.params.gridSize-1) * cs * 0.5
 
-	minPenalty := math32.MaxFloat32
+	var minPenalty float32 = math.MaxFloat32
 	var ns int = 0
 
 	for y := uint8(0); y < oaq.params.gridSize; y++ {
@@ -305,7 +309,7 @@ func (oaq *ObstacleAvoidanceQuery) sampleVelocityAdaptive(pos d3.Vec3, rad, vmax
 	oaq.params = *params
 	oaq.invHorizTime = 1.0 / oaq.params.horizTime
 	oaq.vmax = vmax
-	oaq.invVmax = math32.MaxFloat32
+	oaq.invVmax = math.MaxFloat32
 	if vmax > 0 {
 		oaq.invVmax = 1.0 / vmax
 	}
@@ -377,7 +381,7 @@ func (oaq *ObstacleAvoidanceQuery) sampleVelocityAdaptive(pos d3.Vec3, rad, vmax
 	var ns int = 0
 
 	for k := 0; k < depth; k++ {
-		minPenalty := math32.MaxFloat32
+		var minPenalty float32 = math.MaxFloat32
 		bvel := d3.NewVec3()
 
 		for i := 0; i < npat; i++ {

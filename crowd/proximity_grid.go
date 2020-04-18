@@ -1,7 +1,7 @@
 package crowd
 
 import (
-	"github.com/aurelien-rainone/math32"
+	"github.com/arl/math32"
 )
 
 func hashPos2(x, y, n int32) int32 {
