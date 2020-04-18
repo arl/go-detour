@@ -1,6 +1,8 @@
 package recast
 
 import (
+	"math"
+
 	"github.com/arl/gogeo/f32/d3"
 	"github.com/arl/math32"
 )
@@ -73,7 +75,7 @@ func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
-	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math32.Pi)
+	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math.Pi)
 
 	var norm [3]float32
 	for i := int32(0); i < nt; i++ {
@@ -110,7 +112,7 @@ func ClearUnwalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
-	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math32.Pi)
+	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math.Pi)
 
 	var norm [3]float32
 

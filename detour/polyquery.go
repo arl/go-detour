@@ -2,6 +2,7 @@ package detour
 
 import (
 	"log"
+	"math"
 
 	"github.com/arl/gogeo/f32/d3"
 	"github.com/arl/math32"
@@ -29,7 +30,7 @@ func newFindNearestPolyQuery(query *NavMeshQuery, center d3.Vec3) *findNearestPo
 	return &findNearestPolyQuery{
 		query:              query,
 		center:             center,
-		nearestDistanceSqr: math32.MaxFloat32,
+		nearestDistanceSqr: math.MaxFloat32,
 		nearestRef:         0,
 		nearestPoint:       d3.NewVec3(),
 	}
