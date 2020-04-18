@@ -1398,10 +1398,10 @@ func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
 //   endPos    The position to cast the ray toward. [(x, y, z)]
 //   filter    The polygon filter to apply to the query.
 //   options   Govern how the raycast behaves. See RaycastOptions
+//   hit       Raycast hit structure which will be filled with the results.
 //   prevRef   Parent of start ref. Used during for cost calculation [opt]
 //
 //  Returns:
-//   hit       Raycast hit structure which will be filled with the results.
 //   st        status flags for the query.
 //
 // This method is meant to be used for quick, short distance checks.
