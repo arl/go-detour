@@ -455,7 +455,7 @@ func (q *NavMeshQuery) FindStraightPath(
 		straightPath, straightPathFlags, straightPathRefs,
 		&count)
 	if stat != InProgress {
-		fmt.Println("FindStraightPath returns", stat, count)
+		//fmt.Println("FindStraightPath returns", stat, count)
 		return count, stat
 	}
 
@@ -508,7 +508,7 @@ func (q *NavMeshQuery) FindStraightPath(
 					if count >= len(straightPath) {
 						stat |= BufferTooSmall
 					}
-					fmt.Println("FindStraightPath 2 returns", stat, count)
+					//fmt.Println("FindStraightPath 2 returns", stat, count)
 					return count, stat
 				}
 
@@ -544,7 +544,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, options)
 						if stat != InProgress {
-							fmt.Println("FindStraightPath 3 returns", stat, count)
+							//fmt.Println("FindStraightPath 3 returns", stat, count)
 							return count, stat
 						}
 					}
@@ -565,7 +565,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count)
 					if stat != InProgress {
-						fmt.Println("FindStraightPath 4 returns", stat, count)
+						//fmt.Println("FindStraightPath 4 returns", stat, count)
 						return count, stat
 					}
 
@@ -599,7 +599,7 @@ func (q *NavMeshQuery) FindStraightPath(
 							straightPath, straightPathFlags, straightPathRefs,
 							&count, options)
 						if stat != InProgress {
-							fmt.Println("FindStraightPath 5 returns", stat, count)
+							//fmt.Println("FindStraightPath 5 returns", stat, count)
 							return count, stat
 						}
 					}
@@ -620,7 +620,7 @@ func (q *NavMeshQuery) FindStraightPath(
 						straightPath, straightPathFlags, straightPathRefs,
 						&count)
 					if stat != InProgress {
-						fmt.Println("FindStraightPath 6 returns", stat, count)
+						//fmt.Println("FindStraightPath 6 returns", stat, count)
 						return count, stat
 					}
 
@@ -643,7 +643,7 @@ func (q *NavMeshQuery) FindStraightPath(
 				straightPath, straightPathFlags, straightPathRefs,
 				&count, options)
 			if stat != InProgress {
-				fmt.Println("FindStraightPath 7 returns", stat, count)
+				//fmt.Println("FindStraightPath 7 returns", stat, count)
 				return count, stat
 			}
 		}
@@ -658,7 +658,7 @@ func (q *NavMeshQuery) FindStraightPath(
 	if count >= len(straightPath) {
 		stat |= BufferTooSmall
 	}
-	fmt.Println("FindStraightPath 8 returns", stat, count)
+	//fmt.Println("FindStraightPath 8 returns", stat, count)
 	return count, stat
 }
 
@@ -1398,10 +1398,10 @@ func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
 //   endPos    The position to cast the ray toward. [(x, y, z)]
 //   filter    The polygon filter to apply to the query.
 //   options   Govern how the raycast behaves. See RaycastOptions
+//   hit       Raycast hit structure which will be filled with the results.
 //   prevRef   Parent of start ref. Used during for cost calculation [opt]
 //
 //  Returns:
-//   hit       Raycast hit structure which will be filled with the results.
 //   st        status flags for the query.
 //
 // This method is meant to be used for quick, short distance checks.
@@ -1443,7 +1443,8 @@ func (q *NavMeshQuery) Raycast(
 	startPos, endPos d3.Vec3,
 	filter QueryFilter,
 	options int,
-	prevRef PolyRef) (hit RaycastHit, st Status) {
+	hit *RaycastHit,
+	prevRef PolyRef) (st Status) {
 
 	// Validate input
 	if startRef == 0 || !q.nav.IsValidPolyRef(startRef) {
@@ -1461,6 +1462,7 @@ func (q *NavMeshQuery) Raycast(
 		n                    int
 	)
 
+	lastPos = d3.NewVec3()
 	curPos = d3.NewVec3From(startPos)
 	dir = endPos.Sub(startPos)
 	hit.HitNormal = d3.NewVec3()
@@ -1710,7 +1712,7 @@ func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
 	hit.Path = path
 	hit.MaxPath = maxPath
 
-	hit, status := q.Raycast(startRef, startPos, endPos, filter, 0, 0)
+	status := q.Raycast(startRef, startPos, endPos, filter, 0, &hit, 0)
 	copy(hitNormal, hit.HitNormal)
 	return hit.PathCount, hit.T, status
 }
@@ -1946,7 +1948,7 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 			rayHit.PathCost = 0
 			rayHit.T = 0
 			if tryLOS {
-				rayHit, _ = q.Raycast(parentRef, parentNode.Pos, neighbourNode.Pos, q.query.filter, RaycastUseCosts, grandpaRef)
+				_ = q.Raycast(parentRef, parentNode.Pos, neighbourNode.Pos, q.query.filter, RaycastUseCosts, &rayHit, grandpaRef)
 				foundShortCut = rayHit.T >= 1.0
 			}
 
@@ -1973,8 +1975,8 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 				cost = cost + endCost
 				heuristic = 0
 			} else {
-				fmt.Println("neighbourNode.Pos", neighbourNode.Pos)
-				fmt.Println("q.query.endPos", q.query.endPos)
+				//fmt.Println("neighbourNode.Pos", neighbourNode.Pos)
+				//fmt.Println("q.query.endPos", q.query.endPos)
 				heuristic = neighbourNode.Pos.Dist(q.query.endPos) * HScale
 			}
 
@@ -2025,6 +2027,10 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 	if q.openList.empty() {
 		details := q.query.status & StatusDetailMask
 		q.query.status = Success | details
+	}
+
+	if doneIters != nil {
+		*doneIters = iter
 	}
 
 	return q.query.status
@@ -2164,24 +2170,15 @@ func (q *NavMeshQuery) FinalizeSlicedFindPathPartial(existing []PolyRef, existin
 			prev *Node
 			node []*Node = make([]*Node, 1)
 		)
+		var numNodesFound uint32 = 0
 		for i := existingSize - 1; i >= 0; i-- {
-			panic("CHECK HERE")
-			q.nodePool.FindNodes(existing[i], node, 1)
-			// FIXME
-			// Original C/C++ code
-			//if node {
-			//break
-			//}
-			// seems to be equivalent to:
-			if node[0] != nil {
+			numNodesFound = q.nodePool.FindNodes(existing[i], node, 1)
+			if numNodesFound != 0 {
 				break
 			}
 		}
 
-		// TODO: same than before
-		// this is Original C/C++ code
-		//if !node {
-		if node[0] == nil {
+		if numNodesFound == 0 {
 			q.query.status |= PartialResult
 			if q.query.lastBestNode == nil {
 				panic("q.query.lastBestNode should not be nil")
