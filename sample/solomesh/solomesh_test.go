@@ -317,7 +317,7 @@ func TestRaycastSoloMesh(t *testing.T) {
 		var startRef detour.PolyRef
 		_, startRef, _ = query.FindNearestPoly(spos, polyPickExt, filter)
 
-		var hit detour.RaycastHit
+		var hit *detour.RaycastHit
 
 		st := query.Raycast(startRef, spos, epos, filter, 0, hit, 0)
 		if detour.StatusFailed(st) {
