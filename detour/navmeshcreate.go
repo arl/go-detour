@@ -2,6 +2,7 @@ package detour
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"unsafe"
 
@@ -571,8 +572,8 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 		offMeshConClass = make([]uint8, params.OffMeshConCount*2)
 
 		// Find tight heigh bounds, used for culling out off-mesh start locations.
-		hmin := math32.MaxFloat32
-		hmax := -math32.MaxFloat32
+		hmin := float32(math.MaxFloat32)
+		hmax := float32(-math.MaxFloat32)
 
 		if params.DetailVerts != nil && params.DetailVertsCount != 0 {
 			for i := int32(0); i < params.DetailVertsCount; i++ {

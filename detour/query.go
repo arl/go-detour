@@ -1669,14 +1669,14 @@ func (q *NavMeshQuery) Raycast(
 	return
 }
 
-// This method is meant to be used for quick, short distance checks.
+// Raycast2 is meant to be used for quick, short distance checks.
 //
 // If the path array is too small to hold the result, it will be filled as far
 // as possible from the start postion toward the end position.
 //
 // Using the Hit Parameter (t)
 //
-// If the hit parameter is a very high value (math32.MaxFloat32), then the ray
+// If the hit parameter is a very high value (math.MaxFloat32), then the ray
 // has hit the end position. In this case the path represents a valid corridor
 // to the end position and the value of @p hitNormal is undefined.
 //
@@ -1761,7 +1761,7 @@ func (q *NavMeshQuery) InitSlicedFindPath(startRef, endRef PolyRef,
 	copy(q.query.endPos, endPos)
 	q.query.filter = filter
 	q.query.options = options
-	q.query.raycastLimitSqr = math32.MaxFloat32
+	q.query.raycastLimitSqr = math.MaxFloat32
 
 	if startRef == 0 || endRef == 0 {
 		return Failure | InvalidParam

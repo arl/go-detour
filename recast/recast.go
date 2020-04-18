@@ -1,6 +1,8 @@
 package recast
 
 import (
+	"math"
+
 	"github.com/arl/gogeo/f32/d3"
 	"github.com/arl/math32"
 )
@@ -73,7 +75,7 @@ func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
-	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math32.Pi)
+	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math.Pi)
 
 	var norm [3]float32
 	for i := int32(0); i < nt; i++ {
@@ -110,7 +112,7 @@ func ClearUnwalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	verts []float32, nv int32,
 	tris []int32, nt int32,
 	areas []uint8) {
-	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math32.Pi)
+	walkableThr := math32.Cos(walkableSlopeAngle / 180.0 * math.Pi)
 
 	var norm [3]float32
 
@@ -124,67 +126,94 @@ func ClearUnwalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 	}
 }
 
-// Recast performance timer categories.
+// A TimerLabel is a performance timer category.
 // see BuildContext
 type TimerLabel int
 
 const (
-	// The user defined total time of the build.
+	// TimerTotal is the user defined total time of the build.
 	TimerTotal = iota
-	// A user defined build time.
+	// TimerTemp is an user defined build time.
 	TimerTemp
-	// The time to rasterize the triangles. (See: RasterizeTriangle)
+	// TimerRasterizeTriangles is the time to rasterize the triangles.
+	// see: RasterizeTriangle
 	TimerRasterizeTriangles
-	// The time to build the compact heightfield. (See: BuildCompactHeightfield)
+	// TimerBuildCompactHeightfield is the time to build the compact
+	// heightfield. see: BuildCompactHeightfield
 	TimerBuildCompactHeightfield
-	// The total time to build the contours. (See: BuildContours)
+	// TimerBuildContours is the total time to build the contours.
+	// see: BuildContours
 	TimerBuildContours
-	// The time to trace the boundaries of the contours. (See: BuildContours)
+	// TimerBuildContoursTrace is the time to trace the boundaries of the
+	// contours. see: BuildContours
 	TimerBuildContoursTrace
-	// The time to simplify the contours. (See: BuildContours)
+	// TimerBuildContoursSimplify is the time to simplify the contours.
+	// see: BuildContours
 	TimerBuildContoursSimplify
-	// The time to filter ledge spans. (See: FilterLedgeSpans)
+	// TimerFilterBorder is the time to filter ledge spans.
+	// see: FilterLedgeSpans
 	TimerFilterBorder
-	// The time to filter low height spans. (See: FilterWalkableLowHeightSpans)
+	// TimerFilterWalkable is the time to filter low height spans.
+	// see: FilterWalkableLowHeightSpans
 	TimerFilterWalkable
-	// The time to apply the median filter. (See: MedianFilterWalkableArea)
+	// TimerMedianArea is the time to apply the median filter.
+	// see: MedianFilterWalkableArea
 	TimerMedianArea
-	// The time to filter low obstacles. (See: FilterLowHangingWalkableObstacles)
+	// TimerFilterLowObstacles is the time to filter low obstacles.
+	// see: FilterLowHangingWalkableObstacles
 	TimerFilterLowObstacles
-	// The time to build the polygon mesh. (See: BuildPolyMesh)
+	// TimerBuildPolymesh is the time to build the polygon mesh.
+	// see: BuildPolyMesh
 	TimerBuildPolymesh
-	// The time to merge polygon meshes. (See: MergePolyMeshes)
+	// TimerMergePolymesh is the time to merge polygon meshes.
+	// see: MergePolyMeshes
 	TimerMergePolymesh
-	// The time to erode the walkable area. (See: ErodeWalkableArea)
+	// TimerErodeArea is the time to erode the walkable area.
+	// see: ErodeWalkableArea
 	TimerErodeArea
-	// The time to mark a box area. (See: MarkBoxArea)
+	// TimerMarkBoxArea is the time to mark a box area.
+	// see: MarkBoxArea
 	TimerMarkBoxArea
-	// The time to mark a cylinder area. (See: MarkCylinderArea)
+	// TimerMarkCylinderArea is the time to mark a cylinder area.
+	// see: MarkCylinderArea
 	TimerMarkCylinderArea
-	// The time to mark a convex polygon area. (See: MarkConvexPolyArea)
+	// TimerMarkConvexPolyArea is the time to mark a convex polygon area.
+	// see: MarkConvexPolyArea
 	TimerMarkConvexPolyArea
-	// The total time to build the distance field. (See: BuildDistanceField)
+	// TimerBuildDistanceField is the total time to build the distance field.
+	// see: BuildDistanceField
 	TimerBuildDistanceField
-	// The time to build the distances of the distance field. (See: BuildDistanceField)
+	// TimerBuildDistanceFieldDist is the time to build the distances of the
+	// distance field. see: BuildDistanceField
 	TimerBuildDistanceFieldDist
-	// The time to blur the distance field. (See: BuildDistanceField)
+	// TimerBuildDistanceFieldBlur is the time to blur the distance field.
+	// see: BuildDistanceField
 	TimerBuildDistanceFieldBlur
-	// The total time to build the regions. (See: BuildRegions, BuildRegionsMonotone)
+	// TimerBuildRegions is the total time to build the regions.
+	// see: BuildRegions, BuildRegionsMonotone
 	TimerBuildRegions
-	// The total time to apply the watershed algorithm. (See: BuildRegions)
+	// TimerBuildRegionsWatershed is the total time to apply the watershed
+	// algorithm. see: BuildRegions
 	TimerBuildRegionsWatershed
-	// The time to expand regions while applying the watershed algorithm. (See: BuildRegions)
+	// TimerBuildRegionsExpand is the time to expand regions while applying the
+	// watershed algorithm. see: BuildRegions
 	TimerBuildRegionsExpand
-	// The time to flood regions while applying the watershed algorithm. (See: BuildRegions)
+	// TimerBuildRegionsFlood is the time to flood regions while applying the
+	// watershed algorithm. see: BuildRegions
 	TimerBuildRegionsFlood
-	// The time to filter out small regions. (See: BuildRegions, BuildRegionsMonotone)
+	// TimerBuildRegionsFilter is the time to filter out small regions.
+	// see: BuildRegions, BuildRegionsMonotone
 	TimerBuildRegionsFilter
-	// The time to build heightfield layers. (See: BuildHeightfieldLayers)
+	// TimerBuildLayers is the time to build heightfield layers.
+	// see: BuildHeightfieldLayers
 	TimerBuildLayers
-	// The time to build the polygon mesh detail. (See: BuildPolyMeshDetail)
+	// TimerBuildPolyMeshDetail is the time to build the polygon mesh detail.
+	// see: BuildPolyMeshDetail
 	TimerBuildPolyMeshDetail
-	// The time to merge polygon mesh details. (See: MergePolyMeshDetails)
+	// TimerMergePolyMeshDetail is the time to merge polygon mesh details.
+	// see: MergePolyMeshDetails
 	TimerMergePolyMeshDetail
+
 	// The maximum number of timers. (Used for iterating timers.)
 	maxTimers
 )

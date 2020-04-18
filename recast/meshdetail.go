@@ -2,6 +2,7 @@ package recast
 
 import (
 	"fmt"
+	"math"
 
 	assert "github.com/arl/assertgo"
 	"github.com/arl/gogeo/f32/d3"
@@ -110,7 +111,7 @@ func distPtTri(p, a, b, c []float32) float32 {
 		y := a[1] + v0[1]*u + v1[1]*v
 		return math32.Abs(y - p[1])
 	}
-	return math32.MaxFloat32
+	return math.MaxFloat32
 }
 
 func distancePtSeg3Pt(pt, p, q []float32) float32 {
@@ -161,7 +162,7 @@ func distancePtSeg2d(pt, p, q []float32) float32 {
 }
 
 func distToTriMesh(p, verts []float32, nverts int32, tris []int32, ntris int32) float32 {
-	dmin := math32.MaxFloat32
+	var dmin float32 = math.MaxFloat32
 	for i := int32(0); i < ntris; i++ {
 		va := verts[tris[i*4+0]*3:]
 		vb := verts[tris[i*4+1]*3:]
@@ -171,7 +172,7 @@ func distToTriMesh(p, verts []float32, nverts int32, tris []int32, ntris int32) 
 			dmin = d
 		}
 	}
-	if dmin == math32.MaxFloat32 {
+	if dmin == math.MaxFloat32 {
 		return -1
 	}
 	return dmin
@@ -202,7 +203,7 @@ func getHeight(fx, fy, fz, cs, ics, ch float32, radius int32, hp *HeightPatch) u
 		nextRingIterStart := int32(8)
 		nextRingIters := int32(16)
 
-		dmin := math32.MaxFloat32
+		var dmin float32 = math.MaxFloat32
 		for i := int32(0); i < maxIter; i++ {
 			nx := ix + x
 			nz := iz + z
@@ -714,7 +715,7 @@ func delaunayHull(ctx *BuildContext, npts int32, pts []float32,
 
 // Calculate minimum extend of the polygon.
 func polyMinExtent(verts []float32, nverts int32) float32 {
-	minDist := math32.MaxFloat32
+	var minDist float32 = math.MaxFloat32
 	for i := int32(0); i < nverts; i++ {
 		ni := (i + 1) % nverts
 		p1 := verts[i*3:]
@@ -1191,10 +1192,10 @@ func seedArrayWithPolyCenter(ctx *BuildContext, chf *CompactHeightfield,
 }
 
 func distToPoly(nvert int32, verts, p []float32) float32 {
-	dmin := math32.MaxFloat32
 	var (
 		i, j int32
 		c    bool
+		dmin float32 = math.MaxFloat32
 	)
 
 	for j = nvert - 1; i < nvert; i++ {
