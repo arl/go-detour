@@ -2054,7 +2054,7 @@ func (q *NavMeshQuery) FinalizeSlicedFindPath(path []PolyRef, maxPath int) (path
 		return 0, Failure
 	}
 
-	var n int = 0
+	var n int
 
 	if q.query.startRef == q.query.endRef {
 		// Special case: the search starts and ends at same poly.
