@@ -1,4 +1,4 @@
-# go-detour - port of [Recast & Detour](https://github.com/recastnavigation/recastnavigation) in Go
+# go-detour - port of [recast/detour](https://github.com/recastnavigation/recastnavigation) in Go
 [![GoDoc](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](http://godoc.org/github.com/arl/go-detour) [![Build Status](https://travis-ci.org/arl/go-detour.svg?branch=master)](https://travis-ci.org/arl/go-detour) [![Coverage Status](https://coveralls.io/repos/github/arl/go-detour/badge.svg?branch=master)](https://coveralls.io/github/arl/go-detour?branch=master)
 
 ## Recast library
