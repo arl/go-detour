@@ -215,11 +215,8 @@ func (q *NavMeshQuery) FindPath(
 	outOfNodes := false
 
 	for !q.openList.empty() {
-
-		var bestNode *Node
-
 		// Remove node from open list and put it in closed list.
-		bestNode = q.openList.pop()
+		bestNode := q.openList.pop()
 		bestNode.Flags &= ^nodeOpen
 		bestNode.Flags |= nodeClosed
 
@@ -1388,8 +1385,8 @@ func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
 	return true
 }
 
-// Casts a 'walkability' ray along the surface of the navigation mesh from
-// the start position toward the end position.
+// Raycast casts a 'walkability' ray along the surface of the navigation mesh
+// from the start position toward the end position.
 //
 //  Arguments:
 //   startRef  The reference id of the start polygon.
@@ -1406,15 +1403,14 @@ func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
 //
 // This method is meant to be used for quick, short distance checks.
 //
-// If the path array is too small to hold the result, it will be filled as
-// far as possible from the start postion toward the end position.
+// If the path array is too small to hold the result, it will be filled as far
+// as possible from the start position toward the end position.
 //
 // # Using the Hit Parameter t of RaycastHit
 //
 // If the hit parameter is a very high value (math.MaxFloat32), then the ray has
 // hit the end position. In this case the path represents a valid corridor to
 // the end position and the value of hitNormal is undefined.
-//
 // If the hit parameter is zero, then the start position is on the wall that was
 // hit and the value of hitNormal is undefined.
 //
@@ -1674,7 +1670,7 @@ func (q *NavMeshQuery) Raycast(
 // Raycast2 is meant to be used for quick, short distance checks.
 //
 // If the path array is too small to hold the result, it will be filled as far
-// as possible from the start postion toward the end position.
+// as possible from the start position toward the end position.
 //
 // Using the Hit Parameter (t)
 //
@@ -1717,15 +1713,15 @@ func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
 	return hit.PathCount, hit.T, status
 }
 
-// Intializes a sliced path query.
+// InitSlicedFindPath initializes a sliced path query.
 //
 // Common use case:
-//	-# Call initSlicedFindPath() to initialize the sliced path query.
+//	-# Call InitSlicedFindPath() to initialize the sliced path query.
 //	-# Call UpdateSlicedFindPath() until it returns complete.
 //	-# Call FinalizeSlicedFindPath() to get the path.
 //
 //  Arguments
-//   startRef The refrence id of the start polygon.
+//   startRef The reference id of the start polygon.
 //   endRef   The reference id of the end polygon.
 //   startPos A position within the start polygon. [(x, y, z)]
 //   endPos   A position within the end polygon. [(x, y, z)]
@@ -1806,7 +1802,7 @@ func (q *NavMeshQuery) InitSlicedFindPath(startRef, endRef PolyRef,
 	return q.query.status
 }
 
-// Updates an in-progress sliced path query.
+// UpdateSlicedFindPath updates an in-progress sliced path query.
 //
 //  Arguments:
 //   maxIter   The maximum number of iterations to perform.
@@ -2036,7 +2032,7 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 	return q.query.status
 }
 
-// Finalizes and returns the results of a sliced path query.
+// FinalizeSlicedFindPath finalizes and returns the results of a sliced path query.
 //
 //  Arguments:
 //   path      An ordered list of polygon references representing the path.

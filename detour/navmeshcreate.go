@@ -789,27 +789,17 @@ func CreateNavMeshData(params *NavMeshCreateParams) ([]uint8, error) {
 			p.Verts[j] = src[j]
 			if (src[nvp+j] & 0x8000) != 0 {
 				// Border or portal edge.
-				dir := src[nvp+j] & 0xf
-				if dir == 0xf {
-					// Border
+				switch src[nvp+j] & 0xf {
+				case 0xf: // Border
 					p.Neis[j] = 0
-
-				} else if dir == 0 {
-					// Portal x-
+				case 0: // Portal x-
 					p.Neis[j] = extLink | 4
-
-				} else if dir == 1 {
-					// Portal z+
+				case 1: // Portal z+
 					p.Neis[j] = extLink | 2
-
-				} else if dir == 2 {
-					// Portal x+
-					p.Neis[j] = extLink | 0
-
-				} else if dir == 3 {
-					// Portal z-
+				case 2: // Portal x+
+					p.Neis[j] = extLink
+				case 3: // Portal z-
 					p.Neis[j] = extLink | 6
-
 				}
 			} else {
 				// Normal connection
