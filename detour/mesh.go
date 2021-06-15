@@ -118,7 +118,7 @@ func Decode(r io.Reader) (*NavMesh, error) {
 		}
 		status, _ := mesh.AddTile(data, tileHdr.TileRef)
 		if status&Failure != 0 {
-			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x\n", i, status)
+			return nil, fmt.Errorf("couldn't add tile %d(), status: 0x%x", i, status)
 		}
 	}
 	return &mesh, nil
@@ -231,8 +231,8 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 	}
 	m.TileLUTMask = m.TileLUTSize - 1
 
-	m.Tiles = make([]MeshTile, m.MaxTiles, m.MaxTiles)
-	m.posLookup = make([]*MeshTile, m.TileLUTSize, m.TileLUTSize)
+	m.Tiles = make([]MeshTile, m.MaxTiles)
+	m.posLookup = make([]*MeshTile, m.TileLUTSize)
 	m.nextFree = nil
 	for i := m.MaxTiles - 1; i >= 0; i-- {
 		m.Tiles[i].Salt = 1
@@ -266,7 +266,7 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 //             optional, defaults to 0
 //
 // Return The status flags for the operation and the tile reference. (If the
-// tile was succesfully added.)
+// tile was successfully added.)
 //
 // The add operation will fail if the data is in the wrong format, the allocated tile
 // space is full, or there is a tile already at the specified reference.
@@ -787,8 +787,7 @@ func (m *NavMesh) baseOffMeshLinks(tile *MeshTile) {
 			continue
 		}
 		// Make sure the location is on current mesh.
-		var v d3.Vec3
-		v = tile.Verts[poly.Verts[0]*3 : poly.Verts[0]*3+3]
+		var v d3.Vec3 = tile.Verts[poly.Verts[0]*3 : poly.Verts[0]*3+3]
 		v.Assign(nearestPt)
 
 		// Link off-mesh connection to target poly.

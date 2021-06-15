@@ -9,8 +9,8 @@ import (
 	"github.com/arl/gogeo/f32/d3"
 )
 
-// FIXME: this test is disabled for now
-func _TestOffMeshConnections(t *testing.T) {
+func TestOffMeshConnections(t *testing.T) {
+	t.Skip("Work in progress, disabled for now")
 	var (
 		mesh *NavMesh
 		err  error
@@ -38,7 +38,7 @@ func _TestOffMeshConnections(t *testing.T) {
 			// oldest result:
 			//offmeshconnections (omc) are currently only allowed inside a same tile or its direct neighbours :-(
 
-			// with the new and already commited navmesh 'offmeshcons.bin', we
+			// with the new and already committed navmesh 'offmeshcons.bin', we
 			// got this result on RecastDemo gui:
 			//ps  -17.323172 3.074387 -3.366402  -4.377790 -0.000053 -1.633406  0xffef 0x0
 			//p[0] pt{-17.323172,3.074387,-3.366402} flags0x1
@@ -116,11 +116,11 @@ func _TestOffMeshConnections(t *testing.T) {
 
 		const (
 			samplePolyFlagsWalk     int32 = 0x01   // Ability to walk (ground, grass, road)
-			samplePolyFlagsSwim           = 0x02   // Ability to swim (water).
-			samplePolyFlagsDoor           = 0x04   // Ability to move through doors.
-			samplePolyFlagsJump           = 0x08   // Ability to jump.
-			samplePolyFlagsDisabled       = 0x10   // Disabled polygon
-			samplePolyFlagsAll            = 0xffff // All abilities.
+			samplePolyFlagsSwim     int32 = 0x02   // Ability to swim (water).
+			samplePolyFlagsDoor     int32 = 0x04   // Ability to move through doors.
+			samplePolyFlagsJump     int32 = 0x08   // Ability to jump.
+			samplePolyFlagsDisabled int32 = 0x10   // Disabled polygon
+			samplePolyFlagsAll      int32 = 0xffff // All abilities.
 		)
 
 		// Change costs.

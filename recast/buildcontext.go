@@ -147,7 +147,7 @@ func (ctx *BuildContext) StartTimer(label TimerLabel) {
 // StopTimer stops the specified performance timer.
 func (ctx *BuildContext) StopTimer(label TimerLabel) {
 	if ctx.timerEnabled {
-		deltaTime := time.Now().Sub(ctx.startTime[label])
+		deltaTime := time.Since(ctx.startTime[label])
 		if ctx.accTime[label] == 0 {
 			ctx.accTime[label] = deltaTime
 		} else {

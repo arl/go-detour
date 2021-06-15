@@ -427,8 +427,7 @@ func TestRasterizeTriangle(t *testing.T) {
 
 	w, h := CalcGridSize(bmin[:], bmax[:], cellSize)
 
-	var solid *Heightfield
-	solid = NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
+	solid := NewHeightfield(w, h, bmin[:], bmax[:], cellSize, cellHeight)
 
 	area := uint8(42)
 	flagMergeThr := int32(1)

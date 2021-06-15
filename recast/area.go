@@ -1,7 +1,7 @@
 package recast
 
 import (
-	"github.com/arl/assertgo"
+	assert "github.com/arl/assertgo"
 	"github.com/arl/gogeo/f32/d3"
 )
 
@@ -199,7 +199,7 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 //
 //  Arguments:
 //   ctx     The build context to use during the operation.
-//   verts   The vertices of the polygon [Fomr: (x, y, z) * @p nverts]
+//   verts   The vertices of the polygon [Form: (x, y, z) * @p nverts]
 //   nverts  The number of vertices in the polygon.
 //   hmin    The height of the base of the polygon.
 //   hmax    The height of the top of the polygon.
