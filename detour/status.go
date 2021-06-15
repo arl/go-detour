@@ -39,7 +39,7 @@ func (s Status) Error() string {
 		case PartialResult:
 			return "partial result"
 		default:
-			return fmt.Sprintf("unspecified error 0x%x", s)
+			return fmt.Sprintf("unspecified error 0x%x", uint32(s))
 		}
 	}
 	if s == InProgress {
