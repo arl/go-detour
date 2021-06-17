@@ -92,8 +92,7 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	}
 
 	// Read tiles.
-	var i int32
-	for i = 0; i < hdr.NumTiles; i++ {
+	for i := uint32(0); i < hdr.NumTiles; i++ {
 
 		var (
 			tileHdr navMeshTileHeader
