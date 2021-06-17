@@ -70,12 +70,12 @@ func testCreateSoloMesh(t *testing.T, objName string) {
 	check(t, err)
 	defer r.Close()
 	if err = soloMesh.LoadGeometry(r); err != nil {
-		ctx.DumpLog("")
+		ctx.DumpLog(os.Stdout, "")
 		t.Fatalf("couldn't load mesh %v", path)
 	}
 	navMesh, ok := soloMesh.Build()
 	if !ok {
-		ctx.DumpLog("")
+		ctx.DumpLog(os.Stdout, "")
 		t.Fatalf("couldn't build navmesh for %v", objName)
 	}
 

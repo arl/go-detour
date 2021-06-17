@@ -68,12 +68,12 @@ func testCreateTileMesh(t *testing.T, objName string) {
 	check(t, err)
 	defer r.Close()
 	if err = tileMesh.LoadGeometry(r); err != nil {
-		ctx.DumpLog("")
+		ctx.DumpLog(os.Stdout, "")
 		t.Fatalf("couldn't load mesh %v", path)
 	}
 	navMesh, ok := tileMesh.Build()
 	if !ok {
-		ctx.DumpLog("")
+		ctx.DumpLog(os.Stdout, "")
 		t.Fatalf("couldn't build navmesh for %v", objName)
 	}
 

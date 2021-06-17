@@ -2,6 +2,7 @@ package recast
 
 import (
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -112,18 +113,18 @@ func (ctx *BuildContext) log(category logCategory, format string, v ...interface
 	}
 }
 
-// DumpLog dumps all the log entries to stdout, preceded by a message.
+// DumpLog dumps all the log entries to w, preceded by a message.
 //
 // The format string and arguments are forwarded to fmt.Sprintf and thus accepts
 // the same format specifiers.
-func (ctx *BuildContext) DumpLog(format string, args ...interface{}) {
+func (ctx *BuildContext) DumpLog(w io.Writer, format string, args ...interface{}) {
 	// Print header.
-	fmt.Printf(format+"\n", args...)
+	fmt.Fprintf(w, format+"\n", args...)
 
 	// Print messages
 	for i := 0; i < ctx.numMessages; i++ {
 		msg := ctx.messages[i]
-		fmt.Println(msg)
+		fmt.Fprintln(w, msg)
 	}
 }
 
