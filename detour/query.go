@@ -1,7 +1,6 @@
 package detour
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"unsafe"
@@ -423,11 +422,9 @@ func (q *NavMeshQuery) FindStraightPath(
 
 	// parameter check
 	if len(straightPath) == 0 {
-		fmt.Println("len(straightPath) == 0")
 		return 0, Failure | InvalidParam
 	}
 	if len(path) == 0 {
-		fmt.Println("len(path) == 0")
 		return 0, Failure | InvalidParam
 	}
 
