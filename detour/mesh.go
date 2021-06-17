@@ -92,8 +92,7 @@ func Decode(r io.Reader) (*NavMesh, error) {
 	}
 
 	// Read tiles.
-	var i int32
-	for i = 0; i < hdr.NumTiles; i++ {
+	for i := uint32(0); i < hdr.NumTiles; i++ {
 
 		var (
 			tileHdr navMeshTileHeader
@@ -145,8 +144,7 @@ func (m *NavMesh) SaveToFile(fn string) error {
 	header.Params = m.Params
 
 	if _, err = header.WriteTo(f); err != nil {
-		fmt.Println(err)
-		return err
+		return fmt.Errorf("Error writing header: %v", err)
 	}
 
 	// Store tiles.
@@ -296,7 +294,6 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 
 	// Make sure the location is free.
 	if m.TileAt(hdr.X, hdr.Y, hdr.Layer) != nil {
-		fmt.Println("TileAt failed")
 		return Failure, 0
 	}
 

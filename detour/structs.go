@@ -7,9 +7,9 @@ import (
 )
 
 type navMeshSetHeader struct {
-	Magic    int32
-	Version  int32
-	NumTiles int32
+	Magic    uint32
+	Version  uint32
+	NumTiles uint32
 	Params   NavMeshParams
 }
 
@@ -27,9 +27,9 @@ func (s *navMeshSetHeader) serialize(dst []byte) {
 	)
 
 	// write each field as little endian
-	little.PutUint32(dst[off:], uint32(s.Magic))
-	little.PutUint32(dst[off+4:], uint32(s.Version))
-	little.PutUint32(dst[off+8:], uint32(s.NumTiles))
+	little.PutUint32(dst[off:], s.Magic)
+	little.PutUint32(dst[off+4:], s.Version)
+	little.PutUint32(dst[off+8:], s.NumTiles)
 	s.Params.serialize(dst[off+12:])
 }
 

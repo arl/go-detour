@@ -96,7 +96,7 @@ func doBuild(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	ctx.DumpLog("")
+	ctx.DumpLog(os.Stdout, "")
 
 	//
 	// save

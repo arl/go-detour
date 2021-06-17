@@ -1,8 +1,8 @@
 package detour
 
 const (
-	navMeshSetMagic   int32 = 'M'<<24 | 'S'<<16 | 'E'<<8 | 'T' //'MSET';
-	navMeshSetVersion int32 = 1
+	navMeshSetMagic   = 'M'<<24 | 'S'<<16 | 'E'<<8 | 'T'
+	navMeshSetVersion = 1
 )
 
 const (

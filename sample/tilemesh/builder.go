@@ -2,6 +2,7 @@ package tilemesh
 
 import (
 	"io"
+	"os"
 	"time"
 
 	"github.com/arl/go-detour/detour"
@@ -561,7 +562,7 @@ func (tm *TileMesh) BuildTile(pos d3.Vec3) {
 		}
 	}
 
-	tm.ctx.DumpLog("Build Tile (%d,%d):", tx, ty)
+	tm.ctx.DumpLog(os.Stdout, "Build Tile (%d,%d):", tx, ty)
 }
 
 func (tm *TileMesh) TilePos(pos d3.Vec3) (x, y int32) {
