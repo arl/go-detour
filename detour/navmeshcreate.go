@@ -536,10 +536,10 @@ type NavMeshCreateParams struct {
 // CreateNavMeshData builds navigation mesh tile data from the provided tile
 // creation data.
 //
-//  Arguments:
-//  paramsi     Tile creation data.
-//  outData     The resulting tile data.
-//  outDataSize The size of the tile data array.
+//	Arguments:
+//	paramsi     Tile creation data.
+//	outData     The resulting tile data.
+//	outDataSize The size of the tile data array.
 //
 // Return true if the tile data was successfully created.
 //

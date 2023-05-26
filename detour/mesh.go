@@ -18,33 +18,33 @@ import (
 //
 // The navigation mesh consists of one or more tiles defining three primary
 // types of structural data:
-// - A polygon mesh which defines most of the navigation graph. (See recast.PolyMesh
-//   for its structure.)
-// - A detail mesh used for determining surface height on the polygon mesh. (See
-//   recast.PolyMeshDetail for its structure.)
-// - Off-mesh connections, which define custom point-to-point edges within the
-//   navigation graph.
+//   - A polygon mesh which defines most of the navigation graph. (See recast.PolyMesh
+//     for its structure.)
+//   - A detail mesh used for determining surface height on the polygon mesh. (See
+//     recast.PolyMeshDetail for its structure.)
+//   - Off-mesh connections, which define custom point-to-point edges within the
+//     navigation graph.
 //
 // The general build process is as follows:
-// - Create recast.PolyMesh and recast.PolyMeshDetail data using the recast
-//   build pipeline.
-// - Optionally, create off-mesh connection data.
-// - Combine the source data into a NavMeshCreateParams structure.
-// - Create a tile data array using CreateNavMeshData().
-// - Allocate at detour.NavMesh object and initialize it. (For single tile
-//   navigation meshes, the tile data is loaded during this step.)
-// - For multi-tile navigation meshes, load the tile data using
-//   TileNavMesh.addTile().
+//   - Create recast.PolyMesh and recast.PolyMeshDetail data using the recast
+//     build pipeline.
+//   - Optionally, create off-mesh connection data.
+//   - Combine the source data into a NavMeshCreateParams structure.
+//   - Create a tile data array using CreateNavMeshData().
+//   - Allocate at detour.NavMesh object and initialize it. (For single tile
+//     navigation meshes, the tile data is loaded during this step.)
+//   - For multi-tile navigation meshes, load the tile data using
+//     TileNavMesh.addTile().
 //
 // Notes:
 //
-// - This class is usually used in conjunction with the NavMeshQuery class for
-//   pathfinding.
-// - Technically, all navigation meshes are tiled. A 'solo' mesh is simply a
-//   navigation mesh initialized to have only a single tile.
-// - This class does not implement any asynchronous methods. So the
-//   detour.Status result of all methods will always contain either a success or
-//   failure flag.
+//   - This class is usually used in conjunction with the NavMeshQuery class for
+//     pathfinding.
+//   - Technically, all navigation meshes are tiled. A 'solo' mesh is simply a
+//     navigation mesh initialized to have only a single tile.
+//   - This class does not implement any asynchronous methods. So the
+//     detour.Status result of all methods will always contain either a success or
+//     failure flag.
 //
 // see NavMeshQuery, CreateNavMeshData, NavMeshCreateParams
 type NavMesh struct {
@@ -174,13 +174,14 @@ func (m *NavMesh) SaveToFile(fn string) error {
 
 // InitForSingleTile set up the navigation mesh for single tile use.
 //
-//  Arguments:
-//   data     Data of the new tile. (See: CreateNavMeshData)
-//   dataSize The data size of the new tile.
-//   flags    The tile flags. (See: TileFlags)
+//	Arguments:
+//	 data     Data of the new tile. (See: CreateNavMeshData)
+//	 dataSize The data size of the new tile.
+//	 flags    The tile flags. (See: TileFlags)
 //
 // Return The status flags for the operation.
-//  see CreateNavMeshData
+//
+//	see CreateNavMeshData
 func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 	var header MeshHeader
 	header.unserialize(data)
@@ -211,8 +212,8 @@ func (m *NavMesh) InitForSingleTile(data []uint8, flags int) Status {
 
 // Init initializes the navigation mesh for tiled use.
 //
-//  Arguments:
-//   params  Initialization parameters.
+//	Arguments:
+//	 params  Initialization parameters.
 //
 // Return the status flags for the operation.
 func (m *NavMesh) Init(params *NavMeshParams) Status {
@@ -257,11 +258,11 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 
 // AddTile adds a tile to the navigation mesh.
 //
-//  Arguments:
-//   data      Data for the new tile mesh. (See: CreateNavMeshData)
-//   flags     Tile flags. (See: tileFlags)
-//   lastRef   The desired reference for the tile. (When reloading a tile.)
-//             optional, defaults to 0
+//	Arguments:
+//	 data      Data for the new tile mesh. (See: CreateNavMeshData)
+//	 flags     Tile flags. (See: tileFlags)
+//	 lastRef   The desired reference for the tile. (When reloading a tile.)
+//	           optional, defaults to 0
 //
 // Return The status flags for the operation and the tile reference. (If the
 // tile was successfully added.)
@@ -410,12 +411,13 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 
 // Removes the specified tile from the navigation mesh.
 //
-//  Arguments:
-//   ref      The reference of the tile to remove.
+//	Arguments:
+//	 ref      The reference of the tile to remove.
 //
-//  Return values:
-//   data     Data associated with deleted tile.
-//   st       The status flags for the operation.
+//	Return values:
+//	 data     Data associated with deleted tile.
+//	 st       The status flags for the operation.
+//
 // This function returns the data for the tile so that, if desired,
 // it can be added back to the navigation mesh at a later point.
 //
@@ -510,10 +512,11 @@ func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
 
 // TileAt returns the tile at the specified grid location.
 //
-//  Arguments:
-//   x        The tile's x-location. (x, y, layer)
-//   y        The tile's y-location. (x, y, layer)
-//   layer    The tile's layer. (x, y, layer)
+//	Arguments:
+//	 x        The tile's x-location. (x, y, layer)
+//	 y        The tile's y-location. (x, y, layer)
+//	 layer    The tile's layer. (x, y, layer)
+//
 // Return the tile, or null if it does not exist.
 func (m *NavMesh) TileAt(x, y, layer int32) *MeshTile {
 	var (
@@ -583,13 +586,14 @@ func (m *NavMesh) connectIntLinks(tile *MeshTile) {
 // specified tile.
 //
 // Example use case:
-//  base := navmesh.polyRefBase(tile);
-//  for i = 0; i < tile.Header.PolyCount; i++ {
-//      poly = &tile.polys[i]
-//      ref := base | PolyRef(i)
 //
-//      // Use the reference to access the polygon data.
-//  }
+//	base := navmesh.polyRefBase(tile);
+//	for i = 0; i < tile.Header.PolyCount; i++ {
+//	    poly = &tile.polys[i]
+//	    ref := base | PolyRef(i)
+//
+//	    // Use the reference to access the polygon data.
+//	}
 func (m *NavMesh) polyRefBase(tile *MeshTile) PolyRef {
 	if tile == nil {
 		return 0
@@ -624,10 +628,10 @@ func freeLink(tile *MeshTile, link uint32) {
 
 // encodePolyID derives a standard polygon reference.
 //
-//  Arguments:
-//   salt     The tile's salt value.
-//   it       The index of the tile.
-//   ip       The index of the polygon within the tile.
+//	Arguments:
+//	 salt     The tile's salt value.
+//	 it       The index of the tile.
+//	 ip       The index of the polygon within the tile.
 func (m *NavMesh) encodePolyID(salt, it, ip uint32) PolyRef {
 	return (PolyRef(salt) << (m.polyBits + m.tileBits)) |
 		(PolyRef(it) << m.polyBits) | PolyRef(ip)
@@ -732,7 +736,7 @@ const (
 // decodePolyIdTile extracts the tile's index from the specified polygon
 // reference.
 //
-//  see encodePolyID
+//	see encodePolyID
 func (m *NavMesh) decodePolyIDTile(ref PolyRef) uint32 {
 	tileMask := PolyRef((PolyRef(1) << m.tileBits) - 1)
 	return uint32((ref >> m.polyBits) & tileMask)
@@ -740,7 +744,7 @@ func (m *NavMesh) decodePolyIDTile(ref PolyRef) uint32 {
 
 // Extracts a tile's salt value from the specified polygon reference.
 //
-//  see encodePolyID
+//	see encodePolyID
 func (m *NavMesh) decodePolyIDSalt(ref PolyRef) uint32 {
 	saltMask := (PolyRef(1) << m.saltBits) - 1
 	return uint32((ref >> (m.polyBits + m.tileBits)) & saltMask)
@@ -965,7 +969,7 @@ func (m *NavMesh) queryPolygonsInTile(
 // decodePolyIdPoly extracts the polygon's index (within its tile) from the
 // specified polygon reference.
 //
-//  See encodePolyID
+//	See encodePolyID
 func (m *NavMesh) decodePolyIDPoly(ref PolyRef) uint32 {
 	polyMask := PolyRef((1 << m.polyBits) - 1)
 	return uint32(ref & polyMask)
@@ -973,11 +977,11 @@ func (m *NavMesh) decodePolyIDPoly(ref PolyRef) uint32 {
 
 // closestPointOnPoly finds the closest point on the specified polygon.
 //
-//  Arguments:
-//   [in] ref          The reference id of the polygon.
-//   [in] pos          The position to check. [(x, y, z)]
-//   [out]closest      The closest point on the polygon. [(x, y, z)]
-//   [out]posOverPoly  True of the position is over the polygon.
+//	Arguments:
+//	 [in] ref          The reference id of the polygon.
+//	 [in] pos          The position to check. [(x, y, z)]
+//	 [out]closest      The closest point on the polygon. [(x, y, z)]
+//	 [out]posOverPoly  True of the position is over the polygon.
 func (m *NavMesh) closestPointOnPoly(ref PolyRef, pos, closest d3.Vec3, posOverPoly *bool) {
 	var (
 		tile *MeshTile
@@ -1086,11 +1090,11 @@ func (m *NavMesh) TileAndPolyByRefUnsafe(ref PolyRef, tile **MeshTile, poly **Po
 
 // DecodePolyID decodes a standard polygon reference.
 //
-//  Arguments:
-//   [in]ref    The polygon reference to decode.
-//   [out]salt  The tile's salt value.
-//   [out]it    The index of the tile.
-//   [out]ip    The index of the polygon within the tile.
+//	Arguments:
+//	 [in]ref    The polygon reference to decode.
+//	 [out]salt  The tile's salt value.
+//	 [out]it    The index of the tile.
+//	 [out]ip    The index of the polygon within the tile.
 //
 // see encodePolyID
 // TODO: Use Go-idioms: change signature and returns salt, it and ip
@@ -1191,11 +1195,11 @@ func (m *NavMesh) connectExtOffMeshLinks(tile, target *MeshTile, side int32) {
 
 // TilesAt returns all tiles at the specified grid location. (All layers.)
 //
-//  Arguments:
-//   [in] x          The tile's x-location. (x, y)
-//   [in] y          The tile's y-location. (x, y)
-//   [out]tiles      A pointer to an array of tiles that will hold the result.
-//   [in] maxTiles   The maximum tiles the tiles parameter can hold.
+//	Arguments:
+//	 [in] x          The tile's x-location. (x, y)
+//	 [in] y          The tile's y-location. (x, y)
+//	 [out]tiles      A pointer to an array of tiles that will hold the result.
+//	 [in] maxTiles   The maximum tiles the tiles parameter can hold.
 //
 // Return The number of tiles returned in the tiles array.
 //
@@ -1492,10 +1496,10 @@ func (m *NavMesh) neighbourTilesAt(x, y, side int32, tiles []*MeshTile, maxTiles
 
 // TileRefAt returns the tile reference for the tile at specified grid location.
 //
-//  Arguments:
-//   x       The tile's x-location. (x, y, layer)
-//   y       The tile's y-location. (x, y, layer)
-//   layer   The tile's layer. (x, y, layer)
+//	Arguments:
+//	 x       The tile's x-location. (x, y, layer)
+//	 y       The tile's y-location. (x, y, layer)
+//	 layer   The tile's layer. (x, y, layer)
 //
 // Return The tile reference of the tile, or 0 if there is none.
 // TODO: verify that this function is equivalent with this other version
@@ -1582,10 +1586,11 @@ func (m *NavMesh) IsValidPolyRef(ref PolyRef) bool {
 // TileAndPolyByRef returns the tile and polygon for the specified polygon
 // reference.
 //
-//  Arguments:
-//   [in] ref     A known valid reference for a polygon.
-//   [out]tile    The tile containing the polygon.
-//   [out]poly    The polygon.
+//	Arguments:
+//	 [in] ref     A known valid reference for a polygon.
+//	 [out]tile    The tile containing the polygon.
+//	 [out]poly    The polygon.
+//
 // TODO: Use Go-idioms: change signature and returns tile and poly
 func (m *NavMesh) TileAndPolyByRef(ref PolyRef, tile **MeshTile, poly **Poly) Status {
 	if ref == 0 {
@@ -1610,10 +1615,10 @@ func (m *NavMesh) TileAndPolyByRef(ref PolyRef, tile **MeshTile, poly **Poly) St
 // CalcTileLoc calculates the tile grid location for the specified world
 // position.
 //
-//  Arguments:
-//   [in] pos  The world position for the query. [(x, y, z)]
-//   [out]tx   The tile's x-location. (x, y)
-//   [out]ty   The tile's y-location. (x, y)
+//	Arguments:
+//	 [in] pos  The world position for the query. [(x, y, z)]
+//	 [out]tx   The tile's x-location. (x, y)
+//	 [out]ty   The tile's y-location. (x, y)
 func (m *NavMesh) CalcTileLoc(pos d3.Vec3) (tx, ty int32) {
 	tx = int32(math32.Floor((pos[0] - m.Orig[0]) / m.TileWidth))
 	ty = int32(math32.Floor((pos[2] - m.Orig[2]) / m.TileHeight))

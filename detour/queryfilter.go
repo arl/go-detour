@@ -109,10 +109,10 @@ func (qf *StandardQueryFilter) SetExcludeFlags(flags uint16) { qf.excludeFlags =
 
 // PassFilter returns true if the polygon can be visited.  (I.e. Is traversable.)
 //
-//  Arguments:
-//   ref     The reference id of the polygon test.
-//   tile    The tile containing the polygon.
-//   poly    The polygon to test.
+//	Arguments:
+//	 ref     The reference id of the polygon test.
+//	 tile    The tile containing the polygon.
+//	 poly    The polygon to test.
 func (qf *StandardQueryFilter) PassFilter(ref PolyRef, tile *MeshTile, poly *Poly) bool {
 	return (poly.Flags&qf.includeFlags) != 0 && (poly.Flags&qf.excludeFlags) == 0
 }
@@ -120,18 +120,18 @@ func (qf *StandardQueryFilter) PassFilter(ref PolyRef, tile *MeshTile, poly *Pol
 // Cost returns cost to move from the beginning to the end of a line segment
 // that is fully contained within a polygon.
 //
-//  Arguments:
-//   pa       The start position on the edge of the previous and current polygon. [(x, y, z)]
-//   pb       The end position on the edge of the current and next polygon. [(x, y, z)]
-//   prevRef  The reference id of the previous polygon.
-//   prevTile The tile containing the previous polygon.
-//   prevPoly The previous polygon.
-//   curRef   The reference id of the current polygon.
-//   curTile  The tile containing the current polygon.
-//   curPoly  The current polygon.
-//   nextRef  The reference id of the next polygon.
-//   nextTile The tile containing the next polygon.
-//   nextPoly The next polygon.
+//	Arguments:
+//	 pa       The start position on the edge of the previous and current polygon. [(x, y, z)]
+//	 pb       The end position on the edge of the current and next polygon. [(x, y, z)]
+//	 prevRef  The reference id of the previous polygon.
+//	 prevTile The tile containing the previous polygon.
+//	 prevPoly The previous polygon.
+//	 curRef   The reference id of the current polygon.
+//	 curTile  The tile containing the current polygon.
+//	 curPoly  The current polygon.
+//	 nextRef  The reference id of the next polygon.
+//	 nextTile The tile containing the next polygon.
+//	 nextPoly The next polygon.
 func (qf *StandardQueryFilter) Cost(pa, pb d3.Vec3,
 	prevRef PolyRef, prevTile *MeshTile, prevPoly *Poly,
 	curRef PolyRef, curTile *MeshTile, curPoly *Poly,

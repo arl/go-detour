@@ -245,17 +245,17 @@ func (hf *Heightfield) GetHeightFieldSpanCount(ctx *BuildContext) int32 {
 // BuildCompactHeightfield builds a compact heightfield representing open space,
 // from a heightfield representing solid space.
 //
-//  Arguments:
-//   ctx             The build context to use during the operation.
-//   walkableHeight  Minimum floor to 'ceiling' height that will still allow the
-//                   floor area to be considered walkable.
-//                   [Limit: >= 3] [Units: vx]
-//   walkableClimb   Maximum ledge height that is considered to still be
-//                   traversable. [Limit: >=0] [Units: vx]
-//   hf              The heightfield to be compacted.
-//   chf             The resulting compact heightfield. (Must be pre-allocated.)
+//	Arguments:
+//	 ctx             The build context to use during the operation.
+//	 walkableHeight  Minimum floor to 'ceiling' height that will still allow the
+//	                 floor area to be considered walkable.
+//	                 [Limit: >= 3] [Units: vx]
+//	 walkableClimb   Maximum ledge height that is considered to still be
+//	                 traversable. [Limit: >=0] [Units: vx]
+//	 hf              The heightfield to be compacted.
+//	 chf             The resulting compact heightfield. (Must be pre-allocated.)
 //
-//  Returns true if the operation completed successfully.
+//	Returns true if the operation completed successfully.
 //
 // This is just the beginning of the process of fully building a compact
 // heightfield.  Various filters may be applied, then the distance field and

@@ -98,9 +98,9 @@ func newQueryData() queryData {
 
 // NewNavMeshQuery initializes the query object.
 //
-//  Arguments:
-//   nav       Pointer to the NavMesh object to use for all queries.
-//   maxNodes  Maximum number of search nodes. [Limits: 0 < value <= 65535]
+//	Arguments:
+//	 nav       Pointer to the NavMesh object to use for all queries.
+//	 maxNodes  Maximum number of search nodes. [Limits: 0 < value <= 65535]
 //
 // Return the status flags for the initialization of the query object and the
 // query object.
@@ -154,18 +154,18 @@ func NewNavMeshQuery(nav *NavMesh, maxNodes int32) (Status, *NavMeshQuery) {
 
 // FindPath finds a path from the start polygon to the end polygon.
 //
-//  Arguments:
-//   startRef  The reference id of the start polygon.
-//   endRef    The reference id of the end polygon.
-//   startPos  A position within the start polygon. [(x, y, z)]
-//   endPos    A position within the end polygon. [(x, y, z)]
-//   filter    The polygon filter to apply to the query.
-//   path      This slice will be filled with an ordered list of polygon
-//             references representing the path. (Start to end.)
+//	Arguments:
+//	 startRef  The reference id of the start polygon.
+//	 endRef    The reference id of the end polygon.
+//	 startPos  A position within the start polygon. [(x, y, z)]
+//	 endPos    A position within the end polygon. [(x, y, z)]
+//	 filter    The polygon filter to apply to the query.
+//	 path      This slice will be filled with an ordered list of polygon
+//	           references representing the path. (Start to end.)
 //
-//  Returns:
-//   pathCount the number of polygons in the found path slice.
-//   st        status code (may be a partial result)
+//	Returns:
+//	 pathCount the number of polygons in the found path slice.
+//	 st        status code (may be a partial result)
 //
 // If the end polygon cannot be reached through the navigation graph, the last
 // polygon in the path will be the nearest to the end polygon. If the path array
@@ -392,18 +392,18 @@ const (
 // FindStraightPath finds the straight path from the start to the end position
 // within the polygon corridor
 //
-//  Arguments:
-//   startPos          Path start position. [(x, y, z)]
-//   endPos            Path end position. [(x, y, z)]
-//   path              An array of polygon references that represent the
-//                     path corridor.
-//   straightPath      Points describing the straight path
-//                     [Length: == straightPathCount].
-//   straightPathFlags Flags describing each point.
-//                     (See: StraightPathFlags)
-//   straightPathRefs  The reference id of the polygon that is being
-//                     entered at each point.
-//   options           Query options. (see: StraightPathOptions)
+//	Arguments:
+//	 startPos          Path start position. [(x, y, z)]
+//	 endPos            Path end position. [(x, y, z)]
+//	 path              An array of polygon references that represent the
+//	                   path corridor.
+//	 straightPath      Points describing the straight path
+//	                   [Length: == straightPathCount].
+//	 straightPathFlags Flags describing each point.
+//	                   (See: StraightPathFlags)
+//	 straightPathRefs  The reference id of the polygon that is being
+//	                   entered at each point.
+//	 options           Query options. (see: StraightPathOptions)
 //
 // Returns The status flags for the query and the number of point in the
 // straight path.
@@ -1094,16 +1094,16 @@ func (q *NavMeshQuery) ClosestPointOnPolyBoundary(ref PolyRef, pos, closest d3.V
 
 // FindNearestPoly finds the polygon nearest to the specified center point.
 //
-//  Arguments:
-//   center   The center of the search box.
-//   extents  A vector which components represent the
-//            search distance along each axis.
-//   filter   The polygon filter to apply to the query.
+//	Arguments:
+//	 center   The center of the search box.
+//	 extents  A vector which components represent the
+//	          search distance along each axis.
+//	 filter   The polygon filter to apply to the query.
 //
-//  Return values:
-//   st       The status flags for the query.
-//   ref      The reference id of the nearest polygon.
-//   pt       The nearest point on the polygon. [(x, y, z)]
+//	Return values:
+//	 st       The status flags for the query.
+//	 ref      The reference id of the nearest polygon.
+//	 pt       The nearest point on the polygon. [(x, y, z)]
 //
 // Note: If the search box does not intersect any polygons the returned status
 // will be 'Success', but ref will be zero. So if in doubt, check ref before
@@ -1132,16 +1132,16 @@ func (q *NavMeshQuery) FindNearestPoly(center, extents d3.Vec3,
 
 // queryPolygons6 finds polygons that overlap the search box.
 //
-//  Arguments:
-//   center     The center of the search box.
-//   extents    The search distance along each axis.
-//   filter     The polygon filter to apply to the query.
-//   polys      The reference ids of the polygons that overlap the query box.
-//   polyCount  The number of polygons in the search result.
-//   maxPolys   The maximum number of polygons the search result can hold.
+//	Arguments:
+//	 center     The center of the search box.
+//	 extents    The search distance along each axis.
+//	 filter     The polygon filter to apply to the query.
+//	 polys      The reference ids of the polygons that overlap the query box.
+//	 polyCount  The number of polygons in the search result.
+//	 maxPolys   The maximum number of polygons the search result can hold.
 //
-//  Return values:
-//   The status flags for the query.
+//	Return values:
+//	 The status flags for the query.
 //
 // If no polygons are found, the function will return Success with a polyCount
 // of zero. If polys is too small to hold the entire result set, then the array
@@ -1177,12 +1177,12 @@ func (q *NavMeshQuery) queryPolygons6(
 
 // queryPolygons4 finds polygons that overlap the search box.
 //
-//  Arguments:
-//   center   The center of the search box. [(x, y, z)]
-//   extents  The search distance along each axis. [(x, y, z)]
-//   filter   The polygon filter to apply to the query.
-//   query    The query. Polygons found will be batched together and passed to
-//            this query.
+//	Arguments:
+//	 center   The center of the search box. [(x, y, z)]
+//	 extents  The search distance along each axis. [(x, y, z)]
+//	 filter   The polygon filter to apply to the query.
+//	 query    The query. Polygons found will be batched together and passed to
+//	          this query.
 //
 // The query will be invoked with batches of polygons. Polygons passed to the
 // query have bounding boxes that overlap with the center and extents passed to
@@ -1360,9 +1360,9 @@ func (q *NavMeshQuery) AttachedNavMesh() *NavMesh {
 // IsValidPolyRef returns true if the polygon reference is valid and passes the
 // filter restrictions.
 //
-//  Arguments:
-//   ref      The polygon reference to check.
-//   filter   The filter to apply.
+//	Arguments:
+//	 ref      The polygon reference to check.
+//	 filter   The filter to apply.
 //
 // Note: this method may be used by multiple clients without side effects.
 func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
@@ -1385,18 +1385,18 @@ func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
 // Raycast casts a 'walkability' ray along the surface of the navigation mesh
 // from the start position toward the end position.
 //
-//  Arguments:
-//   startRef  The reference id of the start polygon.
-//   startPos  A position within the start polygon representing
-//             the start of the ray. [(x, y, z)]
-//   endPos    The position to cast the ray toward. [(x, y, z)]
-//   filter    The polygon filter to apply to the query.
-//   options   Govern how the raycast behaves. See RaycastOptions
-//   hit       Raycast hit structure which will be filled with the results.
-//   prevRef   Parent of start ref. Used during for cost calculation [opt]
+//	Arguments:
+//	 startRef  The reference id of the start polygon.
+//	 startPos  A position within the start polygon representing
+//	           the start of the ray. [(x, y, z)]
+//	 endPos    The position to cast the ray toward. [(x, y, z)]
+//	 filter    The polygon filter to apply to the query.
+//	 options   Govern how the raycast behaves. See RaycastOptions
+//	 hit       Raycast hit structure which will be filled with the results.
+//	 prevRef   Parent of start ref. Used during for cost calculation [opt]
 //
-//  Returns:
-//   st        status flags for the query.
+//	Returns:
+//	 st        status flags for the query.
 //
 // This method is meant to be used for quick, short distance checks.
 //
@@ -1414,8 +1414,9 @@ func (q *NavMeshQuery) IsValidPolyRef(ref PolyRef, filter QueryFilter) bool {
 // If 0 < t < 1.0 then the following applies:
 //
 // Example:
-//  distanceToHitBorder = distanceToEndPosition * t
-//  hitPoint = startPos + (endPos - startPos) * t
+//
+//	distanceToHitBorder = distanceToEndPosition * t
+//	hitPoint = startPos + (endPos - startPos) * t
 //
 // # Use Case Restriction
 //
@@ -1680,10 +1681,10 @@ func (q *NavMeshQuery) Raycast(
 //
 // If 0 < t < 1.0 then the following applies:
 //
-//  distanceToHitBorder = distanceToEndPosition * t
-//  hitPoint = startPos + (endPos - startPos) * t
+//	distanceToHitBorder = distanceToEndPosition * t
+//	hitPoint = startPos + (endPos - startPos) * t
 //
-// Use Case Restriction
+// # Use Case Restriction
 //
 // The raycast ignores the y-value of the end position. (2D check.) This places
 // significant limits on how it can be used. For example:
@@ -1697,7 +1698,6 @@ func (q *NavMeshQuery) Raycast(
 // If it reaches the end position's xz-coordinates it will indicate FLT_MAX (no
 // wall hit), meaning it reached the end position. This is one example of why
 // this method is meant for short distance checks.
-//
 func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
 	filter QueryFilter,
 	hitNormal d3.Vec3, path []PolyRef, maxPath int) (pathCount int, t float32, st Status) {
@@ -1713,20 +1713,21 @@ func (q *NavMeshQuery) Raycast2(startRef PolyRef, startPos, endPos d3.Vec3,
 // InitSlicedFindPath initializes a sliced path query.
 //
 // Common use case:
-//	-# Call InitSlicedFindPath() to initialize the sliced path query.
-//	-# Call UpdateSlicedFindPath() until it returns complete.
-//	-# Call FinalizeSlicedFindPath() to get the path.
 //
-//  Arguments
-//   startRef The reference id of the start polygon.
-//   endRef   The reference id of the end polygon.
-//   startPos A position within the start polygon. [(x, y, z)]
-//   endPos   A position within the end polygon. [(x, y, z)]
-//   filter   The polygon filter to apply to the query.
-//   options  query options (see: #dtFindPathOptions)
+//		-# Call InitSlicedFindPath() to initialize the sliced path query.
+//		-# Call UpdateSlicedFindPath() until it returns complete.
+//		-# Call FinalizeSlicedFindPath() to get the path.
 //
-//  Returns
-//   The status flags for the query.
+//	 Arguments
+//	  startRef The reference id of the start polygon.
+//	  endRef   The reference id of the end polygon.
+//	  startPos A position within the start polygon. [(x, y, z)]
+//	  endPos   A position within the end polygon. [(x, y, z)]
+//	  filter   The polygon filter to apply to the query.
+//	  options  query options (see: #dtFindPathOptions)
+//
+//	 Returns
+//	  The status flags for the query.
 //
 // Warning Calling any non-slice methods before calling finalizeSlicedFindPath()
 // or finalizeSlicedFindPathPartial() may result in corrupted data!
@@ -1801,12 +1802,12 @@ func (q *NavMeshQuery) InitSlicedFindPath(startRef, endRef PolyRef,
 
 // UpdateSlicedFindPath updates an in-progress sliced path query.
 //
-//  Arguments:
-//   maxIter   The maximum number of iterations to perform.
-//   doneIters The actual number of iterations completed. [opt]
+//	Arguments:
+//	 maxIter   The maximum number of iterations to perform.
+//	 doneIters The actual number of iterations completed. [opt]
 //
-//  Returns
-//   The status flags for the query.
+//	Returns
+//	 The status flags for the query.
 func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status {
 	if !StatusInProgress(q.query.status) {
 		return q.query.status
@@ -2031,14 +2032,15 @@ func (q *NavMeshQuery) UpdateSlicedFindPath(maxIter int, doneIters *int) Status 
 
 // FinalizeSlicedFindPath finalizes and returns the results of a sliced path query.
 //
-//  Arguments:
-//   path      An ordered list of polygon references representing the path.
-//            (Start to end.) [(polyRef) * pathCount]
-//   maxPath   The max number of polygons the path array can hold. [Limit: >= 1]
+//	Arguments:
+//	 path      An ordered list of polygon references representing the path.
+//	          (Start to end.) [(polyRef) * pathCount]
+//	 maxPath   The max number of polygons the path array can hold. [Limit: >= 1]
 //
-//  Returns
-//   pathCount The number of polygons returned in the path array.
-//   st        The status flags for the query.
+//	Returns
+//	 pathCount The number of polygons returned in the path array.
+//	 st        The status flags for the query.
+//
 // TODO: should remove maxPath as it should be the length of the path slice
 func (q *NavMeshQuery) FinalizeSlicedFindPath(path []PolyRef, maxPath int) (pathCount int, st Status) {
 	if StatusFailed(q.query.status) {
@@ -2128,17 +2130,17 @@ func (q *NavMeshQuery) FinalizeSlicedFindPath(path []PolyRef, maxPath int) (path
 // returning the path to the furthest polygon on the existing path that was
 // visited during the search.
 //
-//  Arguments:
-//   existing     An array of polygon references for the existing path.
-//   existingSize The number of polygon in the existing array.
-//   path         An ordered list of polygon references representing the path.
-//                (Start to end.) [(polyRef) * pathCount]
-//   maxPath      The max number of polygons the path array can hold.
-//                [Limit: >= 1]
+//	Arguments:
+//	 existing     An array of polygon references for the existing path.
+//	 existingSize The number of polygon in the existing array.
+//	 path         An ordered list of polygon references representing the path.
+//	              (Start to end.) [(polyRef) * pathCount]
+//	 maxPath      The max number of polygons the path array can hold.
+//	              [Limit: >= 1]
 //
-//  Returns
-//   pathCount    The number of polygons returned in the path array.
-//   st           The status flags for the query.
+//	Returns
+//	 pathCount    The number of polygons returned in the path array.
+//	 st           The status flags for the query.
 func (q *NavMeshQuery) FinalizeSlicedFindPathPartial(existing []PolyRef, existingSize int, path []PolyRef, maxPath int) (pathCount int, st Status) {
 
 	if existingSize == 0 {

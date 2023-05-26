@@ -177,17 +177,17 @@ func mergeRegionHoles(ctx *BuildContext, region *contourRegion) {
 // BuildContours builds a contour set from the region outlines in the provided
 // compact heightfield.
 //
-//  Arguments:
-//   ctx         The build context to use during the operation.
-//   chf         A fully built compact heightfield.
-//   maxError    The maximum distance a simplfied contour's border edges should
-//               deviate the original raw contour. [Limit: >=0] [Units: wu]
-//   maxEdgeLen  The maximum allowed length for contour edges along the border
-//               of the mesh. [Limit: >=0] [Units: vx]
-//   cset        The resulting contour set. (Must be pre-allocated.)
-//   buildFlags  The build flags. (See: BuildContoursFlags)
+//	Arguments:
+//	 ctx         The build context to use during the operation.
+//	 chf         A fully built compact heightfield.
+//	 maxError    The maximum distance a simplfied contour's border edges should
+//	             deviate the original raw contour. [Limit: >=0] [Units: wu]
+//	 maxEdgeLen  The maximum allowed length for contour edges along the border
+//	             of the mesh. [Limit: >=0] [Units: vx]
+//	 cset        The resulting contour set. (Must be pre-allocated.)
+//	 buildFlags  The build flags. (See: BuildContoursFlags)
 //
-//  Returns true if the operation completed successfully.
+//	Returns true if the operation completed successfully.
 //
 // The raw contours will match the region outlines exactly. The maxError and
 // maxEdgeLen parameters control how closely the simplified contours will match
@@ -786,10 +786,10 @@ func area2(a, b, c []int32) int32 {
 	return (b[0]-a[0])*(c[2]-a[2]) - (c[0]-a[0])*(b[2]-a[2])
 }
 
-//	Exclusive or: true iff exactly one argument is true.
-//	The arguments are negated to ensure that they are 0/1
-//	values.  Then the bitwise Xor operator may apply.
-//	(This idea is due to Michael Baldwin.)
+// Exclusive or: true iff exactly one argument is true.
+// The arguments are negated to ensure that they are 0/1
+// values.  Then the bitwise Xor operator may apply.
+// (This idea is due to Michael Baldwin.)
 func xorb(x, y bool) bool {
 	return x != y
 }
@@ -808,9 +808,9 @@ func collinear(a, b, c []int32) bool {
 	return area2(a, b, c) == 0
 }
 
-//	Returns true iff ab properly intersects cd: they share
-//	a point interior to both segments.  The properness of the
-//	intersection is ensured by using strict leftness.
+// Returns true iff ab properly intersects cd: they share
+// a point interior to both segments.  The properness of the
+// intersection is ensured by using strict leftness.
 func intersectProp(a, b, c, d []int32) bool {
 	// Eliminate improper cases.
 	if collinear(a, b, c) || collinear(a, b, d) ||

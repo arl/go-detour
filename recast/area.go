@@ -8,10 +8,10 @@ import (
 // ErodeWalkableArea erodes the walkable area within the heightfield by the
 // specified radius.
 //
-//  Arguments:
-//   ctx     The build context to use during the operation.
-//   radius  The radius of erosion. [Limits: 0 < value < 255] [Units: vx]
-//   chf     The populated compact heightfield to erode.
+//	Arguments:
+//	 ctx     The build context to use during the operation.
+//	 radius  The radius of erosion. [Limits: 0 < value < 255] [Units: vx]
+//	 chf     The populated compact heightfield to erode.
 //
 // Returns true if the operation completed successfully.
 //
@@ -197,14 +197,14 @@ func ErodeWalkableArea(ctx *BuildContext, radius int32, chf *CompactHeightfield)
 // MarkConvexPolyArea applies the area id to the all spans within the specified
 // convex polygon.
 //
-//  Arguments:
-//   ctx     The build context to use during the operation.
-//   verts   The vertices of the polygon [Form: (x, y, z) * @p nverts]
-//   nverts  The number of vertices in the polygon.
-//   hmin    The height of the base of the polygon.
-//   hmax    The height of the top of the polygon.
-//   areaID  The area id to apply. [Limit: <= RC_WALKABLE_AREA]
-//   chf     A populated compact heightfield.
+//	Arguments:
+//	 ctx     The build context to use during the operation.
+//	 verts   The vertices of the polygon [Form: (x, y, z) * @p nverts]
+//	 nverts  The number of vertices in the polygon.
+//	 hmin    The height of the base of the polygon.
+//	 hmax    The height of the top of the polygon.
+//	 areaID  The area id to apply. [Limit: <= RC_WALKABLE_AREA]
+//	 chf     A populated compact heightfield.
 //
 // The value of spacial parameters are in world units.
 //
