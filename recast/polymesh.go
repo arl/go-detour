@@ -38,12 +38,12 @@ func (pm *PolyMesh) Free() {
 
 // BuildPolyMesh builds a polygon mesh from the provided contours.
 //
-//  Arguments:
-//  ctx     The build context to use during the operation.
-//  cset    A fully built contour set.
-//  nvp     The maximum number of vertices allowed for polygons generated during
-//          the contour to polygon conversion process. [Limit: >= 3]
-//  mesh    The resulting polygon mesh. (Must be re-allocated.)
+//	Arguments:
+//	ctx     The build context to use during the operation.
+//	cset    A fully built contour set.
+//	nvp     The maximum number of vertices allowed for polygons generated during
+//	        the contour to polygon conversion process. [Limit: >= 3]
+//	mesh    The resulting polygon mesh. (Must be re-allocated.)
 //
 // Returns True if the operation completed successfully.
 //

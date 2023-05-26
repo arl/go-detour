@@ -5,16 +5,16 @@ import "github.com/arl/assertgo"
 // BuildRegionsMonotone builds region data for the heightfield using simple
 // monotone partitioning.
 //
-//  Arguments:
-//   ctx             The build context to use during the operation.
-//   chf             A populated compact heightfield.
-//   borderSize      The size of the non-navigable border around the
-//                   heightfield. [Limit: >=0] [Units: vx]
-//   minRegionArea   The minimum number of cells allowed to form isolated island
-//                   areas. [Limit: >=0] [Units: vx].
-//   mergeRegionArea Any regions with a span count smaller than this value will,
-//                   if possible, be merged with larger regions.
-//                   [Limit: >=0] [Units: vx]
+//	Arguments:
+//	 ctx             The build context to use during the operation.
+//	 chf             A populated compact heightfield.
+//	 borderSize      The size of the non-navigable border around the
+//	                 heightfield. [Limit: >=0] [Units: vx]
+//	 minRegionArea   The minimum number of cells allowed to form isolated island
+//	                 areas. [Limit: >=0] [Units: vx].
+//	 mergeRegionArea Any regions with a span count smaller than this value will,
+//	                 if possible, be merged with larger regions.
+//	                 [Limit: >=0] [Units: vx]
 //
 // Returns true if the operation completed successfully.
 // Non-null regions will consist of connected, non-overlapping walkable spans
@@ -174,16 +174,16 @@ func BuildRegionsMonotone(ctx *BuildContext, chf *CompactHeightfield,
 // BuildRegions builds region data for the heightfield using watershed
 // partitioning.
 //
-//  Arguments:
-//   ctx             The build context to use during the operation.
-//   chf             A populated compact heightfield.
-//   borderSize      The size of the non-navigable border around the
-//                   heightfield. [Limit: >=0] [Units: vx]
-//   minRegionArea   The minimum number of cells allowed to form isolated island
-//                   areas. [Limit: >=0] [Units: vx].
-//   mergeRegionArea Any regions with a span count smaller than this value will,
-//                   if possible, be merged with larger regions.
-//                   [Limit: >=0] [Units: vx]
+//	Arguments:
+//	 ctx             The build context to use during the operation.
+//	 chf             A populated compact heightfield.
+//	 borderSize      The size of the non-navigable border around the
+//	                 heightfield. [Limit: >=0] [Units: vx]
+//	 minRegionArea   The minimum number of cells allowed to form isolated island
+//	                 areas. [Limit: >=0] [Units: vx].
+//	 mergeRegionArea Any regions with a span count smaller than this value will,
+//	                 if possible, be merged with larger regions.
+//	                 [Limit: >=0] [Units: vx]
 //
 // Returns True if the operation completed successfully.
 //

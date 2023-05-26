@@ -10,9 +10,10 @@ import (
 // TriArea2D derives the signed xz-plane area of the triangle ABC, or the
 // relationship of line AB to point C.
 //
-//  a   Vertex A. [(x, y, z)]
-//  b   Vertex B. [(x, y, z)]
-//  c   Vertex C. [(x, y, z)]
+//	a   Vertex A. [(x, y, z)]
+//	b   Vertex B. [(x, y, z)]
+//	c   Vertex C. [(x, y, z)]
+//
 // return The signed xz-plane area of the triangle.
 func TriArea2D(a, b, c d3.Vec3) float32 {
 	abx := b[0] - a[0]
@@ -22,7 +23,7 @@ func TriArea2D(a, b, c d3.Vec3) float32 {
 	return acx*abz - abx*acz
 }
 
-// IntersectSegSeg2D returns wether two segments intersect, and their
+// IntersectSegSeg2D returns whether two segments intersect, and their
 // intersection point.
 func IntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
 	u := aq.Sub(ap)
@@ -38,11 +39,12 @@ func IntersectSegSeg2D(ap, aq, bp, bq d3.Vec3) (hit bool, s, t float32) {
 
 // OverlapQuantBounds determines if two axis-aligned bounding boxes overlap.
 //
-//  amin   Minimum bounds of box A. [(x, y, z)]
-//  amax   Maximum bounds of box A. [(x, y, z)]
-//  bmin   Minimum bounds of box B. [(x, y, z)]
-//  bmax   Maximum bounds of box B. [(x, y, z)]
-//  return True if the two AABB's overlap.
+//	amin   Minimum bounds of box A. [(x, y, z)]
+//	amax   Maximum bounds of box A. [(x, y, z)]
+//	bmin   Minimum bounds of box B. [(x, y, z)]
+//	bmax   Maximum bounds of box B. [(x, y, z)]
+//	return True if the two AABB's overlap.
+//
 // see overlapBounds
 func OverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 	if amin[0] > bmax[0] || amax[0] < bmin[0] {
@@ -61,11 +63,11 @@ func OverlapQuantBounds(amin, amax, bmin, bmax []uint16) bool {
 
 // OverlapBounds determines if two axis-aligned bounding boxes overlap.
 //
-//  Arguments:
-//   amin     Minimum bounds of box A. [(x, y, z)]
-//   amax     Maximum bounds of box A. [(x, y, z)]
-//   bmin     Minimum bounds of box B. [(x, y, z)]
-//   bmax     Maximum bounds of box B. [(x, y, z)]
+//	Arguments:
+//	 amin     Minimum bounds of box A. [(x, y, z)]
+//	 amax     Maximum bounds of box A. [(x, y, z)]
+//	 bmin     Minimum bounds of box B. [(x, y, z)]
+//	 bmax     Maximum bounds of box B. [(x, y, z)]
 //
 // Return True if the two AABB's overlap.
 // see overlapQuantBounds

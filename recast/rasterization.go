@@ -8,15 +8,15 @@ import (
 
 // RasterizeTriangle rasterizes a triangle into the specified heightfield.
 //
-//  Arguments:
-//  ctx           The build context to use during the operation.
-//  v0            Triangle vertex 0 [(x, y, z)]
-//  v1            Triangle vertex 1 [(x, y, z)]
-//  v2            Triangle vertex 2 [(x, y, z)]
-//  area          The area id of the triangle. [Limit: <= #RC_WALKABLE_AREA]
-//  solid         An initialized heightfield.
-//  flagMergeThr  The distance where the walkable flag is favored over the
-//                non-walkable flag.[Limit: >= 0] [Units: vx]
+//	Arguments:
+//	ctx           The build context to use during the operation.
+//	v0            Triangle vertex 0 [(x, y, z)]
+//	v1            Triangle vertex 1 [(x, y, z)]
+//	v2            Triangle vertex 2 [(x, y, z)]
+//	area          The area id of the triangle. [Limit: <= #RC_WALKABLE_AREA]
+//	solid         An initialized heightfield.
+//	flagMergeThr  The distance where the walkable flag is favored over the
+//	              non-walkable flag.[Limit: >= 0] [Units: vx]
 //
 // Returns True if the operation completed successfully.
 // No spans will be added if the triangle does not overlap the heightfield grid.
@@ -42,19 +42,19 @@ func RasterizeTriangle(ctx *BuildContext, v0, v1, v2 d3.Vec3,
 // RasterizeTriangles rasterizes an indexed triangle mesh into the specified
 // heightfield.
 //
-//  Arguments:
-//  ctx           The build context to use during the operation.
-//  verts         The vertices. [(x, y, z) * @p nv]
-//  nv            The number of vertices.
-//  tris          The triangle indices. [(vertA, vertB, vertC) * @p nt]
-//  areas         The area id's of the triangles. [Limit: <= #RC_WALKABLE_AREA]
-//                [Size: @p nt]
-//  nt            The number of triangles.
-//  solid         An initialized heightfield.
-//  flagMergeThr  The distance where the walkable flag is favored over the
-//                non-walkable flag. [Limit: >= 0] [Units: vx]
+//	Arguments:
+//	ctx           The build context to use during the operation.
+//	verts         The vertices. [(x, y, z) * @p nv]
+//	nv            The number of vertices.
+//	tris          The triangle indices. [(vertA, vertB, vertC) * @p nt]
+//	areas         The area id's of the triangles. [Limit: <= #RC_WALKABLE_AREA]
+//	              [Size: @p nt]
+//	nt            The number of triangles.
+//	solid         An initialized heightfield.
+//	flagMergeThr  The distance where the walkable flag is favored over the
+//	              non-walkable flag. [Limit: >= 0] [Units: vx]
 //
-//  Returns True if the operation completed successfully.
+//	Returns True if the operation completed successfully.
 //
 // Spans will only be added for triangles that overlap the heightfield grid.
 //
@@ -87,16 +87,16 @@ func RasterizeTriangles(ctx *BuildContext, verts []float32, nv int32,
 
 // RasterizeTriangles2 rasterizes triangles into the specified heightfield.
 //
-//  Arguments:
-//  ctx           The build context to use during the operation.
-//  verts         The triangle vertices.
-//                [(ax, ay, az, bx, by, bz, cx, by, cx) * nt]
-//  areas         The area id's of the triangles.
-//                [Limit: <= #RC_WALKABLE_AREA] [Size: nt]
-//  nt            The number of triangles.
-//  solid         An initialized heightfield.
-//  flagMergeThr  The distance where the walkable flag is favored over the
-//                non-walkable flag. [Limit: >= 0] [Units: vx]
+//	Arguments:
+//	ctx           The build context to use during the operation.
+//	verts         The triangle vertices.
+//	              [(ax, ay, az, bx, by, bz, cx, by, cx) * nt]
+//	areas         The area id's of the triangles.
+//	              [Limit: <= #RC_WALKABLE_AREA] [Size: nt]
+//	nt            The number of triangles.
+//	solid         An initialized heightfield.
+//	flagMergeThr  The distance where the walkable flag is favored over the
+//	              non-walkable flag. [Limit: >= 0] [Units: vx]
 //
 // Returns True if the operation completed successfully.
 // Spans will only be added for triangles that overlap the heightfield grid.
@@ -247,11 +247,11 @@ func rasterizeTri(v0, v1, v2 []float32,
 
 // OverlapBounds determines if two axis-aligned bounding boxes overlap.
 //
-//  Arguments:
-//   amin     Minimum bounds of box A. [(x, y, z)]
-//   amax     Maximum bounds of box A. [(x, y, z)]
-//   bmin     Minimum bounds of box B. [(x, y, z)]
-//   bmax     Maximum bounds of box B. [(x, y, z)]
+//	Arguments:
+//	 amin     Minimum bounds of box A. [(x, y, z)]
+//	 amax     Maximum bounds of box A. [(x, y, z)]
+//	 bmin     Minimum bounds of box B. [(x, y, z)]
+//	 bmax     Maximum bounds of box B. [(x, y, z)]
 //
 // Return true if the two AABB's overlap.
 func overlapBounds(amin, amax, bmin, bmax []float32) bool {

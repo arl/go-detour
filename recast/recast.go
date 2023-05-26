@@ -11,11 +11,11 @@ import (
 
 // CalcBounds calculates the bounding box of an array of vertices.
 //
-//  Arguments:
-//   verts     An array of vertices. [(x, y, z) * nv]
-//   nv        The number of vertices in the verts array.
-//   bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
-//   bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
+//	Arguments:
+//	 verts     An array of vertices. [(x, y, z) * nv]
+//	 nv        The number of vertices in the verts array.
+//	 bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
+//	 bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
 func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 	// Calculate bounding box.
 	copy(bmin, verts[:3])
@@ -32,14 +32,14 @@ func CalcBounds(verts []float32, nv int32, bmin, bmax []float32) {
 // CalcGridSize calculates the grid size based on the bounding box and grid cell
 // size.
 //
-//  Arguments:
-//   bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
-//   bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
-//   cs        The xz-plane cell size. [Limit: > 0] [Units: wu]
+//	 Arguments:
+//	  bmin      The minimum bounds of the AABB. [(x, y, z)] [Units: wu]
+//	  bmax      The maximum bounds of the AABB. [(x, y, z)] [Units: wu]
+//	  cs        The xz-plane cell size. [Limit: > 0] [Units: wu]
 //
-// 	Returns:
-//   w         The width along the x-axis. [Limit: >= 0] [Units: vx]
-//   h         The height along the z-axis. [Limit: >= 0] [Units: vx]
+//		Returns:
+//	  w         The width along the x-axis. [Limit: >= 0] [Units: vx]
+//	  h         The height along the z-axis. [Limit: >= 0] [Units: vx]
 func CalcGridSize(bmin, bmax []float32, cs float32) (w, h int32) {
 	w = int32((bmax[0]-bmin[0])/cs + 0.5)
 	h = int32((bmax[2]-bmin[2])/cs + 0.5)
@@ -54,15 +54,15 @@ func calcTriNormal(v0, v1, v2, norm d3.Vec3) {
 // Sets the area id of all triangles with a slope below the specified value
 // to 'WalkableArea'.
 //
-//  Arguments:
-//   ctx                The build context to use during the operation.
-//   walkableSlopeAngle The maximum slope that is considered walkable.
-//                      [Limits: 0 <= value < 90] [Units: Degrees]
-//   verts              The vertices. [(x, y, z) * nv]
-//   nv                 The number of vertices.
-//   tris               The triangle vertex indices. [(vertA, vertB, vertC) * nt]
-//   nt                 The number of triangles.
-//   areas              The triangle area ids. [Length: >= nt]
+//	Arguments:
+//	 ctx                The build context to use during the operation.
+//	 walkableSlopeAngle The maximum slope that is considered walkable.
+//	                    [Limits: 0 <= value < 90] [Units: Degrees]
+//	 verts              The vertices. [(x, y, z) * nv]
+//	 nv                 The number of vertices.
+//	 tris               The triangle vertex indices. [(vertA, vertB, vertC) * nt]
+//	 nt                 The number of triangles.
+//	 areas              The triangle area ids. [Length: >= nt]
 //
 // Only sets the area id's for the walkable triangles. Does not alter the area
 // id's for unwalkable triangles.
@@ -91,15 +91,15 @@ func MarkWalkableTriangles(ctx *BuildContext, walkableSlopeAngle float32,
 // ClearUnwalkableTriangles sets the area id of all triangles with a slope
 // greater than or equal to the specified value to 'nullArea'.
 //
-//  Arguments:
-//   ctx                The build context to use during the operation.
-//   walkableSlopeAngle The maximum slope that is considered walkable.
-//                      [Limits: 0 <= value < 90] [Units: Degrees]
-//   verts              The vertices. [(x, y, z) * nv]
-//   nv                 The number of vertices.
-//   tris               The triangle vertex indices. [(vertA, vertB, vertC) * nt]
-//   nt                 The number of triangles.
-//   areas              The triangle area ids. [Length: >= nt]
+//	Arguments:
+//	 ctx                The build context to use during the operation.
+//	 walkableSlopeAngle The maximum slope that is considered walkable.
+//	                    [Limits: 0 <= value < 90] [Units: Degrees]
+//	 verts              The vertices. [(x, y, z) * nv]
+//	 nv                 The number of vertices.
+//	 tris               The triangle vertex indices. [(vertA, vertB, vertC) * nt]
+//	 nt                 The number of triangles.
+//	 areas              The triangle area ids. [Length: >= nt]
 //
 // Only sets the area id's for the unwalkable triangles. Does not alter the area
 // id's for walkable triangles.
@@ -231,10 +231,10 @@ func init() {
 
 // SetCon sets the neighbor connection data for the specified direction.
 //
-//  Arguments:
-//   s        The span to update.
-//   dir      The direction to set. [Limits: 0 <= value < 4]
-//   i        The index of the neighbor span.
+//	Arguments:
+//	 s        The span to update.
+//	 dir      The direction to set. [Limits: 0 <= value < 4]
+//	 i        The index of the neighbor span.
 func SetCon(s *CompactSpan, dir, i int32) {
 	shift := uint32(uint32(dir * 6))
 	con := uint32(s.Con)
@@ -243,9 +243,9 @@ func SetCon(s *CompactSpan, dir, i int32) {
 
 // GetCon gets neighbor connection data for the specified direction.
 //
-//  Arguments:
-//   s       The span to check.
-//   dir     The direction to check. [Limits: 0 <= value < 4]
+//	Arguments:
+//	 s       The span to check.
+//	 dir     The direction to check. [Limits: 0 <= value < 4]
 //
 // Return the neighbor connection data for the specified direction,
 // 'notConnected' if there is no connection.
@@ -257,8 +257,8 @@ func GetCon(s *CompactSpan, dir int32) int32 {
 // GetDirOffsetX gets the standard width (x-axis) offset for the specified
 // direction.
 //
-//  Arguments:
-//   dir     The direction. [Limits: 0 <= value < 4]
+//	Arguments:
+//	 dir     The direction. [Limits: 0 <= value < 4]
 //
 // Return the width offset to apply to the current cell position to move in the
 // direction.
@@ -269,8 +269,8 @@ func GetDirOffsetX(dir int32) int32 {
 // GetDirOffsetY gets the standard height (z-axis) offset for the specified
 // direction.
 //
-//  Arguments:
-//   dir     The direction. [Limits: 0 <= value < 4]
+//	Arguments:
+//	 dir     The direction. [Limits: 0 <= value < 4]
 //
 // Return the height offset to apply to the current cell position to move in the
 // direction.
@@ -281,9 +281,9 @@ func GetDirOffsetY(dir int32) int32 {
 // GetDirForOffset gets the direction for the specified offset. One of x and y
 // should be 0.
 //
-//  Arguments:
-//   x       The x offset. [Limits: -1 <= value <= 1]
-//   y       The y offset. [Limits: -1 <= value <= 1]
+//	Arguments:
+//	 x       The x offset. [Limits: -1 <= value <= 1]
+//	 y       The y offset. [Limits: -1 <= value <= 1]
 //
 // Return the direction that represents the offset.
 func GetDirForOffset(x, y int32) int32 {

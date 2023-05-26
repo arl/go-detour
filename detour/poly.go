@@ -51,9 +51,10 @@ func (p *Poly) Type() uint8 {
 }
 
 // CalcPolyCenter derives and returns the centroid of a convex polygon.
-//  idx     polygon indices. [(vertIndex) * nidx]
-//  nidx    number of indices in the polygon. (limit: >= 3)
-//  verts   polygon vertices. [(x, y, z) * vertCount]
+//
+//	idx     polygon indices. [(vertIndex) * nidx]
+//	nidx    number of indices in the polygon. (limit: >= 3)
+//	verts   polygon vertices. [(x, y, z) * vertCount]
 func CalcPolyCenter(idx []uint16, nidx int32, verts []float32) d3.Vec3 {
 	tc := d3.NewVec3()
 	var j int32

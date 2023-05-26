@@ -322,15 +322,15 @@ func getTriFlags(va, vb, vc, vpoly []float32, npoly int32) uint8 {
 
 // BuildPolyMeshDetail builds a detail mesh from the provided polygon mesh.
 //
-//  Arguments:
-//  ctx             The build context to use during the operation.
-//  meshs           A fully built polygon mesh.
-//  chf             The compact heightfield used to build the polygon mesh.
-//  sampleDist      Sets the distance to use when samping the heightfield.
-//                  [Limit: >=0] [Units: wu]
-//  sampleMaxError  The maximum distance the detail mesh surface should deviate
-//                  from heightfield data. [Limit: >=0] [Units: wu]
-//  dmesh           The resulting detail mesh. (Must be pre-allocated.)
+//	Arguments:
+//	ctx             The build context to use during the operation.
+//	meshs           A fully built polygon mesh.
+//	chf             The compact heightfield used to build the polygon mesh.
+//	sampleDist      Sets the distance to use when samping the heightfield.
+//	                [Limit: >=0] [Units: wu]
+//	sampleMaxError  The maximum distance the detail mesh surface should deviate
+//	                from heightfield data. [Limit: >=0] [Units: wu]
+//	dmesh           The resulting detail mesh. (Must be pre-allocated.)
 //
 // Returns True if the operation completed successfully.
 // See the Config documentation for more information on the configuration
