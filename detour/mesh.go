@@ -249,7 +249,8 @@ func (m *NavMesh) Init(params *NavMeshParams) Status {
 		m.saltBits = 32 - m.tileBits - m.polyBits
 	}
 
-	if m.saltBits < 10 {
+	// if m.saltBits < 10 {
+	if m.saltBits < 8 {
 		return Status(Failure | InvalidParam)
 	}
 
@@ -366,6 +367,8 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 
 	// Init tile.
 	tile.Header = &hdr
+	tile.Data = make([]byte, len(data))
+	copy(tile.Data, data)
 	tile.DataSize = int32(len(data))
 	tile.Flags = 0
 
@@ -423,7 +426,6 @@ func (m *NavMesh) AddTile(data []byte, lastRef TileRef) (Status, TileRef) {
 //
 // see AddTile
 func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
-	data = nil
 	if ref == 0 {
 		return data, Failure | InvalidParam
 	}
@@ -435,6 +437,9 @@ func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
 	tile := &m.Tiles[tileIndex]
 	if tile.Salt != tileSalt {
 		return data, Failure | InvalidParam
+	}
+	if tile.Data != nil {
+		data = tile.Data
 	}
 
 	// Remove tile from hash lookup.
@@ -480,11 +485,6 @@ func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
 		}
 	}
 
-	// Reset tile.
-	//if data != nil {
-	//data = tile.Data
-	//}
-
 	tile.Header = nil
 	tile.Flags = 0
 	tile.LinksFreeList = 0
@@ -496,6 +496,8 @@ func (m *NavMesh) RemoveTile(ref TileRef) (data []uint8, st Status) {
 	tile.DetailTris = nil
 	tile.BvTree = nil
 	tile.OffMeshCons = nil
+	tile.Data = nil
+	tile.DataSize = 0
 
 	// Update salt, salt should never be zero.
 	tile.Salt = (tile.Salt + 1) & ((1 << m.saltBits) - 1)
