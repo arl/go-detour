@@ -85,6 +85,9 @@ type MeshTile struct {
 	// [Size: MeshHeader.OffMeshConCount]
 	OffMeshCons []OffMeshConnection
 
+	// The tile data. (Not directly accessed under normal situations.)
+	Data []byte
+
 	// Size of the tile data.
 	DataSize int32
 
