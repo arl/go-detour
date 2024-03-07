@@ -13,12 +13,12 @@ type navMeshSetHeader struct {
 	Params   NavMeshParams
 }
 
-func (s *navMeshSetHeader) size() int {
+func (s *navMeshSetHeader) Size() int {
 	return 12 + s.Params.size()
 }
 
 func (s *navMeshSetHeader) serialize(dst []byte) {
-	if len(dst) < s.size() {
+	if len(dst) < s.Size() {
 		panic("undersized buffer for navMeshSetHeader")
 	}
 	var (
@@ -34,7 +34,7 @@ func (s *navMeshSetHeader) serialize(dst []byte) {
 }
 
 func (s *navMeshSetHeader) WriteTo(w io.Writer) (int64, error) {
-	buf := make([]byte, s.size())
+	buf := make([]byte, s.Size())
 	s.serialize(buf)
 
 	n, err := w.Write(buf)
