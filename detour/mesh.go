@@ -177,6 +177,26 @@ func (m *NavMesh) ToWriter(w io.Writer) error {
 	return nil
 }
 
+// Returns binary navigation mesh file size.
+func (m *NavMesh) Size() int32 {
+	var header navMeshSetHeader
+	header.Params = m.Params
+	hSize := header.Size()
+
+	var tilesSize int32 = 0
+	var tileHeader navMeshTileHeader
+	for i := int32(0); i < m.MaxTiles; i++ {
+		tile := &m.Tiles[i]
+		if tile.DataSize == 0 {
+			continue
+		}
+
+		tilesSize += int32(tileHeader.Size()) + tile.DataSize
+	}
+
+	return int32(hSize) + tilesSize
+}
+
 // InitForSingleTile set up the navigation mesh for single tile use.
 //
 //	Arguments:
