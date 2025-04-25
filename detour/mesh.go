@@ -130,6 +130,11 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		return err
 	}
 
+	return m.ToWriter(f)
+}
+
+// ToWriter writes binary navigation mesh to io.Writer.
+func (m *NavMesh) ToWriter(w io.Writer) error {
 	// Store header.
 	var header navMeshSetHeader
 	header.Magic = navMeshSetMagic
@@ -143,7 +148,7 @@ func (m *NavMesh) SaveToFile(fn string) error {
 	}
 	header.Params = m.Params
 
-	if _, err = header.WriteTo(f); err != nil {
+	if _, err := header.WriteTo(w); err != nil {
 		return fmt.Errorf("Error writing header: %v", err)
 	}
 
@@ -157,7 +162,7 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		var tileHeader navMeshTileHeader
 		tileHeader.TileRef = m.TileRef(tile)
 		tileHeader.DataSize = tile.DataSize
-		if _, err = tileHeader.WriteTo(f); err != nil {
+		if _, err := tileHeader.WriteTo(w); err != nil {
 			return err
 		}
 		var data []byte = make([]byte, tile.DataSize)
@@ -165,11 +170,31 @@ func (m *NavMesh) SaveToFile(fn string) error {
 		tile.Header.serialize(data)
 		// then the tile itself
 		tile.serialize(data[tile.Header.size():])
-		if _, err = f.Write(data); err != nil {
+		if _, err := w.Write(data); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// Returns binary navigation mesh file size.
+func (m *NavMesh) Size() int32 {
+	var header navMeshSetHeader
+	header.Params = m.Params
+	hSize := header.Size()
+
+	var tilesSize int32 = 0
+	var tileHeader navMeshTileHeader
+	for i := int32(0); i < m.MaxTiles; i++ {
+		tile := &m.Tiles[i]
+		if tile.DataSize == 0 {
+			continue
+		}
+
+		tilesSize += int32(tileHeader.Size()) + tile.DataSize
+	}
+
+	return int32(hSize) + tilesSize
 }
 
 // InitForSingleTile set up the navigation mesh for single tile use.
